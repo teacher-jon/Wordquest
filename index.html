@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Glitch Fix</title>
+    <title>WordCraft: Hidden Dangers</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -43,14 +43,15 @@
             background: #fff;
             border: 4px solid var(--ui-border);
             padding: 20px; border-radius: 8px;
-            text-align: center; max-width: 90%;
+            text-align: center; max-width: 95%;
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
-            max-height: 90%; overflow-y: auto;
+            max-height: 95%; overflow-y: auto;
         }
         .popup.active { display: block; }
         
+        /* --- EXPANDED INVENTORY --- */
         #screen-inv {
-            width: 600px; height: 500px;
+            width: 700px; height: 550px; /* Made Wider and Taller */
             background-image: url('assets/bg.png');
             background-size: cover;
             color: #3e2723;
@@ -67,9 +68,14 @@
         /* INVENTORY LIST */
         .inv-grid { 
             display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; 
-            max-height: 320px; /* Taller scroll area */
+            max-height: 380px; /* Much Taller scroll area */
             overflow-y: auto; padding: 5px; 
         }
+        /* Custom Scrollbar for visibility */
+        .inv-grid::-webkit-scrollbar { width: 10px; }
+        .inv-grid::-webkit-scrollbar-track { background: #f1f1f1; }
+        .inv-grid::-webkit-scrollbar-thumb { background: #888; border-radius: 5px; }
+        .inv-grid::-webkit-scrollbar-thumb:hover { background: #555; }
         
         .word-chip { background: #fff; border: 1px solid #5d4037; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold; box-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
         .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
@@ -77,28 +83,28 @@
 
         /* CRAFTING ROWS */
         .craft-row {
-            display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 5px;
+            display: flex; width: 95%; align-items: center; gap: 10px; margin-bottom: 5px;
             background: rgba(255,255,255,0.6); padding: 5px; border-radius: 8px;
             border-bottom: 1px solid #aaa;
         }
         .craft-select { 
-            flex: 1; text-align: left; cursor: pointer; font-weight: bold; font-size: 12px; color: #2c3e50;
+            flex: 1; text-align: left; cursor: pointer; font-weight: bold; font-size: 13px; color: #2c3e50;
         }
         .craft-select:hover { color: #d35400; text-decoration: underline; }
         
         .craft-btn { 
             background: #27ae60; color: white; border: 1px solid #1e8449; border-radius: 4px; 
-            padding: 5px 10px; font-size: 11px; font-weight: bold; cursor: pointer; 
-            min-width: 90px; text-align: center;
+            padding: 8px 12px; font-size: 12px; font-weight: bold; cursor: pointer; 
+            min-width: 100px; text-align: center;
         }
         .craft-btn:hover { background: #219150; transform: scale(1.05); }
         .craft-btn:active { transform: scale(0.95); }
 
         /* RESOURCE BAR */
         #resource-bar {
-            display: flex; justify-content: space-around; background: rgba(0,0,0,0.2); color: white;
-            padding: 5px; border-radius: 4px; margin-bottom: 10px; font-size: 14px; font-weight: bold;
-            text-shadow: 1px 1px 0 #000;
+            display: flex; justify-content: space-around; background: rgba(0,0,0,0.4); color: white;
+            padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 14px; font-weight: bold;
+            text-shadow: 1px 1px 0 #000; border: 1px solid #fff;
         }
 
         #forge-msg {
@@ -133,7 +139,7 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Loading Fixed Engine...
+            Spawning Hidden Monsters...
         </div>
 
         <div id="mobile-controls">
@@ -153,17 +159,12 @@
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Glitch Fix</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Hidden Dangers</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>⛏️ Controls Fixed!</h2>
-                    <p><b>No more scrolling:</b> The Spacebar glitch is gone.</p>
-                    <p><b>Crafting:</b> All building blocks are back in the Tool Bench.</p>
-                    <p><b>Instructions:</b>
-                    <br>1. Mine Resources (Dirt, Sand, Stone).
-                    <br>2. Open Inventory ('I').
-                    <br>3. Click <b>"Craft"</b> (Green Button) to make blocks.
-                    <br>4. Click <b>Item Name</b> (Left) to equip it.</p>
+                    <h2>⚠️ Warning: Monsters Below!</h2>
+                    <p><b>Buried Enemies:</b> Digging isn't safe anymore. <b>Slimes</b> hide in dirt, and <b>Bats</b> sleep in stone. Watch out!</p>
+                    <p><b>Crafting Update:</b> The menu is expanded. Scroll to see Glass, Doors, and Ladders.</p>
                     
                     <button onclick="toggleMobileControls()" class="secondary" style="background:#34495e; width:100%">Toggle Mobile Controls</button>
                 </div>
@@ -190,11 +191,11 @@
                 </div>
                 
                 <div id="resource-bar">
-                    <span>💎: <span id="res-frag">0</span></span>
-                    <span>🟫: <span id="res-dirt">0</span></span>
-                    <span>🟡: <span id="res-sand">0</span></span>
-                    <span>🌑: <span id="res-stone">0</span></span>
-                    <span>🪵: <span id="res-wood">0</span></span>
+                    <span>💎 Gems: <span id="res-frag">0</span></span>
+                    <span>🟫 Dirt: <span id="res-dirt">0</span></span>
+                    <span>🟡 Sand: <span id="res-sand">0</span></span>
+                    <span>🌑 Stone: <span id="res-stone">0</span></span>
+                    <span>🪵 Raw Wood: <span id="res-wood">0</span></span>
                 </div>
 
                 <div id="tab-word">
@@ -301,7 +302,7 @@
         jump: () => sfx.playTone(300, 'sine', 0.2), mine: () => sfx.playTone(100, 'square', 0.1),
         shoot: () => sfx.playTone(600, 'sawtooth', 0.1), build: () => sfx.playTone(200, 'triangle', 0.1),
         collect: () => sfx.playTone(800, 'sine', 0.3), hit: () => sfx.playTone(150, 'sawtooth', 0.3),
-        craft: () => sfx.playTone(500, 'square', 0.5)
+        craft: () => sfx.playTone(500, 'square', 0.5), monster: () => sfx.playTone(100, 'sawtooth', 0.5)
     };
 
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
@@ -445,9 +446,7 @@
     }
 
     document.addEventListener('keydown', e => {
-        // --- FIX: STOP SPACEBAR SCROLLING ---
         if(e.key === ' ') { e.preventDefault(); }
-        
         keys[e.key] = true; 
         if(state !== 'playing') { if(e.key==='i'||e.key==='I') setGameState('playing'); return; }
         
@@ -489,6 +488,13 @@
         projectiles.push({ x: player.x, y: player.y, vx: (dx/len) * 0.8, vy: (dy/len) * 0.8 });
     }
 
+    function spawnEnemy(x, y, type) {
+        if(!monstersEnabled) return;
+        enemies.push({ x:x, y:y, type:type, hp:2, speed:15 });
+        sfx.monster();
+        addPart(x, y, "⚠️");
+    }
+
     function action() {
         let hit=false;
         if(player.hasQuill) {
@@ -517,6 +523,10 @@
                 else if(t===2) { player.resources.stone++; }
                 else if(t===3) { player.resources.obsidian++; } 
                 
+                // HIDDEN MONSTERS SPAWN LOGIC
+                if(Math.random() < 0.05 && t===1) spawnEnemy(tx, ty, 'slime'); // Dirt = Slime
+                if(Math.random() < 0.10 && t===2) spawnEnemy(tx, ty, 'bat'); // Stone = Bat
+
                 if(Math.random()>0.5 && t<=3) {
                     if(Math.random() > 0.5) {
                         let list = LAYER_ROOTS[t]||["root"];
