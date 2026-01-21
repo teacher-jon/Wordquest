@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordCraft: Smart Miner</title>
+    <title>WordCraft: Seamless Edition</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -29,6 +29,7 @@
         }
         canvas { display: block; image-rendering: pixelated; }
         
+        /* UI OVERLAYS */
         #overlay-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; align-items: center; justify-content: center;
@@ -98,24 +99,25 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Loading Builder Tools...
+            Smoother World Loading...
         </div>
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Smart Miner</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Seamless Edition</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>⛏️ New Mining Controls</h2>
-                    <p><b>Directional Mining:</b> Hold an Arrow Key + Spacebar to mine in that direction!</p>
-                    <p>
-                    • <b>Down + Space:</b> Mine floor (Dig hole)<br>
-                    • <b>Up + Space:</b> Mine ceiling<br>
-                    • <b>Side + Space:</b> Mine walls<br>
-                    </p>
+                    <h2>📜 Updates</h2>
+                    <p><b>Graphics Fix:</b> Tiles now connect seamlessly!</p>
+                    <p><b>Fortress Mode:</b> Build walls/doors to stop enemies. You can walk through Doors, enemies cannot.</p>
                     
-                    <h2>🛠️ Building</h2>
-                    <p><b>'B' Key:</b> Place a wall where you are standing/facing.</p>
+                    <h2>⚔️ Controls</h2>
+                    <p>
+                    • <b>Arrows:</b> Move/Aim<br>
+                    • <b>Space:</b> Mine / Attack<br>
+                    • <b>'I' Key:</b> Inventory<br>
+                    • <b>'B' Key:</b> Place Active Block<br>
+                    </p>
                 </div>
 
                 <div class="toggle-container" onclick="toggleMonsters()">
@@ -187,17 +189,30 @@
 
                 <div id="tab-craft" style="display:none;">
                     <h3>Survival Gear</h3>
+                    <div style="font-size:12px; color:#555; margin-bottom:5px;">Click to Select Active Block for Placing ('B')</div>
                     <div class="inv-grid" style="flex-direction:column;">
                         <div class="word-chip" onclick="craft('quill')" style="padding:10px;"><b>Golden Quill</b> (Weapon) - 10 💎</div>
                         <div class="word-chip" onclick="craft('potion')" style="padding:10px;"><b>Health Potion</b> (+1 ❤️) - 5 💎</div>
-                        <div class="word-chip" onclick="craft('wall')" style="padding:10px;"><b>Barricade x5</b> (Press 'B' to Place) - 2 💎</div>
+                        
+                        <div class="word-chip" id="btn-wall" onclick="setActiveBlock(9, 'Wall')" style="padding:10px; border-left:5px solid #5d4037;">
+                            <b>Dirt Wall</b> (x<span id="qty-9">5</span>) - 1 💎
+                        </div>
+                        <div class="word-chip" id="btn-wood" onclick="setActiveBlock(4, 'Wood')" style="padding:10px; border-left:5px solid #d35400;">
+                            <b>Wood Planks</b> (x<span id="qty-4">0</span>) - 2 💎
+                        </div>
+                        <div class="word-chip" id="btn-brick" onclick="setActiveBlock(5, 'Brick')" style="padding:10px; border-left:5px solid #c0392b;">
+                            <b>Stone Brick</b> (x<span id="qty-5">0</span>) - 2 💎
+                        </div>
+                        <div class="word-chip" id="btn-door" onclick="setActiveBlock(8, 'Door')" style="padding:10px; border-left:5px solid #f1c40f;">
+                            <b>Magic Door</b> (x<span id="qty-8">0</span>) - 3 💎
+                        </div>
                     </div>
                 </div>
                 <button onclick="setGameState('playing')" style="margin-top:10px; background:#5d4037;">Close Book</button>
             </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS: Move/Aim | SPACE: Mine | 'I': Inventory | 'B': Place Wall</div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS: Move/Aim | SPACE: Mine | 'I': Inventory | 'B': Place <span id="hud-block-name">Wall</span></div>
 
 <script>
     // --- ASSET LOADER ---
@@ -239,10 +254,8 @@
 
     // --- GAME CONFIG ---
     const TILE_SIZE = 40; 
-    const COLS = 200; 
-    const ROWS = 60;  
-    const CANVAS_W = 800; 
-    const CANVAS_H = 600;
+    const COLS = 200; const ROWS = 60;  
+    const CANVAS_W = 800; const CANVAS_H = 600;
     const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
     canvas.width = CANVAS_W; canvas.height = CANVAS_H;
 
@@ -250,7 +263,7 @@
     let gameTick = 0; let monstersEnabled = true;
 
     let camera = { x: 0, y: 0 };
-    let keys = {}; // Track multiple keys for directional mining
+    let keys = {}; 
 
     // --- UFLI ROOT DATA ---
     const LAYER_ROOTS = {
@@ -262,12 +275,19 @@
     const WORD_CACHE = {};
 
     let state = 'start'; let grid = []; let enemies = []; let particles = []; let animTick = 0;
-    let player = { x:20, y:10, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, walls:0, facingLeft:false, invinc:0 };
+    
+    // Block IDs: 9=DirtWall, 4=Wood, 5=Brick, 8=Door
+    let player = { 
+        x:20, y:10, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, 
+        invinc:0, facingLeft:false,
+        blocks: { 9: 5, 4: 0, 5: 0, 8: 0 },
+        activeBlock: 9,
+        activeBlockName: "Dirt Wall"
+    };
     let forge = { pre:null, root:null, suf:null };
 
     function initGame() {
         grid = [];
-        // GENERATE TERRAIN
         for(let r=0; r<ROWS; r++){
             let row = [];
             for(let c=0; c<COLS; c++){
@@ -280,12 +300,10 @@
             grid.push(row);
         }
         
-        // FIX SPAWN: Find ground level at player start x (20)
+        // Spawn
         let groundY = 0;
-        while(groundY < ROWS && grid[groundY][20] === 0) {
-            groundY++;
-        }
-        player.y = groundY - 1; // Spawn 1 block above ground
+        while(groundY < ROWS && grid[groundY][20] === 0) groundY++;
+        player.y = groundY - 1; 
         
         requestAnimationFrame(loop);
     }
@@ -302,7 +320,7 @@
         let timeOfDay = gameTick % DAY_LENGTH;
         let isNight = timeOfDay > NIGHT_START;
 
-        // Camera Follow
+        // Camera
         let targetCamX = (player.x * TILE_SIZE) - (CANVAS_W / 2);
         let targetCamY = (player.y * TILE_SIZE) - (CANVAS_H / 2);
         camera.x = Math.max(0, Math.min(targetCamX, (COLS * TILE_SIZE) - CANVAS_W));
@@ -310,19 +328,27 @@
 
         // Spawning
         if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 5) {
-            let spawnX = player.x + (Math.random() > 0.5 ? 10 : -10);
+            let spawnX = player.x + (Math.random() > 0.5 ? 12 : -12);
             let spawnY = player.y - 5 + Math.floor(Math.random()*10);
-            if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS) {
+            if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS && grid[spawnY][spawnX] === 0) {
                  enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
             }
         }
         
-        // Enemy Logic
+        // Enemy Logic with Wall Collision
         enemies.forEach((en,i) => {
-            if(Math.abs(en.x - player.x) < 20) {
+            if(Math.abs(en.x - player.x) < 25) {
                 if(animTick % en.speed === 0) {
-                    if(en.x < player.x) en.x++; else if(en.x > player.x) en.x--;
-                    else if(en.y < player.y) en.y++; else if(en.y > player.y) en.y--;
+                    let nextX = en.x; let nextY = en.y;
+                    
+                    if(en.x < player.x) nextX++; else if(en.x > player.x) nextX--;
+                    else if(en.y < player.y) nextY++; else if(en.y > player.y) nextY--;
+                    
+                    // Simple pathfinding: Only move if target block is AIR (0)
+                    // Note: Doors (8) block enemies but not player
+                    if(grid[nextY][nextX] === 0) {
+                        en.x = nextX; en.y = nextY;
+                    }
                 }
                 if(en.x === player.x && en.y === player.y) hurtPlayer();
             }
@@ -335,11 +361,9 @@
 
     // --- CONTROLS ---
     document.addEventListener('keydown', e => {
-        keys[e.key] = true; // Track key state
-
+        keys[e.key] = true; 
         if(state !== 'playing') { if(e.key==='i'||e.key==='I') setGameState('playing'); return; }
         
-        // Movement
         let dx=0, dy=0;
         if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; }
         if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
@@ -349,18 +373,18 @@
         if(dx!==0 || dy!==0) {
             let nx = player.x+dx, ny = player.y+dy;
             if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
-                let t = grid[ny][nx]; if(t===0 || t===9) { player.x=nx; player.y=ny; }
+                // WALKABLE: Air (0) or Door (8)
+                let t = grid[ny][nx]; 
+                if(t===0 || t===8) { player.x=nx; player.y=ny; }
             }
         }
 
         if(e.key===' ') action();
         if(e.key==='i'||e.key==='I') setGameState('inventory');
-        if(e.key==='b'||e.key==='B') placeWall();
+        if(e.key==='b'||e.key==='B') placeBlock();
     });
 
-    document.addEventListener('keyup', e => {
-        keys[e.key] = false;
-    });
+    document.addEventListener('keyup', e => { keys[e.key] = false; });
 
     function action() {
         let hit=false;
@@ -373,25 +397,16 @@
         }
         if(hit) return;
 
-        // OMNI-DIRECTIONAL MINING
-        let tx = player.x; 
-        let ty = player.y;
-
-        if(keys['ArrowUp']) ty -= 1;
-        else if(keys['ArrowDown']) ty += 1;
-        else if(keys['ArrowLeft']) tx -= 1;
-        else if(keys['ArrowRight']) tx += 1;
-        else {
-            // Default: Mine in front/down if no direction held
-            tx += (player.facingLeft ? -1 : 1);
-            if(grid[ty][tx] === 0) ty += 1; // Auto-aim down if front is air
-        }
+        let tx = player.x; let ty = player.y;
+        if(keys['ArrowUp']) ty -= 1; else if(keys['ArrowDown']) ty += 1;
+        else if(keys['ArrowLeft']) tx -= 1; else if(keys['ArrowRight']) tx += 1;
+        else { tx += (player.facingLeft ? -1 : 1); if(grid[ty][tx] === 0) ty += 1; }
 
         if(tx>=0 && tx<COLS && ty>=0 && ty<ROWS) {
             let t = grid[ty][tx];
-            if(t>=1 && t<=3) {
+            if(t>=1 && t<=5 || t===9) { // Mine Dirt, Stone, Marble, Wood, Brick, Wall
                 grid[ty][tx]=0; player.fragments++; addPart(tx,ty,"✨");
-                if(Math.random()>0.6) {
+                if(Math.random()>0.7 && t<=3) {
                     let list = LAYER_ROOTS[t]||["root"];
                     player.roots.push({word:list[Math.floor(Math.random()*list.length)], type:t}); addPart(player.x,player.y-1,"📜");
                 }
@@ -399,13 +414,15 @@
         }
     }
     
-    function placeWall() {
-        if(player.walls > 0) {
-            // Place wall at player position (background wall)
+    function placeBlock() {
+        let id = player.activeBlock;
+        if(player.blocks[id] > 0) {
+            // Place at player position (background wall) if it's air
             if(grid[player.y][player.x] === 0) {
-                grid[player.y][player.x] = 9;
-                player.walls--;
-                addPart(player.x, player.y, "🧱");
+                grid[player.y][player.x] = id;
+                player.blocks[id]--;
+                updateInvCounts();
+                addPart(player.x, player.y, "🔨");
             }
         }
     }
@@ -421,8 +438,16 @@
         let b = Math.floor(235 * cyclePos + 60 * (1-cyclePos));
         ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
+        // TILE RENDERING (WITH SMART ZOOM FIX)
         let tW = processedAssets.tiles.width; 
         let tH = processedAssets.tiles.height/5;
+        
+        // Define Crop (12% off edges to fix lines)
+        let cropX = tW * 0.12; 
+        let cropY = tH * 0.05;
+        let drawW = tW - (2*cropX);
+        let drawH = tH - (2*cropY);
+
         let startCol = Math.floor(camera.x / TILE_SIZE);
         let endCol = startCol + (CANVAS_W / TILE_SIZE) + 1;
         let startRow = Math.floor(camera.y / TILE_SIZE);
@@ -436,8 +461,25 @@
                 if(row<0 || row>=ROWS || col<0 || col>=COLS) continue;
                 let t = grid[row][col];
                 if(t>0) { 
-                    let tidx = (t===9)?3 : (t-1); 
-                    ctx.drawImage(processedAssets.tiles, 0, tidx*tH, tW, tH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
+                    // Map IDs to Sheet Rows: 1,2,3 -> 0,1,2. 9->3. 4->3(tint). 5->1(tint). 8->3(tint)
+                    let tidx = 0;
+                    let tint = null;
+                    
+                    if(t<=3) tidx = t-1;
+                    else if(t===9) tidx = 3; // Wall
+                    else if(t===4) { tidx = 3; tint = "brown"; } // Wood (Use Wall texture tinted)
+                    else if(t===5) { tidx = 1; tint = "red"; } // Brick (Use Stone texture tinted)
+                    else if(t===8) { tidx = 3; tint = "gold"; } // Door (Use Wall texture tinted)
+
+                    // Draw Cropped Tile
+                    ctx.drawImage(processedAssets.tiles, cropX, (tidx*tH)+cropY, drawW, drawH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
+                    
+                    // Apply Tint for Special Blocks
+                    if(tint) {
+                        ctx.fillStyle = tint === "brown" ? "rgba(100,50,0,0.5)" : tint === "red" ? "rgba(100,0,0,0.3)" : "rgba(255,215,0,0.3)";
+                        ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        if(t===8) { ctx.fillStyle="black"; ctx.fillRect((col*TILE_SIZE)+15, (row*TILE_SIZE)+20, 5, 5); } // Door Knob
+                    }
                 }
             }
         }
@@ -466,26 +508,19 @@
     function drawHUD(time) {
         let uW = processedAssets.ui.width/2; let uH = processedAssets.ui.height/2;
         for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(processedAssets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
-        
-        // Fragments
         ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); 
         ctx.fillStyle = "white"; ctx.font = "bold 20px Verdana";
         ctx.fillText(player.fragments, 185, 33);
-        
-        // Tool
         if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
-        
-        // Wall Count
-        ctx.fillText("🧱 x " + player.walls, 300, 33);
-
         let isNight = time > NIGHT_START; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
     }
 
+    // --- SMART FORGE & UI ---
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
         if(s==='death') document.getElementById('screen-death').classList.add('active');
-        if(s==='inventory') { document.getElementById('screen-inv').classList.add('active'); renderRoots(); }
+        if(s==='inventory') { document.getElementById('screen-inv').classList.add('active'); renderRoots(); updateInvCounts(); }
     }
     function toggleMonsters() {
         monstersEnabled = !monstersEnabled;
@@ -503,12 +538,28 @@
         player.roots.forEach(r => { let s = document.createElement('div'); s.className=`word-chip tag-${r.type}`; s.innerText=r.word; s.onclick=()=>setSlot('root',r.word); d.appendChild(s); });
         if(player.roots.length===0) d.innerText="No roots found.";
     }
+    function setActiveBlock(id, name) {
+        player.activeBlock = id;
+        player.activeBlockName = name;
+        document.getElementById('hud-block-name').innerText = name;
+        alert("Selected: " + name + ". Press 'B' to place.");
+    }
+    function updateInvCounts() {
+        document.getElementById('qty-9').innerText = player.blocks[9];
+        document.getElementById('qty-4').innerText = player.blocks[4];
+        document.getElementById('qty-5').innerText = player.blocks[5];
+        document.getElementById('qty-8').innerText = player.blocks[8];
+    }
     function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
     function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
     function craft(i) {
         if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Crafted Quill!"); }
-        if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; alert("Healed!"); }
-        if(i==='wall' && player.fragments>=2) { player.fragments-=2; player.walls+=5; alert("Walls Crafted!"); }
+        else if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; alert("Healed!"); }
+        else if(i==='wall' && player.fragments>=1) { player.fragments-=1; player.blocks[9]+=5; updateInvCounts(); }
+        else if(i==='wood' && player.fragments>=2) { player.fragments-=2; player.blocks[4]+=5; updateInvCounts(); }
+        else if(i==='brick' && player.fragments>=2) { player.fragments-=2; player.blocks[5]+=5; updateInvCounts(); }
+        else if(i==='door' && player.fragments>=3) { player.fragments-=3; player.blocks[8]+=1; updateInvCounts(); }
+        else if(player.fragments < 2) alert("Not enough fragments!");
     }
     async function forgeWord() {
         if(!forge.root) return;
