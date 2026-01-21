@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lexicon Excavation: Day & Night</title>
+    <title>The Lexicon Excavation</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -27,7 +27,6 @@
             line-height: 0;
             background: #000;
         }
-        /* Sky color is now handled in JS for smooth transitions */
         canvas { display: block; image-rendering: pixelated; }
         
         /* OVERLAYS */
@@ -40,8 +39,9 @@
             background: #fff;
             border: 4px solid var(--ui-border);
             padding: 20px; border-radius: 8px;
-            text-align: center; max-width: 500px;
+            text-align: center; max-width: 550px;
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
+            max-height: 90%; overflow-y: auto;
         }
         .popup.active { display: block; }
         
@@ -74,33 +74,68 @@
             box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
         .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
+        
         button {
-            background: #27ae60; border: none; color: white; padding: 8px 16px;
-            font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 4px;
+            background: #27ae60; border: none; color: white; padding: 10px 20px;
+            font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; margin: 5px;
         }
+        button.secondary { background: #7f8c8d; font-size: 14px; }
+        button.danger { background: #c0392b; }
+        button:hover { filter: brightness(1.1); }
+
         .tag-1 { color: #5d4037; border-left: 4px solid #795548; }
         .tag-2 { color: #455a64; border-left: 4px solid #78909c; }
         .tag-3 { color: #f57f17; border-left: 4px solid #ffd54f; }
+        
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; color: #d35400; }
+        p { line-height: 1.5; margin-bottom: 15px; }
+        
+        /* Toggle Switch */
+        .toggle-container { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; }
+        .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle-btn.on { background: #27ae60; }
+        .toggle-btn.on::after { left: 22px; }
+
     </style>
 </head>
 <body>
     <div id="game-frame">
         <canvas id="gameCanvas" width="640" height="480"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Loading Assets...
+            Processing Assets...
         </div>
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b;">The Lexicon Excavation</h1>
-                <p>Day is safe. Night is dangerous.</p>
-                <p>Mine for roots during the day. Build walls or craft a quill before nightfall!</p>
-                <button onclick="setGameState('playing')">Begin Day 1</button>
+                <h1 style="color:#c0392b; margin-top:0;">The Lexicon Excavation</h1>
+                
+                <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
+                    <h2>📜 Storyline</h2>
+                    <p>The Great Library of Babel has collapsed! All the words of the world have shattered into their base <b>ROOTS</b> and fallen deep underground.</p>
+                    <p>You are a Word-Weaver. You must dig into the earth to recover these roots. Bring them to your forge to combine them with <b>AFFIXES</b> (prefixes and suffixes) to rebuild our language.</p>
+                    
+                    <h2>⚔️ Instructions</h2>
+                    <p>
+                    • <b>Arrow Keys:</b> Move & Dig<br>
+                    • <b>Spacebar:</b> Mine Blocks / Attack<br>
+                    • <b>'I' Key:</b> Open Inventory Book<br>
+                    • <b>'B' Key:</b> Place Wall (Safety)<br>
+                    </p>
+                </div>
+
+                <div class="toggle-container" onclick="toggleMonsters()">
+                    <span>Letter Bugs (Monsters):</span>
+                    <div id="monster-toggle" class="toggle-btn on"></div>
+                    <span id="monster-status">ON</span>
+                </div>
+
+                <button onclick="setGameState('playing')">Begin Adventure</button>
             </div>
             
             <div id="screen-death" class="popup">
-                <h1 style="color:red;">Scrambled in the Night!</h1>
-                <p>The Letter Bugs got you.</p>
+                <h1 style="color:red;">Scrambled!</h1>
+                <p>The Letter Bugs scrambled your words.</p>
                 <button onclick="location.reload()">Try Again</button>
             </div>
 
@@ -150,13 +185,51 @@
             </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS to Move | SPACE to Mine/Attack | 'I' for Inventory | 'B' to Place Wall</div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS to Move | SPACE to Mine/Attack | 'I' for Inventory</div>
 
 <script>
-    // --- ASSET LOADER ---
+    // --- ASSET LOADER WITH TRANSPARENCY FIX ---
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
+    const processedAssets = { tiles: null, chars: null, ui: null };
     let loadedCount = 0; const requiredImages = 3;
-    function onAssetLoad() { loadedCount++; if(loadedCount === requiredImages) initGame(); }
+
+    function onAssetLoad() { 
+        loadedCount++; 
+        if(loadedCount === requiredImages) processAssets(); 
+    }
+
+    // This function acts like a "Green Screen" remover for the white backgrounds
+    function removeWhiteBackground(img) {
+        const c = document.createElement('canvas');
+        const cx = c.getContext('2d');
+        c.width = img.width; c.height = img.height;
+        cx.drawImage(img, 0, 0);
+        
+        let imgData = cx.getImageData(0, 0, c.width, c.height);
+        let data = imgData.data;
+        
+        for(let i = 0; i < data.length; i += 4) {
+            let r = data[i], g = data[i+1], b = data[i+2];
+            // If pixel is close to white (allow slight variation)
+            if(r > 240 && g > 240 && b > 240) {
+                data[i+3] = 0; // Set Alpha to 0 (Transparent)
+            }
+        }
+        cx.putImageData(imgData, 0, 0);
+        return c; // Returns a canvas element which works like an image
+    }
+
+    function processAssets() {
+        // Convert all loaded images to transparent versions
+        processedAssets.tiles = removeWhiteBackground(assets.tiles);
+        processedAssets.chars = removeWhiteBackground(assets.chars);
+        processedAssets.ui = removeWhiteBackground(assets.ui);
+        
+        // Hide loading text and start
+        document.getElementById('loading').style.display = 'none';
+        initGame();
+    }
+
     assets.tiles.src = 'assets/tiles.png'; assets.tiles.onload = onAssetLoad;
     assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad;
     assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;
@@ -168,9 +241,10 @@
     canvas.width = W; canvas.height = H;
 
     // --- DAY/NIGHT CONFIG ---
-    const DAY_LENGTH = 3600; // Total ticks per day (~60 seconds at 60fps)
-    const NIGHT_START = DAY_LENGTH / 2; // Night starts halfway through
-    let gameTick = 0; // Global timer
+    const DAY_LENGTH = 3600; 
+    const NIGHT_START = DAY_LENGTH / 2;
+    let gameTick = 0;
+    let monstersEnabled = true;
 
     // --- DATA ---
     const DICTIONARY = { "helper": "One who aids", "helping": "Act of aiding", "unhelpful": "Not aiding", "transport": "Carry across", "portable": "Able to be carried", "report": "Tell back", "action": "Doing something", "react": "Do back", "actor": "One who does", "disrupt": "Break apart", "erupt": "Break out", "banker": "One who banks", "rebuild": "Build again", "builder": "One who builds" };
@@ -182,7 +256,7 @@
     let forge = { pre:null, root:null, suf:null };
 
     function initGame() {
-        document.getElementById('loading').style.display = 'none';
+        grid = [];
         for(let r=0; r<ROWS; r++){
             let row = [];
             for(let c=0; c<COLS; c++){
@@ -200,15 +274,14 @@
     }
 
     function update() {
-        animTick++; gameTick++; // Increment global time
+        animTick++; gameTick++;
         if(player.invinc > 0) player.invinc--;
 
-        // DAY/NIGHT SPAWN LOGIC
         let timeOfDay = gameTick % DAY_LENGTH;
         let isNight = timeOfDay > NIGHT_START;
 
-        // Only spawn enemies at night
-        if(isNight && animTick % 200 === 0 && enemies.length < 3) {
+        // CHECK MONSTER TOGGLE BEFORE SPAWNING
+        if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 3) {
             let r = Math.floor(Math.random()*5); let c = Math.floor(Math.random()*COLS);
             if(Math.abs(c-player.x)>3) {
                 enemies.push({ x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
@@ -222,6 +295,10 @@
             }
             if(en.x === player.x && en.y === player.y) hurtPlayer();
         });
+        
+        // Remove dead enemies
+        if(!monstersEnabled && enemies.length > 0) enemies = [];
+
         for(let i=particles.length-1; i>=0; i--) {
             particles[i].life--; particles[i].y-=0.5; if(particles[i].life<=0) particles.splice(i,1);
         }
@@ -271,24 +348,31 @@
 
     // --- DRAWING & SKY TRANSITION ---
     function draw() {
-        // Calculate Sky Color based on time
         let timeOfDay = gameTick % DAY_LENGTH;
-        let cyclePos = Math.sin((timeOfDay / DAY_LENGTH) * Math.PI); // 0 -> 1 -> 0 over a day
-        // Interpolate between Day Blue and Night Blue
-        let r = Math.floor(135 * cyclePos + 26 * (1-cyclePos));
-        let g = Math.floor(206 * cyclePos + 26 * (1-cyclePos));
-        let b = Math.floor(235 * cyclePos + 46 * (1-cyclePos));
+        let cyclePos = Math.sin((timeOfDay / DAY_LENGTH) * Math.PI); // 0 -> 1 -> 0
+        
+        // DEEPER NIGHT COLORS
+        // Day: 135,206,235 (Sky Blue)
+        // Night: 20, 20, 60 (Dark Blue/Black)
+        let r = Math.floor(135 * cyclePos + 20 * (1-cyclePos));
+        let g = Math.floor(206 * cyclePos + 20 * (1-cyclePos));
+        let b = Math.floor(235 * cyclePos + 60 * (1-cyclePos));
         ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(0,0,W,H); // Fill sky
+        ctx.fillRect(0,0,W,H); 
 
-        let tW = assets.tiles.width; let tH = assets.tiles.height/5;
+        // USE PROCESSED ASSETS (Transparent)
+        let tW = processedAssets.tiles.width; let tH = processedAssets.tiles.height/5;
         for(let r=0; r<ROWS; r++){
             for(let c=0; c<COLS; c++){
                 let t = grid[r][c];
-                if(t>0) { let tidx = (t===9)?3 : (t-1); ctx.drawImage(assets.tiles, 0, tidx*tH, tW, tH, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+                if(t>0) { 
+                    let tidx = (t===9)?3 : (t-1); 
+                    // Draw Tile
+                    ctx.drawImage(processedAssets.tiles, 0, tidx*tH, tW, tH, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); 
+                }
             }
         }
-        let cW = assets.chars.width/3; let cH = assets.chars.height/3;
+        let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
         drawChar(0, 0, Math.floor(animTick/20)%2, player.x, player.y, player.facingLeft);
         enemies.forEach(en => drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false));
         ctx.font="20px Arial"; ctx.fillStyle="white"; particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
@@ -296,31 +380,41 @@
     }
 
     function drawChar(row, col, animOffset, x, y, flip) {
-        let cW = assets.chars.width/3; let cH = assets.chars.height/3;
+        let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
         ctx.save();
-        if(flip) { ctx.translate((x*TILE_SIZE)+TILE_SIZE, y*TILE_SIZE); ctx.scale(-1, 1); ctx.drawImage(assets.chars, (col+animOffset)*cW, row*cH, cW, cH, 0, 0, TILE_SIZE, TILE_SIZE); }
-        else { ctx.drawImage(assets.chars, (col+animOffset)*cW, row*cH, cW, cH, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+        if(flip) { ctx.translate((x*TILE_SIZE)+TILE_SIZE, y*TILE_SIZE); ctx.scale(-1, 1); ctx.drawImage(processedAssets.chars, (col+animOffset)*cW, row*cH, cW, cH, 0, 0, TILE_SIZE, TILE_SIZE); }
+        else { ctx.drawImage(processedAssets.chars, (col+animOffset)*cW, row*cH, cW, cH, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
         ctx.restore();
     }
 
     function drawHUD(time) {
-        let uW = assets.ui.width/2; let uH = assets.ui.height/2;
-        for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(assets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
-        ctx.drawImage(assets.ui, uW, 0, uW, uH, 150, 10, 30, 30); ctx.fillText(player.fragments, 185, 33);
-        if(player.hasQuill) ctx.drawImage(assets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
+        // UI ICONS (Transparency Fixed)
+        let uW = processedAssets.ui.width/2; let uH = processedAssets.ui.height/2;
+        for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(processedAssets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
+        ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); ctx.fillText(player.fragments, 185, 33);
+        if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
         
-        // Draw Day/Night Clock
         let isNight = time > NIGHT_START;
+        ctx.fillStyle = "white";
         ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", W-100, 33);
     }
 
-    // --- UI LOGIC ---
+    // --- UI FUNCTIONS ---
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
         if(s==='death') document.getElementById('screen-death').classList.add('active');
         if(s==='inventory') { document.getElementById('screen-inv').classList.add('active'); renderRoots(); }
     }
+    
+    function toggleMonsters() {
+        monstersEnabled = !monstersEnabled;
+        let btn = document.getElementById('monster-toggle');
+        let txt = document.getElementById('monster-status');
+        if(monstersEnabled) { btn.classList.add('on'); txt.innerText = "ON"; }
+        else { btn.classList.remove('on'); txt.innerText = "OFF"; }
+    }
+
     function switchTab(t) {
         document.getElementById('tab-word').style.display = t==='word'?'block':'none';
         document.getElementById('tab-craft').style.display = t==='craft'?'block':'none';
@@ -344,7 +438,6 @@
         if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; alert("Healed!"); }
         if(i==='wall' && player.fragments>=2) { player.fragments-=2; player.walls+=5; alert("Walls Crafted! Press B to place."); }
     }
-    initGame();
 </script>
 </body>
 </html>
