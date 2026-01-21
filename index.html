@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Full Inventory</title>
+    <title>WordCraft: Glitch Fix</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -49,9 +49,8 @@
         }
         .popup.active { display: block; }
         
-        /* TALLER INVENTORY */
         #screen-inv {
-            width: 600px; height: 500px; /* Made taller */
+            width: 600px; height: 500px;
             background-image: url('assets/bg.png');
             background-size: cover;
             color: #3e2723;
@@ -68,7 +67,7 @@
         /* INVENTORY LIST */
         .inv-grid { 
             display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; 
-            max-height: 300px; /* Increased scroll area */
+            max-height: 320px; /* Taller scroll area */
             overflow-y: auto; padding: 5px; 
         }
         
@@ -134,7 +133,7 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Restoring Tool Bench...
+            Loading Fixed Engine...
         </div>
 
         <div id="mobile-controls">
@@ -154,14 +153,17 @@
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Builder Edition</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Glitch Fix</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>⛏️ How to Craft</h2>
-                    <p><b>1. Mine:</b> Dig Dirt (🟫), Sand (🟡), or Stone (🌑).</p>
-                    <p><b>2. Craft:</b> Open Inventory ('I'). Click the <b>Green Button</b> to turn raw resources into blocks!</p>
-                    <p><b>3. Select:</b> Click the block NAME (left side) to equip it.</p>
-                    <p><b>4. Place:</b> Press 'B' to build.</p>
+                    <h2>⛏️ Controls Fixed!</h2>
+                    <p><b>No more scrolling:</b> The Spacebar glitch is gone.</p>
+                    <p><b>Crafting:</b> All building blocks are back in the Tool Bench.</p>
+                    <p><b>Instructions:</b>
+                    <br>1. Mine Resources (Dirt, Sand, Stone).
+                    <br>2. Open Inventory ('I').
+                    <br>3. Click <b>"Craft"</b> (Green Button) to make blocks.
+                    <br>4. Click <b>Item Name</b> (Left) to equip it.</p>
                     
                     <button onclick="toggleMobileControls()" class="secondary" style="background:#34495e; width:100%">Toggle Mobile Controls</button>
                 </div>
@@ -238,17 +240,17 @@
                         <hr style="width:100%; border:1px solid #ccc; margin: 10px 0;">
 
                         <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(9, 'Wall')">Dirt Wall (Have: <span id="qty-9">5</span>)</div>
+                            <div class="craft-select" onclick="setActiveBlock(9, 'Dirt Wall')">Dirt Wall (Have: <span id="qty-9">5</span>)</div>
                             <button class="craft-btn" onclick="craft('wall')">Craft (1🟫)</button>
                         </div>
                         
                         <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(4, 'Wood')">Wood Plank (Have: <span id="qty-4">0</span>)</div>
+                            <div class="craft-select" onclick="setActiveBlock(4, 'Wood Plank')">Wood Plank (Have: <span id="qty-4">0</span>)</div>
                             <button class="craft-btn" onclick="craft('wood')">Craft (2🪵)</button>
                         </div>
 
                         <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(5, 'Brick')">Stone Brick (Have: <span id="qty-5">0</span>)</div>
+                            <div class="craft-select" onclick="setActiveBlock(5, 'Stone Brick')">Stone Brick (Have: <span id="qty-5">0</span>)</div>
                             <button class="craft-btn" onclick="craft('brick')">Craft (2🌑)</button>
                         </div>
 
@@ -443,6 +445,9 @@
     }
 
     document.addEventListener('keydown', e => {
+        // --- FIX: STOP SPACEBAR SCROLLING ---
+        if(e.key === ' ') { e.preventDefault(); }
+        
         keys[e.key] = true; 
         if(state !== 'playing') { if(e.key==='i'||e.key==='I') setGameState('playing'); return; }
         
