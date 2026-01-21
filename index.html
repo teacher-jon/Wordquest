@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Hidden Dangers</title>
+    <title>WordCraft: The Etymology Update</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
             --ui-border: #5d4037;
+            --accent: #d35400;
         }
         body {
             background-color: var(--bg-color);
@@ -47,64 +48,87 @@
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
             max-height: 95%; overflow-y: auto;
         }
-        .popup.active { display: block; }
+        .popup.active { display: block; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* --- EXPANDED INVENTORY --- */
+        /* --- INVENTORY & CRAFTING --- */
         #screen-inv {
-            width: 700px; height: 550px; /* Made Wider and Taller */
-            background-image: url('assets/bg.png');
+            width: 700px; height: 550px;
+            background-image: url('assets/bg.png'); /* Fallback handled in code if missing */
+            background-color: #f3e5f5;
             background-size: cover;
             color: #3e2723;
+            display: none;
+            flex-direction: column;
         }
+        #screen-inv.active { display: flex; }
 
-        /* --- UI STYLES --- */
-        .forge-tabs { display: flex; border-bottom: 2px solid #5d4037; margin-bottom: 15px; }
-        .tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.3); }
-        .tab.active { background: rgba(255,255,255,0.6); border-bottom: 3px solid #3e2723; }
-        
+        /* TABS */
+        .forge-tabs { display: flex; border-bottom: 3px solid #5d4037; margin-bottom: 10px; background: rgba(0,0,0,0.1); }
+        .tab { flex: 1; padding: 12px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.4); border-right: 1px solid rgba(0,0,0,0.1); transition: 0.2s; }
+        .tab:hover { background: rgba(255,255,255,0.7); }
+        .tab.active { background: #fff; border-bottom: 3px solid #d35400; color: #d35400; transform: translateY(2px); }
+
+        /* GRIDS & LISTS */
         .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 15px 0; }
-        .craft-slot { width: 60px; height: 60px; border: 2px dashed #5d4037; display: flex; align-items: center; justify-content: center; font-weight: bold; background: rgba(0,0,0,0.05); cursor: pointer; }
+        .craft-slot { width: 60px; height: 60px; border: 2px dashed #5d4037; display: flex; align-items: center; justify-content: center; font-weight: bold; background: rgba(255,255,255,0.5); cursor: pointer; border-radius: 8px; }
         
-        /* INVENTORY LIST */
         .inv-grid { 
-            display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; 
-            max-height: 380px; /* Much Taller scroll area */
-            overflow-y: auto; padding: 5px; 
+            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; 
+            flex: 1; overflow-y: auto; padding: 10px; 
+            background: rgba(255,255,255,0.3); border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);
         }
-        /* Custom Scrollbar for visibility */
-        .inv-grid::-webkit-scrollbar { width: 10px; }
-        .inv-grid::-webkit-scrollbar-track { background: #f1f1f1; }
-        .inv-grid::-webkit-scrollbar-thumb { background: #888; border-radius: 5px; }
-        .inv-grid::-webkit-scrollbar-thumb:hover { background: #555; }
-        
-        .word-chip { background: #fff; border: 1px solid #5d4037; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold; box-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
-        .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
-        .chip-pre { background-color: #e3f2fd; } .chip-suf { background-color: #f3e5f5; } .chip-inf { background-color: #fff3e0; }
+        /* Custom Scrollbar */
+        .inv-grid::-webkit-scrollbar { width: 8px; }
+        .inv-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        .inv-grid::-webkit-scrollbar-thumb { background: #8d6e63; border-radius: 4px; }
+
+        /* WORD CHIPS */
+        .word-chip { background: #fff; border: 2px solid #5d4037; padding: 6px 10px; border-radius: 15px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 2px 2px 0px rgba(0,0,0,0.2); transition: 0.1s; }
+        .word-chip:hover { transform: translateY(-2px); box-shadow: 2px 4px 0px rgba(0,0,0,0.2); }
+        .word-chip:active { transform: translateY(0px); box-shadow: 0px 0px 0px rgba(0,0,0,0); }
+        .chip-pre { background-color: #bbdefb; border-color: #1976d2; color: #0d47a1; } 
+        .chip-suf { background-color: #e1bee7; border-color: #8e24aa; color: #4a148c; } 
+        .chip-inf { background-color: #fff9c4; border-color: #fbc02d; }
 
         /* CRAFTING ROWS */
         .craft-row {
-            display: flex; width: 95%; align-items: center; gap: 10px; margin-bottom: 5px;
-            background: rgba(255,255,255,0.6); padding: 5px; border-radius: 8px;
-            border-bottom: 1px solid #aaa;
+            display: flex; width: 95%; align-items: center; gap: 10px; margin-bottom: 8px;
+            background: #fff; padding: 8px; border-radius: 8px;
+            border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .craft-select { 
-            flex: 1; text-align: left; cursor: pointer; font-weight: bold; font-size: 13px; color: #2c3e50;
-        }
-        .craft-select:hover { color: #d35400; text-decoration: underline; }
+        .craft-icon { font-size: 20px; width: 30px; text-align: center; }
+        .craft-desc { flex: 1; text-align: left; font-size: 12px; color: #555; }
+        .craft-title { font-weight: bold; color: #2c3e50; display: block; font-size: 14px; }
+        .craft-cost { font-size: 11px; font-weight: bold; color: #e67e22; background: #fff3e0; padding: 2px 6px; border-radius: 4px; }
         
         .craft-btn { 
-            background: #27ae60; color: white; border: 1px solid #1e8449; border-radius: 4px; 
-            padding: 8px 12px; font-size: 12px; font-weight: bold; cursor: pointer; 
-            min-width: 100px; text-align: center;
+            background: #27ae60; color: white; border: none; border-bottom: 3px solid #1e8449; border-radius: 4px; 
+            padding: 8px 15px; font-size: 12px; font-weight: bold; cursor: pointer; 
+            min-width: 80px; text-align: center; transition: 0.1s;
         }
-        .craft-btn:hover { background: #219150; transform: scale(1.05); }
-        .craft-btn:active { transform: scale(0.95); }
+        .craft-btn:active { transform: translateY(2px); border-bottom: 0px; margin-top: 3px; }
+
+        /* SALVAGE ITEMS */
+        .artifact-item {
+            width: 90%;
+            background: #5d4037; color: #ffecb3;
+            border: 2px solid #3e2723;
+            padding: 12px; margin-bottom: 8px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .artifact-word { font-family: 'Courier New', monospace; font-weight: bold; font-size: 18px; letter-spacing: 2px; text-shadow: 1px 1px 0 #000; }
+        .salvage-btn { background: #d35400; border-color: #a04000; }
+        .salvage-btn:hover { background: #e67e22; }
+        .break-anim { animation: shake 0.4s; background: #c0392b !important; }
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }
 
         /* RESOURCE BAR */
         #resource-bar {
-            display: flex; justify-content: space-around; background: rgba(0,0,0,0.4); color: white;
-            padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 14px; font-weight: bold;
-            text-shadow: 1px 1px 0 #000; border: 1px solid #fff;
+            display: flex; justify-content: space-around; background: #3e2723; color: white;
+            padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 13px; font-weight: bold;
+            border: 1px solid #5d4037;
         }
 
         #forge-msg {
@@ -118,28 +142,25 @@
         .control-group { pointer-events: auto; position: absolute; bottom: 10px; }
         .dpad { left: 20px; width: 120px; height: 120px; position: relative; }
         .actions { right: 20px; display: flex; gap: 15px; align-items: flex-end; }
-        .touch-btn { background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; backdrop-filter: blur(4px); color: white; font-size: 24px; display: flex; justify-content: center; align-items: center; user-select: none; touch-action: none; }
+        .touch-btn { background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; backdrop-filter: blur(4px); color: white; font-size: 24px; display: flex; justify-content: center; align-items: center; user-select: none; touch-action: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .touch-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
         .d-btn { position: absolute; width: 40px; height: 40px; }
         .d-up { top: 0; left: 40px; } .d-down { bottom: 0; left: 40px; } .d-left { top: 40px; left: 0; } .d-right { top: 40px; right: 0; }
         .act-btn { width: 60px; height: 60px; font-size: 28px; } .act-sm { width: 45px; height: 45px; font-size: 20px; margin-bottom: 20px; }
 
-        button { background: #27ae60; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; margin: 5px; }
-        .toggle-container { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; }
+        .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; transition: 0.3s; display:inline-block; vertical-align:middle; margin-left:10px; }
         .toggle-btn.on { background: #27ae60; }
         .toggle-btn.on::after { left: 22px; }
         .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
 
-        h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; color: #d35400; }
-        p { line-height: 1.5; margin-bottom: 15px; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; color: #d35400; margin-top:0; }
     </style>
 </head>
 <body>
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Spawning Hidden Monsters...
+        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace;">
+            Forging World...
         </div>
 
         <div id="mobile-controls">
@@ -159,34 +180,34 @@
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Hidden Dangers</h1>
+                <h1 style="color:#c0392b; margin-top:0; font-size: 28px;">WordCraft</h1>
+                <h3 style="color:#555; margin-top:-10px;">The Etymology Update</h3>
                 
-                <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>⚠️ Warning: Monsters Below!</h2>
-                    <p><b>Buried Enemies:</b> Digging isn't safe anymore. <b>Slimes</b> hide in dirt, and <b>Bats</b> sleep in stone. Watch out!</p>
-                    <p><b>Crafting Update:</b> The menu is expanded. Scroll to see Glass, Doors, and Ladders.</p>
-                    
-                    <button onclick="toggleMobileControls()" class="secondary" style="background:#34495e; width:100%">Toggle Mobile Controls</button>
+                <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
+                    <p><b>✨ New Features:</b></p>
+                    <ul style="padding-left:20px; margin:5px 0;">
+                        <li><b>Salvage Station:</b> Find Ancient Artifacts while mining and break them down!</li>
+                        <li><b>Useful Crafting:</b> Every block now crafts a survival item!
+                            <br><small><i>(Dirt ➔ Heal, Sand ➔ Stun, Wood ➔ Torch)</i></small>
+                        </li>
+                    </ul>
+                    <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
+                        📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
+                    </div>
                 </div>
-
-                <div class="toggle-container" onclick="toggleMonsters()">
-                    <span>Letter Bugs:</span>
-                    <div id="monster-toggle" class="toggle-btn on"></div>
-                    <span id="monster-status">ON</span>
-                </div>
-
-                <button onclick="initAudio(); setGameState('playing')">Start Adventure</button>
+                <button onclick="initAudio(); setGameState('playing')" style="background:#d35400; color:white; border:none; padding:12px 25px; font-size:18px; border-radius:5px; cursor:pointer; font-weight:bold;">Start Adventure</button>
             </div>
             
             <div id="screen-death" class="popup">
                 <h1 style="color:red;">Scrambled!</h1>
                 <p>The Letter Bugs scrambled your words.</p>
-                <button onclick="location.reload()">Respawn</button>
+                <button onclick="location.reload()" style="background:#c0392b; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer;">Respawn</button>
             </div>
 
             <div id="screen-inv" class="popup">
                 <div class="forge-tabs">
                     <div class="tab active" onclick="switchTab('word')">Word Forge</div>
+                    <div class="tab" onclick="switchTab('salvage')">Salvage Station</div>
                     <div class="tab" onclick="switchTab('craft')">Tool Bench</div>
                 </div>
                 
@@ -195,120 +216,159 @@
                     <span>🟫 Dirt: <span id="res-dirt">0</span></span>
                     <span>🟡 Sand: <span id="res-sand">0</span></span>
                     <span>🌑 Stone: <span id="res-stone">0</span></span>
-                    <span>🪵 Raw Wood: <span id="res-wood">0</span></span>
+                    <span>🪵 Wood: <span id="res-wood">0</span></span>
                 </div>
 
-                <div id="tab-word">
+                <div id="tab-word" style="display:flex; flex-direction:column; height:100%;">
                     <div class="crafting-grid">
                         <div id="slot-pre" class="craft-slot" onclick="clearSlot('pre')">[Pre]</div> +
                         <div id="slot-root" class="craft-slot" onclick="clearSlot('root')">[ROOT]</div> +
                         <div id="slot-suf" class="craft-slot" onclick="clearSlot('suf')">[Suf]</div>
-                        <button onclick="forgeWord()">🔨</button>
+                        <button onclick="forgeWord()" style="height:60px; background:#27ae60; border:none; color:white; border-radius:4px; font-weight:bold; cursor:pointer;">🔨 FORGE</button>
                     </div>
                     <div id="forge-msg">
                         Drag items here to forge!<br>Words earn you 💎 Gems.
                     </div>
-                    <div style="display:flex; gap:10px; text-align:left; margin-top:10px;">
-                        <div style="flex:1;">
-                            <small><b>ROOTS</b></small>
+                    <div style="display:flex; gap:10px; text-align:left; margin-top:10px; flex:1; overflow:hidden;">
+                        <div style="flex:1; display:flex; flex-direction:column;">
+                            <small style="background:#a1887f; color:white; padding:2px 5px; border-radius:3px;">ROOTS</small>
                             <div id="list-roots" class="inv-grid"></div>
                         </div>
-                        <div style="flex:1;">
-                            <small><b>AFFIXES</b></small>
+                        <div style="flex:1; display:flex; flex-direction:column;">
+                            <small style="background:#90caf9; color:#0d47a1; padding:2px 5px; border-radius:3px;">AFFIXES</small>
                             <div id="list-affixes" class="inv-grid"></div>
                         </div>
                     </div>
                 </div>
 
-                <div id="tab-craft" style="display:none;">
-                    <h3>Survival Gear</h3>
-                    <div class="inv-grid" style="flex-direction:column; justify-content: flex-start;">
+                <div id="tab-salvage" style="display:none; flex-direction:column; height:100%;">
+                    <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.6); border-radius:4px; margin-bottom:10px;">
+                        <h3 style="margin:0; color:#5d4037;">🪚 The Salvage Station</h3>
+                        <p style="font-size:12px; margin:5px 0;">Break down Ancient Artifacts to find rare Word Parts!</p>
+                    </div>
+                    <div id="list-artifacts" class="inv-grid" style="flex-direction:column; justify-content: flex-start; align-items:center;">
+                        </div>
+                </div>
+
+                <div id="tab-craft" style="display:none; flex-direction:column; height:100%;">
+                    <div class="inv-grid" style="flex-direction:column; justify-content: flex-start; padding-bottom:50px;">
                         
+                        <div class="craft-row" style="background:#e8f5e9; border:1px solid #a5d6a7;">
+                            <div class="craft-icon">💊</div>
+                            <div class="craft-desc">
+                                <span class="craft-title">Mud Poultice (Heal 1 HP)</span>
+                                <span class="craft-cost">Cost: 3 Dirt</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('heal_mud')">Craft</button>
+                        </div>
+
+                        <div class="craft-row" style="background:#fffde7; border:1px solid #fff59d;">
+                            <div class="craft-icon">💥</div>
+                            <div class="craft-desc">
+                                <span class="craft-title">Flash Powder (Stun Enemies)</span>
+                                <span class="craft-cost">Cost: 3 Sand</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('stun_sand')">Craft</button>
+                        </div>
+
+                        <div class="craft-row" style="background:#ffebee; border:1px solid #ef9a9a;">
+                            <div class="craft-icon">⚔️</div>
+                            <div class="craft-desc">
+                                <span class="craft-title">Whetstone (x2 Damage Buff)</span>
+                                <span class="craft-cost">Cost: 3 Stone</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('buff_stone')">Craft</button>
+                        </div>
+
+                        <div class="craft-row" style="background:#fff3e0; border:1px solid #ffcc80;">
+                            <div class="craft-icon">🔥</div>
+                            <div class="craft-desc">
+                                <span class="craft-title">Campfire (Reset to Day)</span>
+                                <span class="craft-cost">Cost: 3 Wood</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('time_wood')">Craft</button>
+                        </div>
+                        
+                        <div class="craft-row" style="background:#f3e5f5; border:1px solid #ce93d8;">
+                            <div class="craft-icon">🔮</div>
+                            <div class="craft-desc">
+                                <span class="craft-title">Void Ward (Destroy Visible Monsters)</span>
+                                <span class="craft-cost">Cost: 3 Obsidian</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('nuke_obs')">Craft</button>
+                        </div>
+
+                        <hr style="width:100%; border:1px solid #ddd; margin: 10px 0;">
+                        <div style="font-size:10px; color:#999; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Building Blocks</div>
+
                         <div class="craft-row">
-                            <div class="craft-select" onclick="craft('quill')">Golden Quill (10 💎)</div>
+                            <div class="craft-icon">🧱</div>
+                            <div class="craft-desc"><span class="craft-title">Dirt Wall x5</span><span class="craft-cost">1 Dirt</span></div>
+                            <button class="craft-btn" onclick="craft('wall')">Make</button>
+                        </div>
+                        <div class="craft-row">
+                            <div class="craft-icon">🪵</div>
+                            <div class="craft-desc"><span class="craft-title">Planks x5</span><span class="craft-cost">2 Wood</span></div>
+                            <button class="craft-btn" onclick="craft('wood')">Make</button>
+                        </div>
+                        <div class="craft-row">
+                            <div class="craft-icon">🏹</div>
+                            <div class="craft-desc"><span class="craft-title">Arrows x10</span><span class="craft-cost">2 Gem + 1 Wood</span></div>
+                            <button class="craft-btn" onclick="craft('arrows')">Make</button>
+                        </div>
+                         <div class="craft-row">
+                            <div class="craft-icon">✒️</div>
+                            <div class="craft-desc"><span class="craft-title">Golden Quill (Weapon)</span><span class="craft-cost">10 Gem</span></div>
                             <button class="craft-btn" onclick="craft('quill')">Buy</button>
                         </div>
-                        <div class="craft-row">
-                            <div class="craft-select">Arrows x10 (2💎 + 1🪵)</div>
-                            <span style="font-size:10px; margin-right:5px">Ammo: <span id="qty-arrows">0</span></span>
-                            <button class="craft-btn" onclick="craft('arrows')">Craft</button>
-                        </div>
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="craft('potion')">Potion (5 💎)</div>
-                            <button class="craft-btn" onclick="craft('potion')">Buy</button>
-                        </div>
-
-                        <hr style="width:100%; border:1px solid #ccc; margin: 10px 0;">
-
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(9, 'Dirt Wall')">Dirt Wall (Have: <span id="qty-9">5</span>)</div>
-                            <button class="craft-btn" onclick="craft('wall')">Craft (1🟫)</button>
-                        </div>
-                        
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(4, 'Wood Plank')">Wood Plank (Have: <span id="qty-4">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('wood')">Craft (2🪵)</button>
-                        </div>
-
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(5, 'Stone Brick')">Stone Brick (Have: <span id="qty-5">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('brick')">Craft (2🌑)</button>
-                        </div>
-
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(11, 'Glass')">Glass (Have: <span id="qty-11">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('glass')">Craft (2🟡)</button>
-                        </div>
-
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(10, 'Ladder')">Ladder (Have: <span id="qty-10">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('ladder')">Craft (1🪵)</button>
-                        </div>
-
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(8, 'Door')">Door (Have: <span id="qty-8">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('door')">Craft (3🪵)</button>
-                        </div>
-
-                        <div class="craft-row">
-                            <div class="craft-select" onclick="setActiveBlock(7, 'Obsidian')">Obsidian (Have: <span id="qty-7">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('obsidian')">Buy (5💎)</button>
-                        </div>
-
                     </div>
                 </div>
-                <button onclick="setGameState('playing')" style="margin-top:10px; background:#5d4037;">Close Book</button>
+                
+                <button onclick="setGameState('playing')" style="margin-top:10px; background:#5d4037; color:white; border:none; padding:10px; font-weight:bold; cursor:pointer; border-radius:4px;">Close Book</button>
             </div>
         </div>
     </div>
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">
-        PC: Arrows, Space, F, B | Mobile: Use On-Screen Controls
+        Keys: Arrows to Move | Space to Mine | F to Shoot | B to Build | I for Inventory
     </div>
 
 <script>
+    /* --- AUDIO ENGINE --- */
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
     const sfx = {
-        playTone: (freq, type, duration) => {
+        playTone: (freq, type, duration, vol=0.1) => {
             if(!audioCtx) return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
             osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + duration);
         },
-        jump: () => sfx.playTone(300, 'sine', 0.2), mine: () => sfx.playTone(100, 'square', 0.1),
-        shoot: () => sfx.playTone(600, 'sawtooth', 0.1), build: () => sfx.playTone(200, 'triangle', 0.1),
-        collect: () => sfx.playTone(800, 'sine', 0.3), hit: () => sfx.playTone(150, 'sawtooth', 0.3),
-        craft: () => sfx.playTone(500, 'square', 0.5), monster: () => sfx.playTone(100, 'sawtooth', 0.5)
+        jump: () => sfx.playTone(300, 'sine', 0.2), 
+        mine: () => sfx.playTone(100, 'square', 0.1),
+        shoot: () => sfx.playTone(600, 'sawtooth', 0.1), 
+        build: () => sfx.playTone(200, 'triangle', 0.1),
+        collect: () => sfx.playTone(800, 'sine', 0.3), 
+        hit: () => sfx.playTone(150, 'sawtooth', 0.3),
+        craft: () => sfx.playTone(500, 'square', 0.5), 
+        monster: () => sfx.playTone(100, 'sawtooth', 0.5, 0.05),
+        magic: () => sfx.playTone(900, 'triangle', 0.8, 0.2)
     };
 
+    /* --- ASSETS & CONSTANTS --- */
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
     let loadedCount = 0; const requiredImages = 3;
+
+    // Use placeholder colored blocks if images fail to load
+    let useFallbackAssets = false;
+
     function onAssetLoad() { loadedCount++; if(loadedCount === requiredImages) processAssets(); }
+    function onAssetError() { console.warn("Asset failed. Using fallback."); useFallbackAssets = true; loadedCount++; if(loadedCount===requiredImages) processAssets(); }
+
     function removeWhiteBackground(img) {
         const c = document.createElement('canvas'); const cx = c.getContext('2d');
         c.width = img.width; c.height = img.height;
@@ -319,15 +379,19 @@
         cx.putImageData(imgData, 0, 0); return c;
     }
     function processAssets() {
-        processedAssets.tiles = removeWhiteBackground(assets.tiles);
-        processedAssets.chars = removeWhiteBackground(assets.chars);
-        processedAssets.ui = removeWhiteBackground(assets.ui);
+        if(!useFallbackAssets) {
+            processedAssets.tiles = removeWhiteBackground(assets.tiles);
+            processedAssets.chars = removeWhiteBackground(assets.chars);
+            processedAssets.ui = removeWhiteBackground(assets.ui);
+        }
         document.getElementById('loading').style.display = 'none';
         initGame();
     }
-    assets.tiles.src = 'assets/tiles.png'; assets.tiles.onload = onAssetLoad;
-    assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad;
-    assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;
+    
+    // Attempt to load assets - You must have these files or it falls back
+    assets.tiles.src = 'assets/tiles.png'; assets.tiles.onload = onAssetLoad; assets.tiles.onerror = onAssetError;
+    assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad; assets.chars.onerror = onAssetError;
+    assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;    assets.ui.onerror = onAssetError;
 
     const TILE_SIZE = 40; const COLS = 600; const ROWS = 150; 
     const CANVAS_W = 800; const CANVAS_H = 600;
@@ -338,6 +402,7 @@
     let gameTick = 0; let monstersEnabled = true;
     let camera = { x: 0, y: 0 }; let keys = {}; let mouse = { x: 0, y: 0 };
 
+    // --- GAME DATA ---
     const LAYER_ROOTS = {
         1: ["play", "help", "jump", "walk", "look", "ask", "wish", "hope", "make", "use", "like", "ride", "smile", "time", "run", "hop", "sit", "win", "cut", "shop", "swim", "sad"],
         2: ["happy", "funny", "penny", "baby", "carry", "cry", "try", "cycle", "angle", "view", "port", "form", "cover", "fair", "kind", "joy", "care", "fear", "pain", "dark"],
@@ -348,6 +413,16 @@
         2: [{val:"un", type:"pre"}, {val:"re", type:"pre"}, {val:"dis", type:"pre"}, {val:"pre", type:"pre"}, {val:"ly", type:"suf"}, {val:"less", type:"suf"}, {val:"ful", type:"suf"}, {val:"ness", type:"suf"}],
         3: [{val:"uni", type:"pre"}, {val:"bi", type:"pre"}, {val:"tri", type:"pre"}, {val:"sub", type:"pre"}, {val:"ment", type:"suf"}, {val:"able", type:"suf"}, {val:"ible", type:"suf"}, {val:"tion", type:"suf"}]
     };
+    
+    // NEW: ARTIFACT LOOT TABLE
+    const ARTIFACT_TABLE = [
+        { name: "Mossy Spade", word: "REPLANTING", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}, {t:'suf',v:'ing'}], desc: "An old gardening tool." },
+        { name: "Hidden Scroll", word: "UNCOVERED", parts: [{t:'pre',v:'un'}, {t:'root',v:'cover'}, {t:'suf',v:'ed'}], desc: "A map buried under leaves." },
+        { name: "Singing Bird", word: "CALLER", parts: [{t:'root',v:'call'}, {t:'suf',v:'er'}], desc: "A mechanical bird." },
+        { name: "Twisted Vine", word: "UNKINDLY", parts: [{t:'pre',v:'un'}, {t:'root',v:'kind'}, {t:'suf',v:'ly'}], desc: "A thorny vine." },
+        { name: "Stone Tablet", word: "RECONSTRUCTION", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'tion'}], desc: "Heavy ancient stone." }
+    ];
+
     const WORD_CACHE = {};
 
     let state = 'start'; let grid = []; let enemies = []; let particles = []; let projectiles = []; let animTick = 0;
@@ -357,12 +432,15 @@
         fragments:0, 
         resources: { dirt:0, sand:0, stone:0, wood:0, obsidian:0 },
         roots:[], affixes:[], 
+        artifacts: [], // Stores found artifacts
         hasQuill:false, invinc:0, facingLeft:false,
         blocks: { 9: 5, 4: 0, 5: 0, 11:0, 7:0, 10:0, 8: 0 }, 
-        arrows: 0, activeBlock: 9, activeBlockName: "Dirt Wall"
+        arrows: 0, activeBlock: 9, activeBlockName: "Dirt Wall",
+        damageBuff: 0 // For Whetstone effect
     };
     let forge = { pre:null, root:null, suf:null };
 
+    /* --- INITIALIZATION --- */
     function initGame() {
         grid = [];
         for(let r=0; r<ROWS; r++){
@@ -370,11 +448,11 @@
             for(let c=0; c<COLS; c++){
                 let surface = 10 + Math.floor(Math.sin(c * 0.05) * 5); 
                 if(r < surface) row.push(0); 
-                else if(r < surface + 5) row.push(1); 
+                else if(r < surface + 5) row.push(1); // Dirt
                 else if(r < surface + 15) row.push(12); // Sand
                 else if(r < surface + 60) row.push(2); // Stone
-                else if(r < ROWS - 2) row.push(3); 
-                else row.push(7); 
+                else if(r < ROWS - 2) row.push(3); // Deep Stone
+                else row.push(7); // Bedrock/Obsidian
             }
             grid.push(row);
         }
@@ -389,26 +467,31 @@
         requestAnimationFrame(loop);
     }
 
+    /* --- UPDATE LOGIC --- */
     function update() {
         animTick++; gameTick++;
         if(player.invinc > 0) player.invinc--;
         let timeOfDay = gameTick % DAY_LENGTH;
         let isNight = timeOfDay > NIGHT_START;
 
+        // Camera Follow
         let targetCamX = (player.x * TILE_SIZE) - (CANVAS_W / 2);
         let targetCamY = (player.y * TILE_SIZE) - (CANVAS_H / 2);
         camera.x = Math.max(0, Math.min(targetCamX, (COLS * TILE_SIZE) - CANVAS_W));
         camera.y = Math.max(0, Math.min(targetCamY, (ROWS * TILE_SIZE) - CANVAS_H));
 
+        // Enemy Spawning
         if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 8) {
             let spawnX = player.x + (Math.random() > 0.5 ? 15 : -15);
             let spawnY = player.y - 5 + Math.floor(Math.random()*10);
             if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS && grid[spawnY][spawnX] === 0) {
-                 enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
+                 enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20, stun:0 });
             }
         }
         
+        // Enemy Logic
         enemies.forEach((en,i) => {
+            if(en.stun > 0) { en.stun--; return; } // Stunned logic
             if(Math.abs(en.x - player.x) < 30) {
                 if(animTick % en.speed === 0) {
                     let nextX = en.x; let nextY = en.y;
@@ -420,6 +503,7 @@
             }
         });
         
+        // Projectile Logic
         for(let i=projectiles.length-1; i>=0; i--) {
             let p = projectiles[i];
             p.x += p.vx; p.y += p.vy;
@@ -427,10 +511,15 @@
             let hit = false;
             enemies.forEach((en, ei) => {
                 if(Math.round(en.x) === gx && Math.round(en.y) === gy) {
-                    en.hp--; hit=true; sfx.hit(); if(en.hp<=0) { enemies.splice(ei,1); player.fragments+=3; }
+                    let dmg = 1 + (player.damageBuff > 0 ? 1 : 0);
+                    en.hp -= dmg; 
+                    hit=true; sfx.hit(); 
+                    addPart(en.x, en.y, `-${dmg}`, "red");
+                    if(en.hp<=0) { enemies.splice(ei,1); player.fragments+=3; }
                 }
             });
-            if(gx<0 || gx>=COLS || gy<0 || gy>=ROWS || grid[gy][gx]!==0 || hit) projectiles.splice(i,1);
+            if(player.damageBuff > 0) player.damageBuff--; // Decrease buff charges
+            if(gx<0 || gx>=COLS || gy<0 || gy>=ROWS || (grid[gy][gx]!==0 && grid[gy][gx]!==8) || hit) projectiles.splice(i,1);
         }
 
         if(!monstersEnabled && enemies.length > 0) enemies = [];
@@ -443,8 +532,11 @@
     function toggleMobileControls() {
         let el = document.getElementById('mobile-controls');
         el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        let btn = document.getElementById('mob-toggle');
+        if(el.style.display === 'block') btn.classList.add('on'); else btn.classList.remove('on');
     }
 
+    /* --- INPUT HANDLING --- */
     document.addEventListener('keydown', e => {
         if(e.key === ' ') { e.preventDefault(); }
         keys[e.key] = true; 
@@ -460,6 +552,7 @@
             if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
                 let t = grid[ny][nx]; 
                 let currentTile = grid[player.y][player.x];
+                // 0=Air, 8=Door, 10=Ladder
                 if(t===0 || t===8 || t===10 || (currentTile===10 && dy!==0)) { player.x=nx; player.y=ny; }
             }
         }
@@ -478,6 +571,7 @@
     });
     canvas.addEventListener('mousedown', () => { initAudio(); shootArrow(); });
 
+    /* --- ACTIONS --- */
     function shootArrow() {
         if(!player.hasQuill || player.arrows <= 0) return;
         player.arrows--; sfx.shoot(); updateInvCounts();
@@ -490,23 +584,27 @@
 
     function spawnEnemy(x, y, type) {
         if(!monstersEnabled) return;
-        enemies.push({ x:x, y:y, type:type, hp:2, speed:15 });
+        enemies.push({ x:x, y:y, type:type, hp:2, speed:15, stun:0 });
         sfx.monster();
-        addPart(x, y, "⚠️");
+        addPart(x, y, "⚠️", "yellow");
     }
 
     function action() {
+        // Melee Attack (Quill)
         let hit=false;
         if(player.hasQuill) {
             enemies.forEach((en,i)=>{
                 if(Math.abs(en.x-player.x)+Math.abs(en.y-player.y)<=1) {
-                    en.hp--; hit=true; sfx.hit(); addPart(en.x,en.y,"💥"); 
+                    let dmg = 1 + (player.damageBuff > 0 ? 1 : 0);
+                    en.hp-=dmg; hit=true; sfx.hit(); addPart(en.x,en.y,`-${dmg}`, "red"); 
+                    if(player.damageBuff > 0) player.damageBuff--;
                     if(en.hp<=0) { enemies.splice(i,1); player.fragments+=3; }
                 }
             });
         }
         if(hit) return;
 
+        // Mining
         let tx = player.x; let ty = player.y;
         if(keys['ArrowUp']) ty -= 1; else if(keys['ArrowDown']) ty += 1;
         else if(keys['ArrowLeft']) tx -= 1; else if(keys['ArrowRight']) tx += 1;
@@ -515,28 +613,40 @@
         if(tx>=0 && tx<COLS && ty>=0 && ty<ROWS) {
             let t = grid[ty][tx];
             if(t>=1 && t<=12 && t!==0 && t!==8) { 
-                if(t===7) { addPart(tx,ty,"🛡️"); return; } 
-                grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨");
+                if(t===7) { addPart(tx,ty,"🛡️", "gray"); return; } 
+                grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨", "white");
                 
+                // Resources
                 if(t===1) { player.resources.dirt++; if(Math.random()>0.8) player.resources.wood++; }
                 else if(t===12) { player.resources.sand++; } 
                 else if(t===2) { player.resources.stone++; }
                 else if(t===3) { player.resources.obsidian++; } 
                 
-                // HIDDEN MONSTERS SPAWN LOGIC
-                if(Math.random() < 0.05 && t===1) spawnEnemy(tx, ty, 'slime'); // Dirt = Slime
-                if(Math.random() < 0.10 && t===2) spawnEnemy(tx, ty, 'bat'); // Stone = Bat
+                // Monsters
+                if(Math.random() < 0.05 && t===1) spawnEnemy(tx, ty, 'slime'); 
+                if(Math.random() < 0.10 && t===2) spawnEnemy(tx, ty, 'bat');
 
-                if(Math.random()>0.5 && t<=3) {
-                    if(Math.random() > 0.5) {
-                        let list = LAYER_ROOTS[t]||["root"];
-                        player.roots.push({word:list[Math.floor(Math.random()*list.length)], type:t}); 
-                        addPart(player.x,player.y-1,"📜"); sfx.collect();
-                    } else {
-                        let list = LAYER_AFFIXES[t]||LAYER_AFFIXES[1];
-                        let aff = list[Math.floor(Math.random()*list.length)];
-                        player.affixes.push(aff);
-                        addPart(player.x,player.y-1,"🧩"); sfx.collect();
+                // LOOT LOGIC: ARTIFACTS & WORDS
+                if(Math.random() > 0.6 && t <= 3) {
+                    let roll = Math.random();
+                    // 15% Chance for Artifact (For Salvage Station)
+                    if(roll < 0.15) {
+                        let art = ARTIFACT_TABLE[Math.floor(Math.random() * ARTIFACT_TABLE.length)];
+                        player.artifacts.push(art);
+                        addPart(player.x, player.y-1, "🎁", "gold"); sfx.collect();
+                    } 
+                    // Standard Root/Affix
+                    else {
+                        if(Math.random() > 0.5) {
+                            let list = LAYER_ROOTS[t]||["root"];
+                            player.roots.push({word:list[Math.floor(Math.random()*list.length)], type:t}); 
+                            addPart(player.x,player.y-1,"📜", "white"); sfx.collect();
+                        } else {
+                            let list = LAYER_AFFIXES[t]||LAYER_AFFIXES[1];
+                            let aff = list[Math.floor(Math.random()*list.length)];
+                            player.affixes.push(aff);
+                            addPart(player.x,player.y-1,"🧩", "cyan"); sfx.collect();
+                        }
                     }
                 }
             }
@@ -549,15 +659,17 @@
             if(grid[player.y][player.x] === 0) {
                 grid[player.y][player.x] = id;
                 player.blocks[id]--; sfx.build(); updateInvCounts();
-                addPart(player.x, player.y, "🔨");
+                addPart(player.x, player.y, "🔨", "brown");
             }
         }
     }
 
-    function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; sfx.hit(); addPart(player.x,player.y,"💔"); if(player.hp<=0) setGameState('death'); }
-    function addPart(x,y,c) { particles.push({x:x,y:y,char:c,life:30}); }
+    function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; sfx.hit(); addPart(player.x,player.y,"💔", "red"); if(player.hp<=0) setGameState('death'); }
+    function addPart(x,y,c, color="white") { particles.push({x:x,y:y,char:c,color:color,life:30}); }
 
+    /* --- RENDERING --- */
     function draw() {
+        // Day/Night Cycle
         let timeOfDay = gameTick % DAY_LENGTH;
         let cyclePos = Math.sin((timeOfDay / DAY_LENGTH) * Math.PI);
         let r = Math.floor(135 * cyclePos + 20 * (1-cyclePos));
@@ -568,7 +680,9 @@
         
         ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
-        let tW = processedAssets.tiles.width; let tH = processedAssets.tiles.height/5;
+        // Tiles
+        let tW = useFallbackAssets ? TILE_SIZE : processedAssets.tiles.width; 
+        let tH = useFallbackAssets ? TILE_SIZE : processedAssets.tiles.height/5;
         let cropX = tW * 0.40; let cropY = tH * 0.20;
         let drawW = tW - (2*cropX); let drawH = tH - (2*cropY);
 
@@ -585,95 +699,109 @@
                 if(row<0 || row>=ROWS || col<0 || col>=COLS) continue;
                 let t = grid[row][col];
                 if(t>0) { 
-                    let tidx=0; let tint=null; let baseColor="#5d4037";
-                    if(t<=3) { tidx = t-1; if(t===2) baseColor="#7f8c8d"; if(t===3) baseColor="#ecf0f1"; }
-                    else if(t===12) { tidx=0; tint="gold"; baseColor="#f1c40f"; } 
-                    else if(t===9) tidx = 3;
-                    else if(t===4) { tidx=3; tint="brown"; }
-                    else if(t===5) { tidx=1; tint="red"; baseColor="#c0392b"; }
-                    else if(t===8) { tidx=3; tint="gold"; }
-                    else if(t===11) { tidx=3; tint="cyan"; baseColor="rgba(0,255,255,0.2)"; }
-                    else if(t===7) { tidx=1; tint="black"; baseColor="#000"; }
-                    else if(t===10) { tidx=3; tint="ladder"; }
-
-                    if(t!==11) { ctx.fillStyle = baseColor; ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
-                    ctx.drawImage(processedAssets.tiles, cropX, (tidx*tH)+cropY, drawW, drawH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
+                    // Draw Block Logic (simplified for fallback or asset)
+                    let color = "#5d4037";
+                    if(t===2) color="#7f8c8d"; if(t===3) color="#ecf0f1"; if(t===12) color="#f1c40f"; 
+                    if(t===11) color="rgba(0,255,255,0.2)"; if(t===7) color="#000";
                     
-                    if(tint) {
-                        if(tint==="ladder") {
-                            ctx.fillStyle="rgba(100,50,0,0.8)";
-                            ctx.fillRect(col*TILE_SIZE+10, row*TILE_SIZE, 5, TILE_SIZE);
-                            ctx.fillRect(col*TILE_SIZE+25, row*TILE_SIZE, 5, TILE_SIZE);
-                            for(let k=5; k<40; k+=10) ctx.fillRect(col*TILE_SIZE+10, row*TILE_SIZE+k, 20, 3);
-                        } else {
-                            ctx.fillStyle = tint==="brown"?"rgba(100,50,0,0.5)": tint==="red"?"rgba(100,0,0,0.3)": tint==="gold"?"rgba(255,215,0,0.3)": tint==="cyan"?"rgba(0,255,255,0.3)": "rgba(0,0,0,0.7)";
-                            ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                            if(t===8) { ctx.fillStyle="black"; ctx.fillRect((col*TILE_SIZE)+15, (row*TILE_SIZE)+20, 5, 5); } 
-                        }
+                    if(t!==11) { ctx.fillStyle = color; ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
+                    
+                    if(!useFallbackAssets) {
+                         let tidx=0;
+                         if(t===9) tidx=3; else if(t===4) tidx=3; else if(t===5) tidx=1; else if(t===10) tidx=3;
+                         if(t<=3) tidx = t-1;
+                         
+                         ctx.drawImage(processedAssets.tiles, cropX, (tidx*tH)+cropY, drawW, drawH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
                     }
                 }
             }
         }
 
-        let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
-        drawChar(0, 0, Math.floor(animTick/20)%2, player.x, player.y, player.facingLeft);
-        enemies.forEach(en => { if(en.x >= startCol && en.x <= endCol) drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false); });
+        // Chars
+        let cW = useFallbackAssets ? 0 : processedAssets.chars.width/3; 
+        let cH = useFallbackAssets ? 0 : processedAssets.chars.height/3;
         
+        // Draw Player
+        if(useFallbackAssets) { ctx.fillStyle="blue"; ctx.fillRect(player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+        else {
+             ctx.save();
+             if(player.facingLeft) { ctx.translate((player.x*TILE_SIZE)+TILE_SIZE, player.y*TILE_SIZE); ctx.scale(-1, 1); ctx.drawImage(processedAssets.chars, (Math.floor(animTick/20)%2)*cW, 0, cW, cH, 0, 0, TILE_SIZE, TILE_SIZE); }
+             else { ctx.drawImage(processedAssets.chars, (Math.floor(animTick/20)%2)*cW, 0, cW, cH, player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+             ctx.restore();
+        }
+
+        // Draw Enemies
+        enemies.forEach(en => { 
+            if(en.x >= startCol && en.x <= endCol) {
+                if(useFallbackAssets) { ctx.fillStyle="red"; ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+                else { ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+                if(en.stun > 0) { ctx.fillStyle="yellow"; ctx.font="20px Arial"; ctx.fillText("💫", en.x*TILE_SIZE, en.y*TILE_SIZE); }
+            }
+        });
+        
+        // Projectiles
         ctx.fillStyle = "yellow";
         projectiles.forEach(p => { ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, 5, 5); });
 
-        ctx.font="20px Arial"; ctx.fillStyle="white"; 
-        particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
+        // Particles
+        ctx.font="bold 20px Arial"; 
+        particles.forEach(p => { ctx.fillStyle=p.color; ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE); });
+        
         ctx.restore(); 
         drawHUD(timeOfDay);
     }
 
-    function drawChar(row, col, animOffset, x, y, flip) {
-        let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
-        ctx.save();
-        if(flip) { ctx.translate((x*TILE_SIZE)+TILE_SIZE, y*TILE_SIZE); ctx.scale(-1, 1); ctx.drawImage(processedAssets.chars, (col+animOffset)*cW, row*cH, cW, cH, 0, 0, TILE_SIZE, TILE_SIZE); }
-        else { ctx.drawImage(processedAssets.chars, (col+animOffset)*cW, row*cH, cW, cH, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
-        ctx.restore();
-    }
     function drawHUD(time) {
-        let uW = processedAssets.ui.width/2; let uH = processedAssets.ui.height/2;
-        for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(processedAssets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
-        ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); 
+        if(!useFallbackAssets) {
+            let uW = processedAssets.ui.width/2; let uH = processedAssets.ui.height/2;
+            for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(processedAssets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
+            ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); 
+            if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
+        } else {
+             ctx.fillStyle="red"; ctx.fillText("HP: "+player.hp, 20, 30);
+        }
+        
         ctx.fillStyle = "white"; ctx.font = "bold 20px Verdana";
         ctx.fillText(player.fragments, 185, 33);
-        if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
+        
         let isNight = time > NIGHT_START; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
-        ctx.font = "14px Verdana"; ctx.fillText("Arrow Ammo: " + player.arrows, 300, 50);
+        ctx.font = "14px Verdana"; 
+        ctx.fillText("Arrows: " + player.arrows, 300, 30);
+        if(player.damageBuff > 0) ctx.fillText(`⚔️ Power Up! (${player.damageBuff})`, 300, 50);
     }
 
+    /* --- UI & CRAFTING LOGIC --- */
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
         if(s==='death') document.getElementById('screen-death').classList.add('active');
-        if(s==='inventory') { document.getElementById('screen-inv').classList.add('active'); renderInventory(); updateInvCounts(); }
+        if(s==='inventory') { 
+            document.getElementById('screen-inv').classList.add('active'); 
+            renderInventory(); 
+            updateInvCounts(); 
+        }
     }
-    function toggleMonsters() {
-        monstersEnabled = !monstersEnabled;
-        let btn = document.getElementById('monster-toggle');
-        let txt = document.getElementById('monster-status');
-        if(monstersEnabled) { btn.classList.add('on'); txt.innerText = "ON"; } else { btn.classList.remove('on'); txt.innerText = "OFF"; }
-    }
+
     function switchTab(t) {
-        document.getElementById('tab-word').style.display = t==='word'?'block':'none';
-        document.getElementById('tab-craft').style.display = t==='craft'?'block':'none';
+        document.getElementById('tab-word').style.display = t==='word'?'flex':'none';
+        document.getElementById('tab-craft').style.display = t==='craft'?'flex':'none';
+        document.getElementById('tab-salvage').style.display = t==='salvage'?'flex':'none';
+        if(t==='salvage') renderSalvage();
         document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); event.target.classList.add('active');
     }
     
     function renderInventory() {
+        // Roots
         let d = document.getElementById('list-roots'); d.innerHTML="";
-        if(player.roots.length===0) d.innerText="Empty. Go Dig!";
+        if(player.roots.length===0) d.innerHTML="<small>Empty. Go Dig!</small>";
         else player.roots.forEach(r => { 
             let s = document.createElement('div'); s.className=`word-chip tag-${r.type}`; s.innerText=r.word; 
             s.onclick=()=>setSlot('root',r.word); d.appendChild(s); 
         });
 
+        // Affixes
         let da = document.getElementById('list-affixes'); da.innerHTML="";
-        if(player.affixes.length===0) da.innerText="Empty. Go Dig!";
+        if(player.affixes.length===0) da.innerHTML="<small>Empty.</small>";
         else player.affixes.forEach(a => {
             let s = document.createElement('div'); 
             let typeClass = (a.type==="pre") ? "chip-pre" : "chip-suf";
@@ -684,6 +812,7 @@
             da.appendChild(s);
         });
         
+        // Resources
         document.getElementById('res-frag').innerText = player.fragments;
         document.getElementById('res-dirt').innerText = player.resources.dirt;
         document.getElementById('res-sand').innerText = player.resources.sand;
@@ -691,36 +820,97 @@
         document.getElementById('res-wood').innerText = player.resources.wood;
     }
 
-    function setActiveBlock(id, name) { player.activeBlock = id; player.activeBlockName = name; alert("Selected: " + name); }
+    function renderSalvage() {
+        let d = document.getElementById('list-artifacts');
+        d.innerHTML = "";
+        if(player.artifacts.length === 0) {
+            d.innerHTML = "<div style='color:#555; padding:20px;'>No Artifacts. Go dig up some treasure!</div>";
+            return;
+        }
+
+        player.artifacts.forEach((art, index) => {
+            let div = document.createElement('div');
+            div.className = 'artifact-item';
+            div.innerHTML = `
+                <div style="text-align:left">
+                    <div class="artifact-word">${art.word}</div>
+                    <div style="font-size:10px; color:#ffcc80;">${art.desc}</div>
+                </div>
+                <button class="salvage-btn" style="background:#d35400; color:white; border:none; padding:5px; border-radius:3px; cursor:pointer;" onclick="salvageItem(${index}, this)">SALVAGE</button>
+            `;
+            d.appendChild(div);
+        });
+    }
+
+    function salvageItem(index, btnElem) {
+        if(!player.artifacts[index]) return;
+        btnElem.parentElement.classList.add('break-anim');
+        sfx.mine(); 
+
+        setTimeout(() => {
+            let item = player.artifacts[index];
+            item.parts.forEach(p => {
+                if(p.t === 'root') player.roots.push({word: p.v, type: 1});
+                else player.affixes.push({val: p.v, type: p.t});
+            });
+            player.artifacts.splice(index, 1);
+            player.fragments += 5; // Bonus Gems
+            alert(`Salvaged: ${item.word}!\nReceived parts: ${item.parts.map(p => p.v).join(", ")}`);
+            renderSalvage(); renderInventory();
+        }, 400);
+    }
+
     function updateInvCounts() {
-        document.getElementById('qty-9').innerText = player.blocks[9];
-        document.getElementById('qty-4').innerText = player.blocks[4];
-        document.getElementById('qty-5').innerText = player.blocks[5];
-        document.getElementById('qty-11').innerText = player.blocks[11]; 
-        document.getElementById('qty-7').innerText = player.blocks[7];
-        document.getElementById('qty-10').innerText = player.blocks[10];
-        document.getElementById('qty-8').innerText = player.blocks[8];
-        document.getElementById('qty-arrows').innerText = player.arrows;
+        document.getElementById('res-frag').innerText = player.fragments;
     }
     function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
     function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
     
     function craft(i) {
-        if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; sfx.craft(); alert("Crafted Quill!"); }
-        else if(i==='arrows' && player.fragments>=2 && player.resources.wood>=1) { 
-            player.fragments-=2; player.resources.wood-=1; player.arrows+=10; sfx.craft(); updateInvCounts(); 
+        let msg = "";
+        // --- NEW USEFUL ITEMS ---
+        if(i==='heal_mud') {
+            if(player.resources.dirt >= 3) { 
+                player.resources.dirt-=3; player.hp = Math.min(player.hp+1, player.maxHp); 
+                sfx.magic(); msg = "Mud Poultice applied! HP Restored.";
+            } else msg = "Need 3 Dirt.";
         }
-        else if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; sfx.craft(); alert("Healed!"); }
+        else if(i==='stun_sand') {
+            if(player.resources.sand >= 3) {
+                player.resources.sand-=3; 
+                enemies.forEach(en => en.stun = 100); // Stun for 100 frames
+                sfx.magic(); msg = "FLASH! Enemies stunned!";
+            } else msg = "Need 3 Sand.";
+        }
+        else if(i==='buff_stone') {
+            if(player.resources.stone >= 3) {
+                player.resources.stone-=3; player.damageBuff = 10; // 10 hits buffed
+                sfx.magic(); msg = "Blade sharpened! (Double Damage for 10 hits)";
+            } else msg = "Need 3 Stone.";
+        }
+        else if(i==='time_wood') {
+            if(player.resources.wood >= 3) {
+                player.resources.wood-=3; gameTick = 0; // Reset to Day 0 (simple hack)
+                sfx.magic(); msg = "Campfire lit. The night recedes...";
+            } else msg = "Need 3 Wood.";
+        }
+        else if(i==='nuke_obs') {
+            if(player.resources.obsidian >= 3) {
+                player.resources.obsidian-=3; 
+                player.fragments += (enemies.length * 3); // Get loot for them
+                enemies = []; // Clear screen
+                sfx.magic(); msg = "VOID WARD ACTIVATED. Enemies banished.";
+            } else msg = "Need 3 Obsidian.";
+        }
         
-        else if(i==='wall' && player.resources.dirt>=1) { player.resources.dirt-=1; player.blocks[9]+=5; sfx.craft(); updateInvCounts(); }
-        else if(i==='wood' && player.resources.wood>=2) { player.resources.wood-=2; player.blocks[4]+=5; sfx.craft(); updateInvCounts(); }
-        else if(i==='brick' && player.resources.stone>=2) { player.resources.stone-=2; player.blocks[5]+=5; sfx.craft(); updateInvCounts(); }
-        else if(i==='glass' && player.resources.sand>=2) { player.resources.sand-=2; player.blocks[11]+=5; sfx.craft(); updateInvCounts(); }
-        else if(i==='obsidian' && player.fragments>=5) { player.fragments-=5; player.blocks[7]+=5; sfx.craft(); updateInvCounts(); }
-        else if(i==='ladder' && player.resources.wood>=1) { player.resources.wood-=1; player.blocks[10]+=5; sfx.craft(); updateInvCounts(); }
-        else if(i==='door' && player.resources.wood>=3) { player.resources.wood-=3; player.blocks[8]+=1; sfx.craft(); updateInvCounts(); }
-        else { alert("Missing Resources! Check the costs."); }
-        renderInventory(); 
+        // --- STANDARD ITEMS ---
+        else if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; sfx.craft(); msg="Crafted Quill!"; }
+        else if(i==='arrows' && player.fragments>=2 && player.resources.wood>=1) { player.fragments-=2; player.resources.wood-=1; player.arrows+=10; sfx.craft(); msg="Crafted 10 Arrows"; }
+        else if(i==='wall' && player.resources.dirt>=1) { player.resources.dirt-=1; player.blocks[9]+=5; sfx.craft(); msg="+5 Dirt Walls"; }
+        else if(i==='wood' && player.resources.wood>=2) { player.resources.wood-=2; player.blocks[4]+=5; sfx.craft(); msg="+5 Planks"; }
+        
+        if(msg) alert(msg);
+        renderInventory(); updateInvCounts();
     }
     
     async function forgeWord() {
@@ -729,17 +919,20 @@
         let base = forge.root; let pre = forge.pre || ""; let suf = forge.suf || "";
         let rawWord = (pre + base + suf).toLowerCase();
         let correctedWord = rawWord;
+        
+        // Basic Spelling Rules
         if (suf.length > 0) {
             if (base.endsWith('e') && isVowel(suf[0])) correctedWord = pre + base.slice(0, -1) + suf;
             else if (isCVC(base) && isVowel(suf[0])) correctedWord = pre + base + base[base.length-1] + suf;
             else if (base.endsWith('y') && !isVowel(base[base.length-2]) && suf[0] !== 'i') correctedWord = pre + base.slice(0, -1) + "i" + suf;
         }
+
         let definition = await checkValidity(correctedWord);
         if (definition) {
             m.innerHTML = `<span style="color:green">✨ ${correctedWord.toUpperCase()}</span>: ${definition}`;
-            if (rawWord !== correctedWord) m.innerHTML += `<br><small style="color:#555">(Spelling rule: ${rawWord} ➔ ${correctedWord})</small>`;
             player.fragments += 5; sfx.collect();
             
+            // Remove parts
             let rIdx = player.roots.findIndex(r => r.word === base);
             if(rIdx > -1) player.roots.splice(rIdx, 1);
             if(pre) { let pIdx = player.affixes.findIndex(a => a.val === pre && a.type === "pre"); if(pIdx > -1) player.affixes.splice(pIdx, 1); }
@@ -750,15 +943,11 @@
             document.getElementById('slot-root').innerText="[Root]";
             document.getElementById('slot-suf').innerText="[Suf]";
             renderInventory(); 
-            
         } else {
-            if (rawWord !== correctedWord) {
-                let rawDef = await checkValidity(rawWord);
-                if (rawDef) { m.innerHTML = `<span style="color:green">✨ ${rawWord.toUpperCase()}</span>: ${rawDef}`; return; }
-            }
-            m.innerHTML = `❌ "${correctedWord}" is not in the dictionary.`;
+             m.innerHTML = `❌ "${correctedWord}" is not in the dictionary.`;
         }
     }
+
     function isVowel(char) { return ['a','e','i','o','u','y'].includes(char); }
     function isCVC(word) {
         if(word.length < 3) return false;
