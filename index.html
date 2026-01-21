@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordCraft: Seamless Edition</title>
+    <title>WordCraft: Solid Earth</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -29,7 +29,6 @@
         }
         canvas { display: block; image-rendering: pixelated; }
         
-        /* UI OVERLAYS */
         #overlay-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; align-items: center; justify-content: center;
@@ -99,17 +98,17 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Smoother World Loading...
+            Solidifying Ground...
         </div>
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Seamless Edition</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Solid Earth</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
                     <h2>📜 Updates</h2>
-                    <p><b>Graphics Fix:</b> Tiles now connect seamlessly!</p>
-                    <p><b>Fortress Mode:</b> Build walls/doors to stop enemies. You can walk through Doors, enemies cannot.</p>
+                    <p><b>Solid Ground:</b> No more gaps between blocks!</p>
+                    <p><b>Fortress Mode:</b> Build walls/doors to stop enemies.</p>
                     
                     <h2>⚔️ Controls</h2>
                     <p>
@@ -300,7 +299,6 @@
             grid.push(row);
         }
         
-        // Spawn
         let groundY = 0;
         while(groundY < ROWS && grid[groundY][20] === 0) groundY++;
         player.y = groundY - 1; 
@@ -335,20 +333,14 @@
             }
         }
         
-        // Enemy Logic with Wall Collision
+        // Enemy Logic
         enemies.forEach((en,i) => {
             if(Math.abs(en.x - player.x) < 25) {
                 if(animTick % en.speed === 0) {
                     let nextX = en.x; let nextY = en.y;
-                    
                     if(en.x < player.x) nextX++; else if(en.x > player.x) nextX--;
                     else if(en.y < player.y) nextY++; else if(en.y > player.y) nextY--;
-                    
-                    // Simple pathfinding: Only move if target block is AIR (0)
-                    // Note: Doors (8) block enemies but not player
-                    if(grid[nextY][nextX] === 0) {
-                        en.x = nextX; en.y = nextY;
-                    }
+                    if(grid[nextY][nextX] === 0) { en.x = nextX; en.y = nextY; }
                 }
                 if(en.x === player.x && en.y === player.y) hurtPlayer();
             }
@@ -373,7 +365,6 @@
         if(dx!==0 || dy!==0) {
             let nx = player.x+dx, ny = player.y+dy;
             if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
-                // WALKABLE: Air (0) or Door (8)
                 let t = grid[ny][nx]; 
                 if(t===0 || t===8) { player.x=nx; player.y=ny; }
             }
@@ -404,7 +395,7 @@
 
         if(tx>=0 && tx<COLS && ty>=0 && ty<ROWS) {
             let t = grid[ty][tx];
-            if(t>=1 && t<=5 || t===9) { // Mine Dirt, Stone, Marble, Wood, Brick, Wall
+            if(t>=1 && t<=5 || t===9) { // Mine
                 grid[ty][tx]=0; player.fragments++; addPart(tx,ty,"✨");
                 if(Math.random()>0.7 && t<=3) {
                     let list = LAYER_ROOTS[t]||["root"];
@@ -417,7 +408,6 @@
     function placeBlock() {
         let id = player.activeBlock;
         if(player.blocks[id] > 0) {
-            // Place at player position (background wall) if it's air
             if(grid[player.y][player.x] === 0) {
                 grid[player.y][player.x] = id;
                 player.blocks[id]--;
@@ -438,11 +428,10 @@
         let b = Math.floor(235 * cyclePos + 60 * (1-cyclePos));
         ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
-        // TILE RENDERING (WITH SMART ZOOM FIX)
+        // --- THE "GROUT" FIX ---
+        // We crop the source image (Smart Zoom) AND fill behind the tiles (Grout)
         let tW = processedAssets.tiles.width; 
         let tH = processedAssets.tiles.height/5;
-        
-        // Define Crop (12% off edges to fix lines)
         let cropX = tW * 0.12; 
         let cropY = tH * 0.05;
         let drawW = tW - (2*cropX);
@@ -461,24 +450,25 @@
                 if(row<0 || row>=ROWS || col<0 || col>=COLS) continue;
                 let t = grid[row][col];
                 if(t>0) { 
-                    // Map IDs to Sheet Rows: 1,2,3 -> 0,1,2. 9->3. 4->3(tint). 5->1(tint). 8->3(tint)
-                    let tidx = 0;
-                    let tint = null;
+                    let tidx = 0; let tint = null; let baseColor = "#5d4037"; // Default grout color (Dark Brown)
                     
-                    if(t<=3) tidx = t-1;
-                    else if(t===9) tidx = 3; // Wall
-                    else if(t===4) { tidx = 3; tint = "brown"; } // Wood (Use Wall texture tinted)
-                    else if(t===5) { tidx = 1; tint = "red"; } // Brick (Use Stone texture tinted)
-                    else if(t===8) { tidx = 3; tint = "gold"; } // Door (Use Wall texture tinted)
+                    if(t<=3) { tidx = t-1; if(t===2) baseColor="#7f8c8d"; if(t===3) baseColor="#ecf0f1"; }
+                    else if(t===9) { tidx = 3; }
+                    else if(t===4) { tidx = 3; tint = "brown"; }
+                    else if(t===5) { tidx = 1; tint = "red"; baseColor="#c0392b"; }
+                    else if(t===8) { tidx = 3; tint = "gold"; }
 
-                    // Draw Cropped Tile
+                    // STEP 1: GROUT (Fill background to hide gaps)
+                    ctx.fillStyle = baseColor;
+                    ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
+
+                    // STEP 2: DRAW IMAGE (With Overlap)
                     ctx.drawImage(processedAssets.tiles, cropX, (tidx*tH)+cropY, drawW, drawH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
                     
-                    // Apply Tint for Special Blocks
                     if(tint) {
                         ctx.fillStyle = tint === "brown" ? "rgba(100,50,0,0.5)" : tint === "red" ? "rgba(100,0,0,0.3)" : "rgba(255,215,0,0.3)";
                         ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        if(t===8) { ctx.fillStyle="black"; ctx.fillRect((col*TILE_SIZE)+15, (row*TILE_SIZE)+20, 5, 5); } // Door Knob
+                        if(t===8) { ctx.fillStyle="black"; ctx.fillRect((col*TILE_SIZE)+15, (row*TILE_SIZE)+20, 5, 5); } 
                     }
                 }
             }
@@ -515,7 +505,7 @@
         let isNight = time > NIGHT_START; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
     }
 
-    // --- SMART FORGE & UI ---
+    // --- UI FUNCTIONS ---
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
