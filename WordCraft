@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lexicon Excavation</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --ui-border: #5d4037;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: #2c3e50;
+            font-family: 'Verdana', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0; padding: 10px; height: 100vh; overflow: hidden;
+            user-select: none;
+        }
+        #game-frame {
+            position: relative;
+            border: 8px solid var(--ui-border);
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            line-height: 0;
+            background: #000;
+        }
+        canvas { display: block; image-rendering: pixelated; }
+        
+        /* OVERLAYS */
+        #overlay-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; align-items: center; justify-content: center;
+        }
+        .popup {
+            pointer-events: auto;
+            background: #fff; /* Fallback */
+            border: 4px solid var(--ui-border);
+            padding: 20px; border-radius: 8px;
+            text-align: center; max-width: 500px;
+            display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
+        }
+        .popup.active { display: block; }
+        
+        /* INVENTORY BOOK STYLING */
+        #screen-inv {
+            width: 550px; height: 400px;
+            background-image: url('assets/bg.png'); /* The new parchment image */
+            background-size: cover;
+            color: #3e2723;
+        }
+
+        /* UI ELEMENTS */
+        .forge-tabs { display: flex; border-bottom: 2px solid #5d4037; margin-bottom: 15px; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.3); }
+        .tab.active { background: rgba(255,255,255,0.6); border-bottom: 3px solid #3e2723; }
+        
+        .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; }
+        .craft-slot { 
+            width: 60px; height: 60px; border: 2px dashed #5d4037;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; background: rgba(0,0,0,0.05); cursor: pointer;
+        }
+        .inv-grid { 
+            display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; 
+            max-height: 180px; overflow-y: auto; padding: 5px;
+        }
+        .word-chip { 
+            background: #fff; border: 1px solid #5d4037; padding: 4px 8px; 
+            border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
+        button {
+            background: #27ae60; border: none; color: white; padding: 8px 16px;
+            font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 4px;
+        }
+        .tag-1 { color: #5d4037; border-left: 4px solid #795548; }
+        .tag-2 { color: #455a64; border-left: 4px solid #78909c; }
+        .tag-3 { color: #f57f17; border-left: 4px solid #ffd54f; }
+    </style>
+</head>
+<body>
+    <div id="game-frame">
+        <canvas id="gameCanvas" width="640" height="480"></canvas>
+        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
+            Loading Assets...
+        </div>
+
+        <div id="overlay-layer">
+            <div id="screen-start" class="popup active">
+                <h1 style="color:#c0392b;">The Lexicon Excavation</h1>
+                <p>Recover the lost Roots. Fight the Letter Bugs.</p>
+                <button onclick="setGameState('playing')">Begin Adventure</button>
+            </div>
+            
+            <div id="screen-death" class="popup">
+                <h1 style="color:red;">Scrambled!</h1>
+                <p>The language has been lost.</p>
+                <button onclick="location.reload()">Try Again</button>
+            </div>
+
+            <div id="screen-inv" class="popup">
+                <div class="forge-tabs">
+                    <div class="tab active" onclick="switchTab('word')">Word Forge</div>
+                    <div class="tab" onclick="switchTab('craft')">Tool Bench</div>
+                </div>
+                
+                <div id="tab-word">
+                    <div class="crafting-grid">
+                        <div id="slot-pre" class="craft-slot" onclick="clearSlot('pre')">[Pre]</div> +
+                        <div id="slot-root" class="craft-slot" onclick="clearSlot('root')">[ROOT]</div> +
+                        <div id="slot-suf" class="craft-slot" onclick="clearSlot('suf')">[Suf]</div>
+                        <button onclick="forgeWord()">🔨</button>
+                    </div>
+                    <div id="forge-msg" style="height:20px; font-weight:bold; color:#d84315;"></div>
+                    <div style="display:flex; gap:10px; text-align:left; margin-top:10px;">
+                        <div style="flex:1;">
+                            <small><b>ROOTS</b></small>
+                            <div id="list-roots" class="inv-grid"></div>
+                        </div>
+                        <div style="flex:1;">
+                            <small><b>AFFIXES</b></small>
+                            <div class="inv-grid">
+                                <span class="word-chip" onclick="setSlot('pre','re')">re-</span>
+                                <span class="word-chip" onclick="setSlot('pre','un')">un-</span>
+                                <span class="word-chip" onclick="setSlot('pre','trans')">trans-</span>
+                                <span class="word-chip" onclick="setSlot('suf','ing')">-ing</span>
+                                <span class="word-chip" onclick="setSlot('suf','ed')">-ed</span>
+                                <span class="word-chip" onclick="setSlot('suf','er')">-er</span>
+                                <span class="word-chip" onclick="setSlot('suf','ful')">-ful</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-craft" style="display:none;">
+                    <h3>Survival Gear</h3>
+                    <div class="inv-grid" style="flex-direction:column;">
+                        <div class="word-chip" onclick="craft('quill')" style="padding:10px;"><b>Golden Quill</b> (Weapon) - 10 💎</div>
+                        <div class="word-chip" onclick="craft('potion')" style="padding:10px;"><b>Health Potion</b> (+1 ❤️) - 5 💎</div>
+                        <div class="word-chip" onclick="craft('wall')" style="padding:10px;"><b>Barricade</b> (Safe Zone) - 2 💎</div>
+                    </div>
+                </div>
+                <button onclick="setGameState('playing')" style="margin-top:20px; background:#5d4037;">Close Book</button>
+            </div>
+        </div>
+    </div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS to Move | SPACE to Mine/Attack | 'I' for Inventory</div>
+
+<script>
+    // --- ASSET LOADER ---
+    const assets = {
+        tiles: new Image(),
+        chars: new Image(),
+        ui: new Image()
+    };
+    let loadedCount = 0;
+    const requiredImages = 3; // bg.png is loaded by CSS, so we wait for 3 JS images
+
+    function onAssetLoad() {
+        loadedCount++;
+        if(loadedCount === requiredImages) initGame();
+    }
+
+    assets.tiles.src = 'assets/tiles.png'; assets.tiles.onload = onAssetLoad;
+    assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad;
+    assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;
+
+    // --- CONFIG ---
+    const TILE_SIZE = 40;
+    const COLS = 16; const ROWS = 12;
+    const W = TILE_SIZE * COLS; const H = TILE_SIZE * ROWS;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = W; canvas.height = H;
+
+    // --- DATA ---
+    const DICTIONARY = {
+        "helper": "One who aids", "helping": "Act of aiding", "unhelpful": "Not aiding",
+        "transport": "Carry across", "portable": "Able to be carried", "report": "Tell back",
+        "action": "Doing something", "react": "Do back", "actor": "One who does",
+        "disrupt": "Break apart", "erupt": "Break out", "banker": "One who banks",
+        "rebuild": "Build again", "builder": "One who builds"
+    };
+    const LAYER_ROOTS = {
+        1: ["help", "play", "walk", "bank", "build"],
+        2: ["port", "form", "ject", "rupt"],
+        3: ["phon", "graph", "chron", "bio"]
+    };
+
+    // --- STATE ---
+    let state = 'start';
+    let grid = [];
+    let enemies = [];
+    let particles = [];
+    let animTick = 0;
+    let player = { x:8, y:4, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, walls:0, facingLeft:false, invinc:0 };
+    let forge = { pre:null, root:null, suf:null };
+
+    function initGame() {
+        document.getElementById('loading').style.display = 'none';
+        // Generate Terrain
+        for(let r=0; r<ROWS; r++){
+            let row = [];
+            for(let c=0; c<COLS; c++){
+                if(r < 5) row.push(0); // Sky
+                else if(r < 8) row.push(1); // Dirt
+                else if(r < 10) row.push(2); // Stone
+                else row.push(3); // Marble
+            }
+            grid.push(row);
+        }
+        requestAnimationFrame(loop);
+    }
+
+    function loop() {
+        if(state === 'playing') update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    function update() {
+        animTick++;
+        if(player.invinc > 0) player.invinc--;
+
+        // Spawn Enemies
+        if(animTick % 100 === 0 && enemies.length < 4) {
+            let r = Math.floor(Math.random()*5);
+            let c = Math.floor(Math.random()*COLS);
+            if(Math.abs(c-player.x)>3) enemies.push({x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:15});
+        }
+
+        // Enemy AI
+        enemies.forEach((en,i) => {
+            if(animTick % en.speed === 0) {
+                if(en.x < player.x) en.x++; else if(en.x > player.x) en.x--;
+                else if(en.y < player.y) en.y++; else if(en.y > player.y) en.y--;
+            }
+            if(en.x === player.x && en.y === player.y) hurtPlayer();
+        });
+
+        // Particles
+        for(let i=particles.length-1; i>=0; i--) {
+            particles[i].life--; particles[i].y-=0.5;
+            if(particles[i].life<=0) particles.splice(i,1);
+        }
+    }
+
+    // --- CONTROLS ---
+    document.addEventListener('keydown', e => {
+        if(state !== 'playing') {
+            if(e.key==='i'||e.key==='I') setGameState('playing'); return;
+        }
+        let dx=0, dy=0;
+        if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; }
+        if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
+        if(e.key==='ArrowUp') dy=-1;
+        if(e.key==='ArrowDown') dy=1;
+        if(e.key===' ') { action(); return; }
+        if(e.key==='i'||e.key==='I') { setGameState('inventory'); return; }
+        if(e.key==='b'||e.key==='B') { if(player.walls>0){ grid[player.y][player.x]=9; player.walls--; } return; }
+
+        let nx = player.x+dx, ny = player.y+dy;
+        if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
+            let t = grid[ny][nx];
+            if(t===0 || t===9) { player.x=nx; player.y=ny; }
+        }
+    });
+
+    function action() {
+        // Attack
+        let hit=false;
+        if(player.hasQuill) {
+            enemies.forEach((en,i)=>{
+                if(Math.abs(en.x-player.x)+Math.abs(en.y-player.y)<=1) {
+                    en.hp--; hit=true; addPart(en.x,en.y,"💥");
+                    if(en.hp<=0) { enemies.splice(i,1); player.fragments+=3; }
+                }
+            });
+        }
+        if(hit) return;
+
+        // Mine
+        let tx = player.x + (player.facingLeft?-1:1);
+        let ty = player.y;
+        if(tx>=0 && tx<COLS) {
+            if(grid[ty][tx]===0) ty++; // Auto-mine down
+            let t = grid[ty][tx];
+            if(t>=1 && t<=3) {
+                grid[ty][tx]=0; player.fragments++; addPart(tx,ty,"✨");
+                if(Math.random()>0.6) {
+                    let list = LAYER_ROOTS[t]||["root"];
+                    let w = list[Math.floor(Math.random()*list.length)];
+                    player.roots.push({word:w, type:t}); addPart(player.x,player.y-1,"📜");
+                }
+            }
+        }
+    }
+
+    function hurtPlayer() {
+        if(player.invinc>0) return;
+        player.hp--; player.invinc=30; addPart(player.x,player.y,"💔");
+        if(player.hp<=0) setGameState('death');
+    }
+    function addPart(x,y,c) { particles.push({x:x,y:y,char:c,life:30}); }
+
+    // --- DRAWING (Auto-Scaling Sprites) ---
+    function draw() {
+        ctx.clearRect(0,0,W,H);
+
+        // Sky (Use Tile 5 if exists, else Blue)
+        let tW = assets.tiles.width; 
+        let tH = assets.tiles.height/5; // Assuming column of 5
+        
+        // Draw World
+        for(let r=0; r<ROWS; r++){
+            for(let c=0; c<COLS; c++){
+                if(r<5) ctx.drawImage(assets.tiles, 0, 4*tH, tW, tH, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); // Sky
+                let t = grid[r][c];
+                if(t>0) {
+                    let tidx = (t===9)?3 : (t-1); // Map 1,2,3 -> 0,1,2. Wall 9 -> 3
+                    ctx.drawImage(assets.tiles, 0, tidx*tH, tW, tH, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+
+        // Draw Player
+        // Wizard 3x3 grid. Width/3, Height/3.
+        let cW = assets.chars.width/3; let cH = assets.chars.height/3;
+        let pFrame = Math.floor(animTick/20)%2;
+        drawChar(0, 0, pFrame, player.x, player.y, player.facingLeft);
+
+        // Draw Enemies
+        enemies.forEach(en => {
+            let row = (en.type==='bat')?1:2;
+            let frame = Math.floor(animTick/10)%3;
+            drawChar(row, frame, 0, en.x, en.y, false); // Row is Y
+        });
+
+        // Particles
+        ctx.font="20px Arial"; ctx.fillStyle="white";
+        particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
+
+        drawHUD();
+    }
+
+    function drawChar(row, col, animOffset, x, y, flip) {
+        let cW = assets.chars.width/3; let cH = assets.chars.height/3;
+        let sx = (col + animOffset) * cW; 
+        let sy = row * cH;
+        ctx.save();
+        if(flip) {
+            ctx.translate((x*TILE_SIZE)+TILE_SIZE, y*TILE_SIZE);
+            ctx.scale(-1, 1);
+            ctx.drawImage(assets.chars, sx, sy, cW, cH, 0, 0, TILE_SIZE, TILE_SIZE);
+        } else {
+            ctx.drawImage(assets.chars, sx, sy, cW, cH, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+        ctx.restore();
+    }
+
+    function drawHUD() {
+        // UI Sheet is 2x2 grid.
+        let uW = assets.ui.width/2; let uH = assets.ui.height/2;
+        
+        // Draw Hearts
+        for(let i=0; i<player.maxHp; i++) {
+            if(i<player.hp) ctx.drawImage(assets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30); // Top-Left (Heart)
+        }
+        // Crystal Icon (Top-Right)
+        ctx.drawImage(assets.ui, uW, 0, uW, uH, 150, 10, 30, 30);
+        ctx.fillStyle="white"; ctx.font="bold 20px Verdana";
+        ctx.fillText(player.fragments, 185, 33);
+
+        // Tool Icon (Quill: Bottom-Left)
+        if(player.hasQuill) ctx.drawImage(assets.ui, 0, uH, uW, uH, 250, 10, 30, 30);
+        else ctx.fillText("🔨", 250, 33);
+    }
+
+    // --- UI LOGIC ---
+    function setGameState(s) {
+        state=s;
+        document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
+        if(s==='start') document.getElementById('screen-start').classList.add('active');
+        if(s==='death') document.getElementById('screen-death').classList.add('active');
+        if(s==='inventory') {
+            document.getElementById('screen-inv').classList.add('active');
+            renderRoots();
+        }
+    }
+    function switchTab(t) {
+        document.getElementById('tab-word').style.display = t==='word'?'block':'none';
+        document.getElementById('tab-craft').style.display = t==='craft'?'block':'none';
+        document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+    function renderRoots() {
+        let d = document.getElementById('list-roots'); d.innerHTML="";
+        player.roots.forEach(r => {
+            let s = document.createElement('div'); s.className=`word-chip tag-${r.type}`;
+            s.innerText=r.word; s.onclick=()=>setSlot('root',r.word); d.appendChild(s);
+        });
+        if(player.roots.length===0) d.innerText="No roots found.";
+    }
+    function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
+    function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
+    function forgeWord() {
+        if(!forge.root) return;
+        let w = ((forge.pre||"")+forge.root+(forge.suf||"")).toLowerCase();
+        let m = document.getElementById('forge-msg');
+        if(DICTIONARY[w]) m.innerHTML=`<span style="color:green">✨ ${w.toUpperCase()}</span>: ${DICTIONARY[w]}`;
+        else m.innerHTML=`❌ ${w} is not a valid word.`;
+    }
+    function craft(i) {
+        if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Crafted Quill!"); }
+        if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; alert("Healed!"); }
+        if(i==='wall' && player.fragments>=2) { player.fragments-=2; player.walls+=5; alert("Walls Crafted!"); }
+    }
+
+    // Start
+    initGame();
+</script>
+</body>
+</html>
