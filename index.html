@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordCraft: Solid Earth</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WordCraft: Mobile Edition</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -16,29 +16,34 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 0; padding: 10px; height: 100vh; overflow: hidden;
+            margin: 0; padding: 0; height: 100vh; overflow: hidden;
             user-select: none;
+            touch-action: none; /* Prevent scroll on mobile */
         }
         #game-frame {
             position: relative;
-            border: 8px solid var(--ui-border);
+            border: 4px solid var(--ui-border);
             border-radius: 4px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             line-height: 0;
             background: #000;
+            cursor: crosshair;
+            width: 100%; max-width: 800px;
+            height: auto; aspect-ratio: 4/3;
         }
-        canvas { display: block; image-rendering: pixelated; }
+        canvas { display: block; image-rendering: pixelated; width: 100%; height: 100%; }
         
         #overlay-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; align-items: center; justify-content: center;
+            z-index: 10;
         }
         .popup {
             pointer-events: auto;
             background: #fff;
             border: 4px solid var(--ui-border);
             padding: 20px; border-radius: 8px;
-            text-align: center; max-width: 600px;
+            text-align: center; max-width: 90%;
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
             max-height: 90%; overflow-y: auto;
         }
@@ -51,45 +56,55 @@
             color: #3e2723;
         }
 
+        /* --- MOBILE CONTROLS --- */
+        #mobile-controls {
+            position: absolute; bottom: 10px; left: 0; width: 100%; height: 160px;
+            pointer-events: none; z-index: 5;
+            display: none; /* Hidden on desktop by default, toggleable */
+        }
+        .control-group { pointer-events: auto; position: absolute; bottom: 10px; }
+        .dpad { left: 20px; width: 120px; height: 120px; position: relative; }
+        .actions { right: 20px; display: flex; gap: 15px; align-items: flex-end; }
+        
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%; backdrop-filter: blur(4px);
+            color: white; font-size: 24px; display: flex; justify-content: center; align-items: center;
+            user-select: none; touch-action: none;
+        }
+        .touch-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
+        
+        /* D-Pad Layout */
+        .d-btn { position: absolute; width: 40px; height: 40px; }
+        .d-up { top: 0; left: 40px; }
+        .d-down { bottom: 0; left: 40px; }
+        .d-left { top: 40px; left: 0; }
+        .d-right { top: 40px; right: 0; }
+        
+        /* Action Buttons */
+        .act-btn { width: 60px; height: 60px; font-size: 28px; }
+        .act-sm { width: 45px; height: 45px; font-size: 20px; margin-bottom: 20px; }
+
+        /* --- UI STYLES --- */
         .forge-tabs { display: flex; border-bottom: 2px solid #5d4037; margin-bottom: 15px; }
         .tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.3); }
         .tab.active { background: rgba(255,255,255,0.6); border-bottom: 3px solid #3e2723; }
         
         .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 15px 0; }
-        .craft-slot { 
-            width: 60px; height: 60px; border: 2px dashed #5d4037;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; background: rgba(0,0,0,0.05); cursor: pointer;
-        }
-        .inv-grid { 
-            display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; 
-            max-height: 220px; overflow-y: auto; padding: 5px;
-        }
-        .word-chip { 
-            background: #fff; border: 1px solid #5d4037; padding: 4px 8px; 
-            border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold;
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }
+        .craft-slot { width: 60px; height: 60px; border: 2px dashed #5d4037; display: flex; align-items: center; justify-content: center; font-weight: bold; background: rgba(0,0,0,0.05); cursor: pointer; }
+        .inv-grid { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; max-height: 220px; overflow-y: auto; padding: 5px; }
+        .word-chip { background: #fff; border: 1px solid #5d4037; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold; box-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
         .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
-        
-        .chip-pre { background-color: #e3f2fd; }
-        .chip-suf { background-color: #f3e5f5; }
-        .chip-inf { background-color: #fff3e0; }
+        .chip-pre { background-color: #e3f2fd; } .chip-suf { background-color: #f3e5f5; } .chip-inf { background-color: #fff3e0; }
 
-        button {
-            background: #27ae60; border: none; color: white; padding: 10px 20px;
-            font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; margin: 5px;
-        }
+        button { background: #27ae60; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; margin: 5px; }
         .toggle-container { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; }
         .toggle-btn.on { background: #27ae60; }
         .toggle-btn.on::after { left: 22px; }
         .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
 
-        .tag-1 { color: #5d4037; border-left: 4px solid #795548; }
-        .tag-2 { color: #455a64; border-left: 4px solid #78909c; }
-        .tag-3 { color: #f57f17; border-left: 4px solid #ffd54f; }
-        
         h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; color: #d35400; }
         p { line-height: 1.5; margin-bottom: 15px; }
     </style>
@@ -98,24 +113,40 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Solidifying Ground...
+            Loading Audio Engine...
+        </div>
+
+        <div id="mobile-controls">
+            <div class="control-group dpad">
+                <div class="touch-btn d-btn d-up" ontouchstart="simKey('ArrowUp', true)" ontouchend="simKey('ArrowUp', false)">⬆️</div>
+                <div class="touch-btn d-btn d-down" ontouchstart="simKey('ArrowDown', true)" ontouchend="simKey('ArrowDown', false)">⬇️</div>
+                <div class="touch-btn d-btn d-left" ontouchstart="simKey('ArrowLeft', true)" ontouchend="simKey('ArrowLeft', false)">⬅️</div>
+                <div class="touch-btn d-btn d-right" ontouchstart="simKey('ArrowRight', true)" ontouchend="simKey('ArrowRight', false)">➡️</div>
+            </div>
+            <div class="control-group actions">
+                <div class="touch-btn act-btn act-sm" ontouchstart="setGameState('inventory')" style="background:rgba(200,100,0,0.4)">🎒</div>
+                <div class="touch-btn act-btn act-sm" ontouchstart="placeBlock()" style="background:rgba(100,200,0,0.4)">🧱</div>
+                <div class="touch-btn act-btn" ontouchstart="shootArrow()" style="background:rgba(0,100,200,0.4)">🏹</div>
+                <div class="touch-btn act-btn" ontouchstart="action()" style="background:rgba(200,50,50,0.4)">⛏️</div>
+            </div>
         </div>
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Solid Earth</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Mobile Edition</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>📜 Updates</h2>
-                    <p><b>Solid Ground:</b> No more gaps between blocks!</p>
-                    <p><b>Fortress Mode:</b> Build walls/doors to stop enemies.</p>
+                    <h2>🔊 Audio & Controls Update</h2>
+                    <p><b>Sound:</b> Click anywhere to enable sound effects!</p>
+                    <p><b>Mobile:</b> On-screen controls added for iPad/Tablet play.</p>
                     
-                    <h2>⚔️ Controls</h2>
+                    <button onclick="toggleMobileControls()" class="secondary" style="background:#34495e; width:100%">Toggle Mobile Controls</button>
+                    
+                    <h2>⚔️ How to Play</h2>
                     <p>
-                    • <b>Arrows:</b> Move/Aim<br>
-                    • <b>Space:</b> Mine / Attack<br>
-                    • <b>'I' Key:</b> Inventory<br>
-                    • <b>'B' Key:</b> Place Active Block<br>
+                    • <b>Left Hand:</b> Move (D-Pad)<br>
+                    • <b>Right Hand:</b> Attack, Shoot, Build, Inventory<br>
+                    • <b>Goal:</b> Dig deep, find roots, build a fort.<br>
                     </p>
                 </div>
 
@@ -125,7 +156,7 @@
                     <span id="monster-status">ON</span>
                 </div>
 
-                <button onclick="setGameState('playing')">Enter World</button>
+                <button onclick="initAudio(); setGameState('playing')">Start Game (Enable Audio)</button>
             </div>
             
             <div id="screen-death" class="popup">
@@ -188,21 +219,31 @@
 
                 <div id="tab-craft" style="display:none;">
                     <h3>Survival Gear</h3>
-                    <div style="font-size:12px; color:#555; margin-bottom:5px;">Click to Select Active Block for Placing ('B')</div>
+                    <div style="font-size:12px; color:#555; margin-bottom:5px;">Select Active Block ('B' / 🧱)</div>
                     <div class="inv-grid" style="flex-direction:column;">
-                        <div class="word-chip" onclick="craft('quill')" style="padding:10px;"><b>Golden Quill</b> (Weapon) - 10 💎</div>
+                        <div class="word-chip" onclick="craft('quill')" style="padding:10px;"><b>Golden Quill</b> (Bow) - 10 💎</div>
+                        <div class="word-chip" onclick="craft('arrows')" style="padding:10px;"><b>Arrows x10</b> - 2 💎 <span id="qty-arrows" style="float:right; color:blue;">0</span></div>
                         <div class="word-chip" onclick="craft('potion')" style="padding:10px;"><b>Health Potion</b> (+1 ❤️) - 5 💎</div>
                         
-                        <div class="word-chip" id="btn-wall" onclick="setActiveBlock(9, 'Wall')" style="padding:10px; border-left:5px solid #5d4037;">
+                        <div class="word-chip" onclick="setActiveBlock(9, 'Wall')" style="padding:10px; border-left:5px solid #5d4037;">
                             <b>Dirt Wall</b> (x<span id="qty-9">5</span>) - 1 💎
                         </div>
-                        <div class="word-chip" id="btn-wood" onclick="setActiveBlock(4, 'Wood')" style="padding:10px; border-left:5px solid #d35400;">
+                        <div class="word-chip" onclick="setActiveBlock(4, 'Wood')" style="padding:10px; border-left:5px solid #d35400;">
                             <b>Wood Planks</b> (x<span id="qty-4">0</span>) - 2 💎
                         </div>
-                        <div class="word-chip" id="btn-brick" onclick="setActiveBlock(5, 'Brick')" style="padding:10px; border-left:5px solid #c0392b;">
+                        <div class="word-chip" onclick="setActiveBlock(5, 'Brick')" style="padding:10px; border-left:5px solid #c0392b;">
                             <b>Stone Brick</b> (x<span id="qty-5">0</span>) - 2 💎
                         </div>
-                        <div class="word-chip" id="btn-door" onclick="setActiveBlock(8, 'Door')" style="padding:10px; border-left:5px solid #f1c40f;">
+                        <div class="word-chip" onclick="setActiveBlock(6, 'Glass')" style="padding:10px; border-left:5px solid #00bcd4;">
+                            <b>Glass</b> (x<span id="qty-6">0</span>) - 2 💎
+                        </div>
+                        <div class="word-chip" onclick="setActiveBlock(7, 'Obsidian')" style="padding:10px; border-left:5px solid #2c3e50;">
+                            <b>Obsidian</b> (x<span id="qty-7">0</span>) - 5 💎
+                        </div>
+                        <div class="word-chip" onclick="setActiveBlock(10, 'Ladder')" style="padding:10px; border-left:5px solid #8d6e63;">
+                            <b>Ladder</b> (x<span id="qty-10">0</span>) - 1 💎
+                        </div>
+                        <div class="word-chip" onclick="setActiveBlock(8, 'Door')" style="padding:10px; border-left:5px solid #f1c40f;">
                             <b>Magic Door</b> (x<span id="qty-8">0</span>) - 3 💎
                         </div>
                     </div>
@@ -211,30 +252,57 @@
             </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS: Move/Aim | SPACE: Mine | 'I': Inventory | 'B': Place <span id="hud-block-name">Wall</span></div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">
+        PC: Arrows, Space, F, B | Mobile: Use On-Screen Controls
+    </div>
 
 <script>
+    // --- AUDIO ENGINE (Synthesizer) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+    
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    const sfx = {
+        playTone: (freq, type, duration) => {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        },
+        jump: () => sfx.playTone(300, 'sine', 0.2),
+        mine: () => sfx.playTone(100, 'square', 0.1),
+        shoot: () => sfx.playTone(600, 'sawtooth', 0.1),
+        build: () => sfx.playTone(200, 'triangle', 0.1),
+        collect: () => sfx.playTone(800, 'sine', 0.3),
+        hit: () => sfx.playTone(150, 'sawtooth', 0.3),
+        craft: () => sfx.playTone(500, 'square', 0.5)
+    };
+
     // --- ASSET LOADER ---
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
     let loadedCount = 0; const requiredImages = 3;
 
-    function onAssetLoad() { 
-        loadedCount++; 
-        if(loadedCount === requiredImages) processAssets(); 
-    }
+    function onAssetLoad() { loadedCount++; if(loadedCount === requiredImages) processAssets(); }
 
     function removeWhiteBackground(img) {
-        const c = document.createElement('canvas');
-        const cx = c.getContext('2d');
+        const c = document.createElement('canvas'); const cx = c.getContext('2d');
         c.width = img.width; c.height = img.height;
         cx.drawImage(img, 0, 0);
         let imgData = cx.getImageData(0, 0, c.width, c.height);
         let data = imgData.data;
-        for(let i = 0; i < data.length; i += 4) {
-            let r = data[i], g = data[i+1], b = data[i+2];
-            if(r > 240 && g > 240 && b > 240) data[i+3] = 0;
-        }
+        for(let i=0; i<data.length; i+=4) { if(data[i]>240 && data[i+1]>240 && data[i+2]>240) data[i+3]=0; }
         cx.putImageData(imgData, 0, 0);
         return c;
     }
@@ -251,37 +319,35 @@
     assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad;
     assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;
 
-    // --- GAME CONFIG ---
-    const TILE_SIZE = 40; 
-    const COLS = 200; const ROWS = 60;  
+    // --- CONFIG ---
+    const TILE_SIZE = 40; const COLS = 600; const ROWS = 150; 
     const CANVAS_W = 800; const CANVAS_H = 600;
     const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
     canvas.width = CANVAS_W; canvas.height = CANVAS_H;
-
     const DAY_LENGTH = 3600; const NIGHT_START = DAY_LENGTH / 2;
+    
     let gameTick = 0; let monstersEnabled = true;
-
     let camera = { x: 0, y: 0 };
     let keys = {}; 
+    let mouse = { x: 0, y: 0 };
 
-    // --- UFLI ROOT DATA ---
+    // --- DATA ---
     const LAYER_ROOTS = {
         1: ["play", "help", "jump", "walk", "look", "ask", "wish", "hope", "make", "use", "like", "ride", "smile", "time", "run", "hop", "sit", "win", "cut", "shop", "swim", "sad"],
         2: ["happy", "funny", "penny", "baby", "carry", "cry", "try", "cycle", "angle", "view", "port", "form", "cover", "fair", "kind", "joy", "care", "fear", "pain", "dark"],
         3: ["struct", "ject", "rupt", "phon", "graph", "scope", "meter", "bio", "chron", "vis", "aud", "terr", "fract", "pic", "mix"]
     };
-
     const WORD_CACHE = {};
 
-    let state = 'start'; let grid = []; let enemies = []; let particles = []; let animTick = 0;
+    // --- STATE ---
+    let state = 'start'; let grid = []; let enemies = []; let particles = []; let projectiles = []; let animTick = 0;
     
-    // Block IDs: 9=DirtWall, 4=Wood, 5=Brick, 8=Door
     let player = { 
         x:20, y:10, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, 
         invinc:0, facingLeft:false,
-        blocks: { 9: 5, 4: 0, 5: 0, 8: 0 },
-        activeBlock: 9,
-        activeBlockName: "Dirt Wall"
+        blocks: { 9: 5, 4: 0, 5: 0, 6:0, 7:0, 10:0, 8: 0 },
+        arrows: 0,
+        activeBlock: 9, activeBlockName: "Dirt Wall"
     };
     let forge = { pre:null, root:null, suf:null };
 
@@ -290,19 +356,17 @@
         for(let r=0; r<ROWS; r++){
             let row = [];
             for(let c=0; c<COLS; c++){
-                let surface = 10 + Math.floor(Math.sin(c * 0.1) * 3); 
+                let surface = 10 + Math.floor(Math.sin(c * 0.05) * 5); 
                 if(r < surface) row.push(0); 
-                else if(r < surface + 5) row.push(1); 
-                else if(r < surface + 20) row.push(2); 
-                else row.push(3); 
+                else if(r < surface + 15) row.push(1); 
+                else if(r < surface + 60) row.push(2); 
+                else if(r < ROWS - 2) row.push(3); 
+                else row.push(7); // Bedrock
             }
             grid.push(row);
         }
-        
-        let groundY = 0;
-        while(groundY < ROWS && grid[groundY][20] === 0) groundY++;
+        let groundY = 0; while(groundY < ROWS && grid[groundY][20] === 0) groundY++;
         player.y = groundY - 1; 
-        
         requestAnimationFrame(loop);
     }
 
@@ -325,17 +389,17 @@
         camera.y = Math.max(0, Math.min(targetCamY, (ROWS * TILE_SIZE) - CANVAS_H));
 
         // Spawning
-        if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 5) {
-            let spawnX = player.x + (Math.random() > 0.5 ? 12 : -12);
+        if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 8) {
+            let spawnX = player.x + (Math.random() > 0.5 ? 15 : -15);
             let spawnY = player.y - 5 + Math.floor(Math.random()*10);
             if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS && grid[spawnY][spawnX] === 0) {
                  enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
             }
         }
         
-        // Enemy Logic
+        // Enemies
         enemies.forEach((en,i) => {
-            if(Math.abs(en.x - player.x) < 25) {
+            if(Math.abs(en.x - player.x) < 30) {
                 if(animTick % en.speed === 0) {
                     let nextX = en.x; let nextY = en.y;
                     if(en.x < player.x) nextX++; else if(en.x > player.x) nextX--;
@@ -345,6 +409,27 @@
                 if(en.x === player.x && en.y === player.y) hurtPlayer();
             }
         });
+        
+        // Projectiles
+        for(let i=projectiles.length-1; i>=0; i--) {
+            let p = projectiles[i];
+            p.x += p.vx; p.y += p.vy;
+            let gx = Math.round(p.x); let gy = Math.round(p.y);
+            
+            // Hit Enemy
+            let hit = false;
+            enemies.forEach((en, ei) => {
+                if(Math.round(en.x) === gx && Math.round(en.y) === gy) {
+                    en.hp--; hit=true; sfx.hit();
+                    if(en.hp<=0) { enemies.splice(ei,1); player.fragments+=3; }
+                }
+            });
+            // Hit Wall or Out of Bounds
+            if(gx<0 || gx>=COLS || gy<0 || gy>=ROWS || grid[gy][gx]!==0 || hit) {
+                projectiles.splice(i,1);
+            }
+        }
+
         if(!monstersEnabled && enemies.length > 0) enemies = [];
         for(let i=particles.length-1; i>=0; i--) {
             particles[i].life--; particles[i].y-=0.5; if(particles[i].life<=0) particles.splice(i,1);
@@ -352,6 +437,12 @@
     }
 
     // --- CONTROLS ---
+    function simKey(k, s) { keys[k] = s; if(s) initAudio(); }
+    function toggleMobileControls() {
+        let el = document.getElementById('mobile-controls');
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
     document.addEventListener('keydown', e => {
         keys[e.key] = true; 
         if(state !== 'playing') { if(e.key==='i'||e.key==='I') setGameState('playing'); return; }
@@ -359,30 +450,62 @@
         let dx=0, dy=0;
         if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; }
         if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
-        if(e.key==='ArrowUp') dy=-1; 
-        if(e.key==='ArrowDown') dy=1;
+        if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
 
         if(dx!==0 || dy!==0) {
             let nx = player.x+dx, ny = player.y+dy;
             if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
                 let t = grid[ny][nx]; 
-                if(t===0 || t===8) { player.x=nx; player.y=ny; }
+                // Ladder Logic: Can move UP/DOWN freely on ladder (10)
+                let currentTile = grid[player.y][player.x];
+                if(t===0 || t===8 || t===10 || (currentTile===10 && dy!==0)) { 
+                    player.x=nx; player.y=ny; 
+                }
             }
         }
 
         if(e.key===' ') action();
+        if(e.key==='f'||e.key==='F') shootArrow();
         if(e.key==='i'||e.key==='I') setGameState('inventory');
         if(e.key==='b'||e.key==='B') placeBlock();
     });
-
+    
     document.addEventListener('keyup', e => { keys[e.key] = false; });
+    canvas.addEventListener('mousemove', e => {
+        let rect = canvas.getBoundingClientRect();
+        mouse.x = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+        mouse.y = (e.clientY - rect.top) * (CANVAS_H / rect.height);
+    });
+    canvas.addEventListener('mousedown', () => { initAudio(); shootArrow(); });
+
+    function shootArrow() {
+        if(!player.hasQuill || player.arrows <= 0) return;
+        player.arrows--; sfx.shoot();
+        updateInvCounts();
+        
+        // Calculate Angle towards Mouse (or Facing dir if mobile)
+        let worldMX = mouse.x + camera.x;
+        let worldMY = mouse.y + camera.y;
+        let dx = worldMX - (player.x * TILE_SIZE);
+        let dy = worldMY - (player.y * TILE_SIZE);
+        let len = Math.sqrt(dx*dx + dy*dy);
+        
+        // Mobile fallback: Shoot straight
+        if(len < 1) { dx = player.facingLeft ? -1 : 1; dy = 0; len = 1; }
+
+        projectiles.push({
+            x: player.x, y: player.y,
+            vx: (dx/len) * 0.8, vy: (dy/len) * 0.8
+        });
+    }
 
     function action() {
         let hit=false;
         if(player.hasQuill) {
             enemies.forEach((en,i)=>{
                 if(Math.abs(en.x-player.x)+Math.abs(en.y-player.y)<=1) {
-                    en.hp--; hit=true; addPart(en.x,en.y,"💥"); if(en.hp<=0) { enemies.splice(i,1); player.fragments+=3; }
+                    en.hp--; hit=true; sfx.hit(); addPart(en.x,en.y,"💥"); 
+                    if(en.hp<=0) { enemies.splice(i,1); player.fragments+=3; }
                 }
             });
         }
@@ -395,11 +518,12 @@
 
         if(tx>=0 && tx<COLS && ty>=0 && ty<ROWS) {
             let t = grid[ty][tx];
-            if(t>=1 && t<=5 || t===9) { // Mine
-                grid[ty][tx]=0; player.fragments++; addPart(tx,ty,"✨");
+            if(t>=1 && t<=7 || t===9 || t===10) { // Mineable
+                if(t===7) { addPart(tx,ty,"🛡️"); return; } // Bedrock
+                grid[ty][tx]=0; player.fragments++; sfx.mine(); addPart(tx,ty,"✨");
                 if(Math.random()>0.7 && t<=3) {
                     let list = LAYER_ROOTS[t]||["root"];
-                    player.roots.push({word:list[Math.floor(Math.random()*list.length)], type:t}); addPart(player.x,player.y-1,"📜");
+                    player.roots.push({word:list[Math.floor(Math.random()*list.length)], type:t}); addPart(player.x,player.y-1,"📜"); sfx.collect();
                 }
             }
         }
@@ -410,14 +534,14 @@
         if(player.blocks[id] > 0) {
             if(grid[player.y][player.x] === 0) {
                 grid[player.y][player.x] = id;
-                player.blocks[id]--;
+                player.blocks[id]--; sfx.build();
                 updateInvCounts();
                 addPart(player.x, player.y, "🔨");
             }
         }
     }
 
-    function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; addPart(player.x,player.y,"💔"); if(player.hp<=0) setGameState('death'); }
+    function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; sfx.hit(); addPart(player.x,player.y,"💔"); if(player.hp<=0) setGameState('death'); }
     function addPart(x,y,c) { particles.push({x:x,y:y,char:c,life:30}); }
 
     function draw() {
@@ -426,16 +550,17 @@
         let r = Math.floor(135 * cyclePos + 20 * (1-cyclePos));
         let g = Math.floor(206 * cyclePos + 20 * (1-cyclePos));
         let b = Math.floor(235 * cyclePos + 60 * (1-cyclePos));
+        
+        // Depth gradient
+        let depth = Math.min(1, player.y / ROWS);
+        r = Math.floor(r * (1-depth)); g = Math.floor(g * (1-depth)); b = Math.floor(b * (1-depth));
+        
         ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
-        // --- THE "GROUT" FIX ---
-        // We crop the source image (Smart Zoom) AND fill behind the tiles (Grout)
-        let tW = processedAssets.tiles.width; 
-        let tH = processedAssets.tiles.height/5;
-        let cropX = tW * 0.40; 
-        let cropY = tH * 0.20;
-        let drawW = tW - (2*cropX);
-        let drawH = tH - (2*cropY);
+        // TILE RENDERING (GROUT FIX)
+        let tW = processedAssets.tiles.width; let tH = processedAssets.tiles.height/5;
+        let cropX = tW * 0.40; let cropY = tH * 0.20;
+        let drawW = tW - (2*cropX); let drawH = tH - (2*cropY);
 
         let startCol = Math.floor(camera.x / TILE_SIZE);
         let endCol = startCol + (CANVAS_W / TILE_SIZE) + 1;
@@ -450,25 +575,30 @@
                 if(row<0 || row>=ROWS || col<0 || col>=COLS) continue;
                 let t = grid[row][col];
                 if(t>0) { 
-                    let tidx = 0; let tint = null; let baseColor = "#5d4037"; // Default grout color (Dark Brown)
-                    
+                    let tidx=0; let tint=null; let baseColor="#5d4037";
                     if(t<=3) { tidx = t-1; if(t===2) baseColor="#7f8c8d"; if(t===3) baseColor="#ecf0f1"; }
-                    else if(t===9) { tidx = 3; }
-                    else if(t===4) { tidx = 3; tint = "brown"; }
-                    else if(t===5) { tidx = 1; tint = "red"; baseColor="#c0392b"; }
-                    else if(t===8) { tidx = 3; tint = "gold"; }
+                    else if(t===9) tidx = 3;
+                    else if(t===4) { tidx=3; tint="brown"; }
+                    else if(t===5) { tidx=1; tint="red"; baseColor="#c0392b"; }
+                    else if(t===8) { tidx=3; tint="gold"; }
+                    else if(t===6) { tidx=3; tint="cyan"; baseColor="rgba(0,255,255,0.2)"; } // Glass
+                    else if(t===7) { tidx=1; tint="black"; baseColor="#000"; } // Obsidian
+                    else if(t===10) { tidx=3; tint="ladder"; } // Ladder
 
-                    // STEP 1: GROUT (Fill background to hide gaps)
-                    ctx.fillStyle = baseColor;
-                    ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
-
-                    // STEP 2: DRAW IMAGE (With Overlap)
+                    if(t!==6) { ctx.fillStyle = baseColor; ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
                     ctx.drawImage(processedAssets.tiles, cropX, (tidx*tH)+cropY, drawW, drawH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
                     
                     if(tint) {
-                        ctx.fillStyle = tint === "brown" ? "rgba(100,50,0,0.5)" : tint === "red" ? "rgba(100,0,0,0.3)" : "rgba(255,215,0,0.3)";
-                        ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        if(t===8) { ctx.fillStyle="black"; ctx.fillRect((col*TILE_SIZE)+15, (row*TILE_SIZE)+20, 5, 5); } 
+                        if(tint==="ladder") {
+                            ctx.fillStyle="rgba(100,50,0,0.8)";
+                            ctx.fillRect(col*TILE_SIZE+10, row*TILE_SIZE, 5, TILE_SIZE);
+                            ctx.fillRect(col*TILE_SIZE+25, row*TILE_SIZE, 5, TILE_SIZE);
+                            for(let k=5; k<40; k+=10) ctx.fillRect(col*TILE_SIZE+10, row*TILE_SIZE+k, 20, 3);
+                        } else {
+                            ctx.fillStyle = tint==="brown"?"rgba(100,50,0,0.5)": tint==="red"?"rgba(100,0,0,0.3)": tint==="gold"?"rgba(255,215,0,0.3)": tint==="cyan"?"rgba(0,255,255,0.3)": "rgba(0,0,0,0.7)";
+                            ctx.fillRect(col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                            if(t===8) { ctx.fillStyle="black"; ctx.fillRect((col*TILE_SIZE)+15, (row*TILE_SIZE)+20, 5, 5); } 
+                        }
                     }
                 }
             }
@@ -476,15 +606,14 @@
 
         let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
         drawChar(0, 0, Math.floor(animTick/20)%2, player.x, player.y, player.facingLeft);
-        enemies.forEach(en => {
-            if(en.x >= startCol && en.x <= endCol) {
-                drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false);
-            }
-        });
+        enemies.forEach(en => { if(en.x >= startCol && en.x <= endCol) drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false); });
+        
+        ctx.fillStyle = "yellow";
+        projectiles.forEach(p => { ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, 5, 5); });
+
         ctx.font="20px Arial"; ctx.fillStyle="white"; 
         particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
         ctx.restore(); 
-
         drawHUD(timeOfDay);
     }
 
@@ -503,9 +632,9 @@
         ctx.fillText(player.fragments, 185, 33);
         if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
         let isNight = time > NIGHT_START; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
+        ctx.font = "14px Verdana"; ctx.fillText("Arrow Ammo: " + player.arrows, 300, 50);
     }
 
-    // --- UI FUNCTIONS ---
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
@@ -529,47 +658,51 @@
         if(player.roots.length===0) d.innerText="No roots found.";
     }
     function setActiveBlock(id, name) {
-        player.activeBlock = id;
-        player.activeBlockName = name;
+        player.activeBlock = id; player.activeBlockName = name;
         document.getElementById('hud-block-name').innerText = name;
-        alert("Selected: " + name + ". Press 'B' to place.");
+        alert("Selected: " + name);
     }
     function updateInvCounts() {
         document.getElementById('qty-9').innerText = player.blocks[9];
         document.getElementById('qty-4').innerText = player.blocks[4];
         document.getElementById('qty-5').innerText = player.blocks[5];
+        document.getElementById('qty-6').innerText = player.blocks[6];
+        document.getElementById('qty-7').innerText = player.blocks[7];
+        document.getElementById('qty-10').innerText = player.blocks[10];
         document.getElementById('qty-8').innerText = player.blocks[8];
+        document.getElementById('qty-arrows').innerText = player.arrows;
     }
     function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
     function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
     function craft(i) {
-        if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Crafted Quill!"); }
-        else if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; alert("Healed!"); }
-        else if(i==='wall' && player.fragments>=1) { player.fragments-=1; player.blocks[9]+=5; updateInvCounts(); }
-        else if(i==='wood' && player.fragments>=2) { player.fragments-=2; player.blocks[4]+=5; updateInvCounts(); }
-        else if(i==='brick' && player.fragments>=2) { player.fragments-=2; player.blocks[5]+=5; updateInvCounts(); }
-        else if(i==='door' && player.fragments>=3) { player.fragments-=3; player.blocks[8]+=1; updateInvCounts(); }
+        if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; sfx.craft(); alert("Crafted Quill!"); }
+        else if(i==='arrows' && player.fragments>=2) { player.fragments-=2; player.arrows+=10; sfx.craft(); updateInvCounts(); }
+        else if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; sfx.craft(); alert("Healed!"); }
+        else if(i==='wall' && player.fragments>=1) { player.fragments-=1; player.blocks[9]+=5; sfx.craft(); updateInvCounts(); }
+        else if(i==='wood' && player.fragments>=2) { player.fragments-=2; player.blocks[4]+=5; sfx.craft(); updateInvCounts(); }
+        else if(i==='brick' && player.fragments>=2) { player.fragments-=2; player.blocks[5]+=5; sfx.craft(); updateInvCounts(); }
+        else if(i==='glass' && player.fragments>=2) { player.fragments-=2; player.blocks[6]+=5; sfx.craft(); updateInvCounts(); }
+        else if(i==='obsidian' && player.fragments>=5) { player.fragments-=5; player.blocks[7]+=5; sfx.craft(); updateInvCounts(); }
+        else if(i==='ladder' && player.fragments>=1) { player.fragments-=1; player.blocks[10]+=5; sfx.craft(); updateInvCounts(); }
+        else if(i==='door' && player.fragments>=3) { player.fragments-=3; player.blocks[8]+=1; sfx.craft(); updateInvCounts(); }
         else if(player.fragments < 2) alert("Not enough fragments!");
     }
     async function forgeWord() {
         if(!forge.root) return;
-        let m = document.getElementById('forge-msg');
-        m.innerHTML = "Checking ancient texts..."; 
+        let m = document.getElementById('forge-msg'); m.innerHTML = "Checking..."; sfx.craft();
         let base = forge.root; let pre = forge.pre || ""; let suf = forge.suf || "";
         let rawWord = (pre + base + suf).toLowerCase();
         let correctedWord = rawWord;
-        
         if (suf.length > 0) {
             if (base.endsWith('e') && isVowel(suf[0])) correctedWord = pre + base.slice(0, -1) + suf;
             else if (isCVC(base) && isVowel(suf[0])) correctedWord = pre + base + base[base.length-1] + suf;
             else if (base.endsWith('y') && !isVowel(base[base.length-2]) && suf[0] !== 'i') correctedWord = pre + base.slice(0, -1) + "i" + suf;
         }
-
         let definition = await checkValidity(correctedWord);
         if (definition) {
             m.innerHTML = `<span style="color:green">✨ ${correctedWord.toUpperCase()}</span>: ${definition}`;
             if (rawWord !== correctedWord) m.innerHTML += `<br><small style="color:#555">(Spelling rule: ${rawWord} ➔ ${correctedWord})</small>`;
-            player.fragments += 5;
+            player.fragments += 5; sfx.collect();
         } else {
             if (rawWord !== correctedWord) {
                 let rawDef = await checkValidity(rawWord);
