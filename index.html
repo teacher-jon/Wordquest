@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordCraft: Endless World</title>
+    <title>WordCraft: Smart Miner</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -29,7 +29,6 @@
         }
         canvas { display: block; image-rendering: pixelated; }
         
-        /* OVERLAYS */
         #overlay-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; align-items: center; justify-content: center;
@@ -45,7 +44,6 @@
         }
         .popup.active { display: block; }
         
-        /* INVENTORY BOOK STYLING */
         #screen-inv {
             width: 600px; height: 450px;
             background-image: url('assets/bg.png');
@@ -53,7 +51,6 @@
             color: #3e2723;
         }
 
-        /* UI ELEMENTS */
         .forge-tabs { display: flex; border-bottom: 2px solid #5d4037; margin-bottom: 15px; }
         .tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.3); }
         .tab.active { background: rgba(255,255,255,0.6); border-bottom: 3px solid #3e2723; }
@@ -85,9 +82,9 @@
         }
         .toggle-container { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; }
-        .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
         .toggle-btn.on { background: #27ae60; }
         .toggle-btn.on::after { left: 22px; }
+        .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
 
         .tag-1 { color: #5d4037; border-left: 4px solid #795548; }
         .tag-2 { color: #455a64; border-left: 4px solid #78909c; }
@@ -101,25 +98,24 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Generating Massive World...
+            Loading Builder Tools...
         </div>
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Endless Edition</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Smart Miner</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>📜 The New World</h2>
-                    <p>Welcome to a vast, living world. The map is now <b>200 blocks wide</b> with hills, valleys, and deep caves.</p>
-                    <p>Dig deep to find the rarest Greek Roots, but beware—night falls quickly.</p>
-                    
-                    <h2>⚔️ Instructions</h2>
+                    <h2>⛏️ New Mining Controls</h2>
+                    <p><b>Directional Mining:</b> Hold an Arrow Key + Spacebar to mine in that direction!</p>
                     <p>
-                    • <b>Arrows:</b> Explore the world<br>
-                    • <b>Space:</b> Mine / Attack<br>
-                    • <b>'I' Key:</b> Word Forge<br>
-                    • <b>'B' Key:</b> Place Wall<br>
+                    • <b>Down + Space:</b> Mine floor (Dig hole)<br>
+                    • <b>Up + Space:</b> Mine ceiling<br>
+                    • <b>Side + Space:</b> Mine walls<br>
                     </p>
+                    
+                    <h2>🛠️ Building</h2>
+                    <p><b>'B' Key:</b> Place a wall where you are standing/facing.</p>
                 </div>
 
                 <div class="toggle-container" onclick="toggleMonsters()">
@@ -151,13 +147,11 @@
                         <button onclick="forgeWord()">🔨</button>
                     </div>
                     <div id="forge-msg" style="height:20px; font-weight:bold; color:#d84315; font-size:12px;"></div>
-                    
                     <div style="display:flex; gap:10px; text-align:left; margin-top:10px;">
                         <div style="flex:1;">
                             <small><b>COLLECTED ROOTS</b></small>
                             <div id="list-roots" class="inv-grid"></div>
                         </div>
-                        
                         <div style="flex:1;">
                             <small><b>AFFIXES</b></small>
                             <div class="inv-grid">
@@ -196,17 +190,17 @@
                     <div class="inv-grid" style="flex-direction:column;">
                         <div class="word-chip" onclick="craft('quill')" style="padding:10px;"><b>Golden Quill</b> (Weapon) - 10 💎</div>
                         <div class="word-chip" onclick="craft('potion')" style="padding:10px;"><b>Health Potion</b> (+1 ❤️) - 5 💎</div>
-                        <div class="word-chip" onclick="craft('wall')" style="padding:10px;"><b>Barricade</b> (Safe Zone) - 2 💎</div>
+                        <div class="word-chip" onclick="craft('wall')" style="padding:10px;"><b>Barricade x5</b> (Press 'B' to Place) - 2 💎</div>
                     </div>
                 </div>
                 <button onclick="setGameState('playing')" style="margin-top:10px; background:#5d4037;">Close Book</button>
             </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS to Move | SPACE to Mine/Attack | 'I' for Inventory</div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS: Move/Aim | SPACE: Mine | 'I': Inventory | 'B': Place Wall</div>
 
 <script>
-    // --- ASSET LOADER (Transparent Fix) ---
+    // --- ASSET LOADER ---
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
     let loadedCount = 0; const requiredImages = 3;
@@ -225,7 +219,6 @@
         let data = imgData.data;
         for(let i = 0; i < data.length; i += 4) {
             let r = data[i], g = data[i+1], b = data[i+2];
-            // Remove white-ish pixels
             if(r > 240 && g > 240 && b > 240) data[i+3] = 0;
         }
         cx.putImageData(imgData, 0, 0);
@@ -244,10 +237,10 @@
     assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad;
     assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;
 
-    // --- GAME CONFIG (BIGGER WORLD) ---
+    // --- GAME CONFIG ---
     const TILE_SIZE = 40; 
-    const COLS = 200; // HUGE WORLD WIDTH
-    const ROWS = 60;  // DEEP WORLD
+    const COLS = 200; 
+    const ROWS = 60;  
     const CANVAS_W = 800; 
     const CANVAS_H = 600;
     const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
@@ -256,8 +249,8 @@
     const DAY_LENGTH = 3600; const NIGHT_START = DAY_LENGTH / 2;
     let gameTick = 0; let monstersEnabled = true;
 
-    // --- CAMERA SYSTEM ---
     let camera = { x: 0, y: 0 };
+    let keys = {}; // Track multiple keys for directional mining
 
     // --- UFLI ROOT DATA ---
     const LAYER_ROOTS = {
@@ -268,29 +261,32 @@
 
     const WORD_CACHE = {};
 
-    // --- STATE ---
     let state = 'start'; let grid = []; let enemies = []; let particles = []; let animTick = 0;
     let player = { x:20, y:10, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, walls:0, facingLeft:false, invinc:0 };
     let forge = { pre:null, root:null, suf:null };
 
     function initGame() {
         grid = [];
-        // GENERATE TERRAIN WITH HILLS
+        // GENERATE TERRAIN
         for(let r=0; r<ROWS; r++){
             let row = [];
             for(let c=0; c<COLS; c++){
-                // Simple Hill Generation using Sine wave
                 let surface = 10 + Math.floor(Math.sin(c * 0.1) * 3); 
-                
-                if(r < surface) row.push(0); // Sky
-                else if(r < surface + 5) row.push(1); // Dirt Layer
-                else if(r < surface + 20) row.push(2); // Stone Layer
-                else row.push(3); // Marble Layer
+                if(r < surface) row.push(0); 
+                else if(r < surface + 5) row.push(1); 
+                else if(r < surface + 20) row.push(2); 
+                else row.push(3); 
             }
             grid.push(row);
         }
-        // Place player on surface
-        player.y = 8;
+        
+        // FIX SPAWN: Find ground level at player start x (20)
+        let groundY = 0;
+        while(groundY < ROWS && grid[groundY][20] === 0) {
+            groundY++;
+        }
+        player.y = groundY - 1; // Spawn 1 block above ground
+        
         requestAnimationFrame(loop);
     }
 
@@ -306,27 +302,23 @@
         let timeOfDay = gameTick % DAY_LENGTH;
         let isNight = timeOfDay > NIGHT_START;
 
-        // Camera Follow Player
-        // Target is player position minus half screen
+        // Camera Follow
         let targetCamX = (player.x * TILE_SIZE) - (CANVAS_W / 2);
         let targetCamY = (player.y * TILE_SIZE) - (CANVAS_H / 2);
-        
-        // Clamp Camera to world bounds
         camera.x = Math.max(0, Math.min(targetCamX, (COLS * TILE_SIZE) - CANVAS_W));
         camera.y = Math.max(0, Math.min(targetCamY, (ROWS * TILE_SIZE) - CANVAS_H));
 
-        // Spawn Enemies near player (but not too close)
+        // Spawning
         if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 5) {
-            let spawnX = player.x + (Math.random() > 0.5 ? 10 : -10); // Spawn left or right
+            let spawnX = player.x + (Math.random() > 0.5 ? 10 : -10);
             let spawnY = player.y - 5 + Math.floor(Math.random()*10);
-            
             if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS) {
                  enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
             }
         }
         
+        // Enemy Logic
         enemies.forEach((en,i) => {
-            // Only move if relatively close to player (Optimization)
             if(Math.abs(en.x - player.x) < 20) {
                 if(animTick % en.speed === 0) {
                     if(en.x < player.x) en.x++; else if(en.x > player.x) en.x--;
@@ -341,19 +333,33 @@
         }
     }
 
+    // --- CONTROLS ---
     document.addEventListener('keydown', e => {
+        keys[e.key] = true; // Track key state
+
         if(state !== 'playing') { if(e.key==='i'||e.key==='I') setGameState('playing'); return; }
+        
+        // Movement
         let dx=0, dy=0;
         if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; }
         if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
-        if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
-        if(e.key===' ') { action(); return; }
-        if(e.key==='i'||e.key==='I') { setGameState('inventory'); return; }
-        if(e.key==='b'||e.key==='B') { if(player.walls>0){ grid[player.y][player.x]=9; player.walls--; } return; }
-        let nx = player.x+dx, ny = player.y+dy;
-        if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
-            let t = grid[ny][nx]; if(t===0 || t===9) { player.x=nx; player.y=ny; }
+        if(e.key==='ArrowUp') dy=-1; 
+        if(e.key==='ArrowDown') dy=1;
+
+        if(dx!==0 || dy!==0) {
+            let nx = player.x+dx, ny = player.y+dy;
+            if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
+                let t = grid[ny][nx]; if(t===0 || t===9) { player.x=nx; player.y=ny; }
+            }
         }
+
+        if(e.key===' ') action();
+        if(e.key==='i'||e.key==='I') setGameState('inventory');
+        if(e.key==='b'||e.key==='B') placeWall();
+    });
+
+    document.addEventListener('keyup', e => {
+        keys[e.key] = false;
     });
 
     function action() {
@@ -366,9 +372,22 @@
             });
         }
         if(hit) return;
-        let tx = player.x + (player.facingLeft?-1:1); let ty = player.y;
-        if(tx>=0 && tx<COLS) {
-            if(grid[ty][tx]===0) ty++;
+
+        // OMNI-DIRECTIONAL MINING
+        let tx = player.x; 
+        let ty = player.y;
+
+        if(keys['ArrowUp']) ty -= 1;
+        else if(keys['ArrowDown']) ty += 1;
+        else if(keys['ArrowLeft']) tx -= 1;
+        else if(keys['ArrowRight']) tx += 1;
+        else {
+            // Default: Mine in front/down if no direction held
+            tx += (player.facingLeft ? -1 : 1);
+            if(grid[ty][tx] === 0) ty += 1; // Auto-aim down if front is air
+        }
+
+        if(tx>=0 && tx<COLS && ty>=0 && ty<ROWS) {
             let t = grid[ty][tx];
             if(t>=1 && t<=3) {
                 grid[ty][tx]=0; player.fragments++; addPart(tx,ty,"✨");
@@ -379,6 +398,18 @@
             }
         }
     }
+    
+    function placeWall() {
+        if(player.walls > 0) {
+            // Place wall at player position (background wall)
+            if(grid[player.y][player.x] === 0) {
+                grid[player.y][player.x] = 9;
+                player.walls--;
+                addPart(player.x, player.y, "🧱");
+            }
+        }
+    }
+
     function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; addPart(player.x,player.y,"💔"); if(player.hp<=0) setGameState('death'); }
     function addPart(x,y,c) { particles.push({x:x,y:y,char:c,life:30}); }
 
@@ -390,18 +421,15 @@
         let b = Math.floor(235 * cyclePos + 60 * (1-cyclePos));
         ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
-        // WORLD RENDERING WITH CAMERA
         let tW = processedAssets.tiles.width; 
         let tH = processedAssets.tiles.height/5;
-        
-        // Calculate visible range (Optimization: Don't draw whole world)
         let startCol = Math.floor(camera.x / TILE_SIZE);
         let endCol = startCol + (CANVAS_W / TILE_SIZE) + 1;
         let startRow = Math.floor(camera.y / TILE_SIZE);
         let endRow = startRow + (CANVAS_H / TILE_SIZE) + 1;
 
         ctx.save();
-        ctx.translate(-camera.x, -camera.y); // Apply Camera Scroll
+        ctx.translate(-camera.x, -camera.y);
 
         for(let row=startRow; row<=endRow; row++){
             for(let col=startCol; col<=endCol; col++){
@@ -409,25 +437,21 @@
                 let t = grid[row][col];
                 if(t>0) { 
                     let tidx = (t===9)?3 : (t-1); 
-                    // DRAW WITH BLEED (+1 pixel) TO FIX SEAMS
                     ctx.drawImage(processedAssets.tiles, 0, tidx*tH, tW, tH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
                 }
             }
         }
 
-        // Draw Entities (Relative to World)
         let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
         drawChar(0, 0, Math.floor(animTick/20)%2, player.x, player.y, player.facingLeft);
         enemies.forEach(en => {
-            // Only draw if on screen
             if(en.x >= startCol && en.x <= endCol) {
                 drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false);
             }
         });
         ctx.font="20px Arial"; ctx.fillStyle="white"; 
         particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
-
-        ctx.restore(); // Undo Camera for HUD
+        ctx.restore(); 
 
         drawHUD(timeOfDay);
     }
@@ -442,12 +466,21 @@
     function drawHUD(time) {
         let uW = processedAssets.ui.width/2; let uH = processedAssets.ui.height/2;
         for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(processedAssets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
-        ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); ctx.fillText(player.fragments, 185, 33);
+        
+        // Fragments
+        ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); 
+        ctx.fillStyle = "white"; ctx.font = "bold 20px Verdana";
+        ctx.fillText(player.fragments, 185, 33);
+        
+        // Tool
         if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
-        let isNight = time > NIGHT_START; ctx.fillStyle = "white"; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
+        
+        // Wall Count
+        ctx.fillText("🧱 x " + player.walls, 300, 33);
+
+        let isNight = time > NIGHT_START; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
     }
 
-    // --- SMART FORGE & UI ---
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
