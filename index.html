@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lexicon Excavation</title>
+    <title>WordCraft: Endless World</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -39,7 +39,7 @@
             background: #fff;
             border: 4px solid var(--ui-border);
             padding: 20px; border-radius: 8px;
-            text-align: center; max-width: 550px;
+            text-align: center; max-width: 600px;
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
             max-height: 90%; overflow-y: auto;
         }
@@ -47,7 +47,7 @@
         
         /* INVENTORY BOOK STYLING */
         #screen-inv {
-            width: 550px; height: 400px;
+            width: 600px; height: 450px;
             background-image: url('assets/bg.png');
             background-size: cover;
             color: #3e2723;
@@ -58,7 +58,7 @@
         .tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.3); }
         .tab.active { background: rgba(255,255,255,0.6); border-bottom: 3px solid #3e2723; }
         
-        .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; }
+        .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 15px 0; }
         .craft-slot { 
             width: 60px; height: 60px; border: 2px dashed #5d4037;
             display: flex; align-items: center; justify-content: center;
@@ -66,7 +66,7 @@
         }
         .inv-grid { 
             display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; 
-            max-height: 180px; overflow-y: auto; padding: 5px;
+            max-height: 220px; overflow-y: auto; padding: 5px;
         }
         .word-chip { 
             background: #fff; border: 1px solid #5d4037; padding: 4px 8px; 
@@ -75,13 +75,19 @@
         }
         .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
         
+        .chip-pre { background-color: #e3f2fd; }
+        .chip-suf { background-color: #f3e5f5; }
+        .chip-inf { background-color: #fff3e0; }
+
         button {
             background: #27ae60; border: none; color: white; padding: 10px 20px;
             font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; margin: 5px;
         }
-        button.secondary { background: #7f8c8d; font-size: 14px; }
-        button.danger { background: #c0392b; }
-        button:hover { filter: brightness(1.1); }
+        .toggle-container { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; }
+        .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle-btn.on { background: #27ae60; }
+        .toggle-btn.on::after { left: 22px; }
 
         .tag-1 { color: #5d4037; border-left: 4px solid #795548; }
         .tag-2 { color: #455a64; border-left: 4px solid #78909c; }
@@ -89,54 +95,46 @@
         
         h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; color: #d35400; }
         p { line-height: 1.5; margin-bottom: 15px; }
-        
-        /* Toggle Switch */
-        .toggle-container { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .toggle-btn { background: #ccc; border-radius: 20px; width: 40px; height: 20px; position: relative; cursor: pointer; }
-        .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
-        .toggle-btn.on { background: #27ae60; }
-        .toggle-btn.on::after { left: 22px; }
-
     </style>
 </head>
 <body>
     <div id="game-frame">
-        <canvas id="gameCanvas" width="640" height="480"></canvas>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
-            Processing Assets...
+            Generating Massive World...
         </div>
 
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
-                <h1 style="color:#c0392b; margin-top:0;">The Lexicon Excavation</h1>
+                <h1 style="color:#c0392b; margin-top:0;">WordCraft: Endless Edition</h1>
                 
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
-                    <h2>📜 Storyline</h2>
-                    <p>The Great Library of Babel has collapsed! All the words of the world have shattered into their base <b>ROOTS</b> and fallen deep underground.</p>
-                    <p>You are a Word-Weaver. You must dig into the earth to recover these roots. Bring them to your forge to combine them with <b>AFFIXES</b> (prefixes and suffixes) to rebuild our language.</p>
+                    <h2>📜 The New World</h2>
+                    <p>Welcome to a vast, living world. The map is now <b>200 blocks wide</b> with hills, valleys, and deep caves.</p>
+                    <p>Dig deep to find the rarest Greek Roots, but beware—night falls quickly.</p>
                     
                     <h2>⚔️ Instructions</h2>
                     <p>
-                    • <b>Arrow Keys:</b> Move & Dig<br>
-                    • <b>Spacebar:</b> Mine Blocks / Attack<br>
-                    • <b>'I' Key:</b> Open Inventory Book<br>
-                    • <b>'B' Key:</b> Place Wall (Safety)<br>
+                    • <b>Arrows:</b> Explore the world<br>
+                    • <b>Space:</b> Mine / Attack<br>
+                    • <b>'I' Key:</b> Word Forge<br>
+                    • <b>'B' Key:</b> Place Wall<br>
                     </p>
                 </div>
 
                 <div class="toggle-container" onclick="toggleMonsters()">
-                    <span>Letter Bugs (Monsters):</span>
+                    <span>Letter Bugs:</span>
                     <div id="monster-toggle" class="toggle-btn on"></div>
                     <span id="monster-status">ON</span>
                 </div>
 
-                <button onclick="setGameState('playing')">Begin Adventure</button>
+                <button onclick="setGameState('playing')">Enter World</button>
             </div>
             
             <div id="screen-death" class="popup">
                 <h1 style="color:red;">Scrambled!</h1>
                 <p>The Letter Bugs scrambled your words.</p>
-                <button onclick="location.reload()">Try Again</button>
+                <button onclick="location.reload()">Respawn</button>
             </div>
 
             <div id="screen-inv" class="popup">
@@ -152,22 +150,42 @@
                         <div id="slot-suf" class="craft-slot" onclick="clearSlot('suf')">[Suf]</div>
                         <button onclick="forgeWord()">🔨</button>
                     </div>
-                    <div id="forge-msg" style="height:20px; font-weight:bold; color:#d84315;"></div>
+                    <div id="forge-msg" style="height:20px; font-weight:bold; color:#d84315; font-size:12px;"></div>
+                    
                     <div style="display:flex; gap:10px; text-align:left; margin-top:10px;">
                         <div style="flex:1;">
-                            <small><b>ROOTS</b></small>
+                            <small><b>COLLECTED ROOTS</b></small>
                             <div id="list-roots" class="inv-grid"></div>
                         </div>
+                        
                         <div style="flex:1;">
                             <small><b>AFFIXES</b></small>
                             <div class="inv-grid">
-                                <span class="word-chip" onclick="setSlot('pre','re')">re-</span>
-                                <span class="word-chip" onclick="setSlot('pre','un')">un-</span>
-                                <span class="word-chip" onclick="setSlot('pre','trans')">trans-</span>
-                                <span class="word-chip" onclick="setSlot('suf','ing')">-ing</span>
-                                <span class="word-chip" onclick="setSlot('suf','ed')">-ed</span>
-                                <span class="word-chip" onclick="setSlot('suf','er')">-er</span>
-                                <span class="word-chip" onclick="setSlot('suf','ful')">-ful</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','un')">un-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','re')">re-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','dis')">dis-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','pre')">pre-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','uni')">uni-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','bi')">bi-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','tri')">tri-</span>
+                                <span class="word-chip chip-pre" onclick="setSlot('pre','sub')">sub-</span>
+                                <span class="word-chip chip-inf" onclick="setSlot('suf','s')">-s</span>
+                                <span class="word-chip chip-inf" onclick="setSlot('suf','es')">-es</span>
+                                <span class="word-chip chip-inf" onclick="setSlot('suf','ed')">-ed</span>
+                                <span class="word-chip chip-inf" onclick="setSlot('suf','ing')">-ing</span>
+                                <span class="word-chip chip-inf" onclick="setSlot('suf','er')">-er</span>
+                                <span class="word-chip chip-inf" onclick="setSlot('suf','est')">-est</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ly')">-ly</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','less')">-less</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ful')">-ful</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ness')">-ness</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ment')">-ment</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','able')">-able</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ible')">-ible</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ish')">-ish</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','y')">-y</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','ture')">-ture</span>
+                                <span class="word-chip chip-suf" onclick="setSlot('suf','tion')">-tion</span>
                             </div>
                         </div>
                     </div>
@@ -181,14 +199,14 @@
                         <div class="word-chip" onclick="craft('wall')" style="padding:10px;"><b>Barricade</b> (Safe Zone) - 2 💎</div>
                     </div>
                 </div>
-                <button onclick="setGameState('playing')" style="margin-top:20px; background:#5d4037;">Close Book</button>
+                <button onclick="setGameState('playing')" style="margin-top:10px; background:#5d4037;">Close Book</button>
             </div>
         </div>
     </div>
     <div style="color:#aaa; font-size:12px; margin-top:5px;">ARROWS to Move | SPACE to Mine/Attack | 'I' for Inventory</div>
 
 <script>
-    // --- ASSET LOADER WITH TRANSPARENCY FIX ---
+    // --- ASSET LOADER (Transparent Fix) ---
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
     let loadedCount = 0; const requiredImages = 3;
@@ -198,34 +216,26 @@
         if(loadedCount === requiredImages) processAssets(); 
     }
 
-    // This function acts like a "Green Screen" remover for the white backgrounds
     function removeWhiteBackground(img) {
         const c = document.createElement('canvas');
         const cx = c.getContext('2d');
         c.width = img.width; c.height = img.height;
         cx.drawImage(img, 0, 0);
-        
         let imgData = cx.getImageData(0, 0, c.width, c.height);
         let data = imgData.data;
-        
         for(let i = 0; i < data.length; i += 4) {
             let r = data[i], g = data[i+1], b = data[i+2];
-            // If pixel is close to white (allow slight variation)
-            if(r > 240 && g > 240 && b > 240) {
-                data[i+3] = 0; // Set Alpha to 0 (Transparent)
-            }
+            // Remove white-ish pixels
+            if(r > 240 && g > 240 && b > 240) data[i+3] = 0;
         }
         cx.putImageData(imgData, 0, 0);
-        return c; // Returns a canvas element which works like an image
+        return c;
     }
 
     function processAssets() {
-        // Convert all loaded images to transparent versions
         processedAssets.tiles = removeWhiteBackground(assets.tiles);
         processedAssets.chars = removeWhiteBackground(assets.chars);
         processedAssets.ui = removeWhiteBackground(assets.ui);
-        
-        // Hide loading text and start
         document.getElementById('loading').style.display = 'none';
         initGame();
     }
@@ -234,36 +244,53 @@
     assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad;
     assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;
 
-    // --- CONFIG ---
-    const TILE_SIZE = 40; const COLS = 16; const ROWS = 12;
-    const W = TILE_SIZE * COLS; const H = TILE_SIZE * ROWS;
+    // --- GAME CONFIG (BIGGER WORLD) ---
+    const TILE_SIZE = 40; 
+    const COLS = 200; // HUGE WORLD WIDTH
+    const ROWS = 60;  // DEEP WORLD
+    const CANVAS_W = 800; 
+    const CANVAS_H = 600;
     const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
-    canvas.width = W; canvas.height = H;
+    canvas.width = CANVAS_W; canvas.height = CANVAS_H;
 
-    // --- DAY/NIGHT CONFIG ---
-    const DAY_LENGTH = 3600; 
-    const NIGHT_START = DAY_LENGTH / 2;
-    let gameTick = 0;
-    let monstersEnabled = true;
+    const DAY_LENGTH = 3600; const NIGHT_START = DAY_LENGTH / 2;
+    let gameTick = 0; let monstersEnabled = true;
 
-    // --- DATA ---
-    const DICTIONARY = { "helper": "One who aids", "helping": "Act of aiding", "unhelpful": "Not aiding", "transport": "Carry across", "portable": "Able to be carried", "report": "Tell back", "action": "Doing something", "react": "Do back", "actor": "One who does", "disrupt": "Break apart", "erupt": "Break out", "banker": "One who banks", "rebuild": "Build again", "builder": "One who builds" };
-    const LAYER_ROOTS = { 1: ["help", "play", "walk", "bank", "build"], 2: ["port", "form", "ject", "rupt"], 3: ["phon", "graph", "chron", "bio"] };
+    // --- CAMERA SYSTEM ---
+    let camera = { x: 0, y: 0 };
+
+    // --- UFLI ROOT DATA ---
+    const LAYER_ROOTS = {
+        1: ["play", "help", "jump", "walk", "look", "ask", "wish", "hope", "make", "use", "like", "ride", "smile", "time", "run", "hop", "sit", "win", "cut", "shop", "swim", "sad"],
+        2: ["happy", "funny", "penny", "baby", "carry", "cry", "try", "cycle", "angle", "view", "port", "form", "cover", "fair", "kind", "joy", "care", "fear", "pain", "dark"],
+        3: ["struct", "ject", "rupt", "phon", "graph", "scope", "meter", "bio", "chron", "vis", "aud", "terr", "fract", "pic", "mix"]
+    };
+
+    const WORD_CACHE = {};
 
     // --- STATE ---
     let state = 'start'; let grid = []; let enemies = []; let particles = []; let animTick = 0;
-    let player = { x:8, y:4, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, walls:0, facingLeft:false, invinc:0 };
+    let player = { x:20, y:10, hp:3, maxHp:3, fragments:0, roots:[], hasQuill:false, walls:0, facingLeft:false, invinc:0 };
     let forge = { pre:null, root:null, suf:null };
 
     function initGame() {
         grid = [];
+        // GENERATE TERRAIN WITH HILLS
         for(let r=0; r<ROWS; r++){
             let row = [];
             for(let c=0; c<COLS; c++){
-                if(r < 5) row.push(0); else if(r < 8) row.push(1); else if(r < 10) row.push(2); else row.push(3);
+                // Simple Hill Generation using Sine wave
+                let surface = 10 + Math.floor(Math.sin(c * 0.1) * 3); 
+                
+                if(r < surface) row.push(0); // Sky
+                else if(r < surface + 5) row.push(1); // Dirt Layer
+                else if(r < surface + 20) row.push(2); // Stone Layer
+                else row.push(3); // Marble Layer
             }
             grid.push(row);
         }
+        // Place player on surface
+        player.y = 8;
         requestAnimationFrame(loop);
     }
 
@@ -276,35 +303,44 @@
     function update() {
         animTick++; gameTick++;
         if(player.invinc > 0) player.invinc--;
-
         let timeOfDay = gameTick % DAY_LENGTH;
         let isNight = timeOfDay > NIGHT_START;
 
-        // CHECK MONSTER TOGGLE BEFORE SPAWNING
-        if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 3) {
-            let r = Math.floor(Math.random()*5); let c = Math.floor(Math.random()*COLS);
-            if(Math.abs(c-player.x)>3) {
-                enemies.push({ x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
+        // Camera Follow Player
+        // Target is player position minus half screen
+        let targetCamX = (player.x * TILE_SIZE) - (CANVAS_W / 2);
+        let targetCamY = (player.y * TILE_SIZE) - (CANVAS_H / 2);
+        
+        // Clamp Camera to world bounds
+        camera.x = Math.max(0, Math.min(targetCamX, (COLS * TILE_SIZE) - CANVAS_W));
+        camera.y = Math.max(0, Math.min(targetCamY, (ROWS * TILE_SIZE) - CANVAS_H));
+
+        // Spawn Enemies near player (but not too close)
+        if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 5) {
+            let spawnX = player.x + (Math.random() > 0.5 ? 10 : -10); // Spawn left or right
+            let spawnY = player.y - 5 + Math.floor(Math.random()*10);
+            
+            if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS) {
+                 enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20 });
             }
         }
-
-        enemies.forEach((en,i) => {
-            if(animTick % en.speed === 0) {
-                if(en.x < player.x) en.x++; else if(en.x > player.x) en.x--;
-                else if(en.y < player.y) en.y++; else if(en.y > player.y) en.y--;
-            }
-            if(en.x === player.x && en.y === player.y) hurtPlayer();
-        });
         
-        // Remove dead enemies
+        enemies.forEach((en,i) => {
+            // Only move if relatively close to player (Optimization)
+            if(Math.abs(en.x - player.x) < 20) {
+                if(animTick % en.speed === 0) {
+                    if(en.x < player.x) en.x++; else if(en.x > player.x) en.x--;
+                    else if(en.y < player.y) en.y++; else if(en.y > player.y) en.y--;
+                }
+                if(en.x === player.x && en.y === player.y) hurtPlayer();
+            }
+        });
         if(!monstersEnabled && enemies.length > 0) enemies = [];
-
         for(let i=particles.length-1; i>=0; i--) {
             particles[i].life--; particles[i].y-=0.5; if(particles[i].life<=0) particles.splice(i,1);
         }
     }
 
-    // --- CONTROLS ---
     document.addEventListener('keydown', e => {
         if(state !== 'playing') { if(e.key==='i'||e.key==='I') setGameState('playing'); return; }
         let dx=0, dy=0;
@@ -346,36 +382,53 @@
     function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; addPart(player.x,player.y,"💔"); if(player.hp<=0) setGameState('death'); }
     function addPart(x,y,c) { particles.push({x:x,y:y,char:c,life:30}); }
 
-    // --- DRAWING & SKY TRANSITION ---
     function draw() {
         let timeOfDay = gameTick % DAY_LENGTH;
-        let cyclePos = Math.sin((timeOfDay / DAY_LENGTH) * Math.PI); // 0 -> 1 -> 0
-        
-        // DEEPER NIGHT COLORS
-        // Day: 135,206,235 (Sky Blue)
-        // Night: 20, 20, 60 (Dark Blue/Black)
+        let cyclePos = Math.sin((timeOfDay / DAY_LENGTH) * Math.PI);
         let r = Math.floor(135 * cyclePos + 20 * (1-cyclePos));
         let g = Math.floor(206 * cyclePos + 20 * (1-cyclePos));
         let b = Math.floor(235 * cyclePos + 60 * (1-cyclePos));
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(0,0,W,H); 
+        ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
-        // USE PROCESSED ASSETS (Transparent)
-        let tW = processedAssets.tiles.width; let tH = processedAssets.tiles.height/5;
-        for(let r=0; r<ROWS; r++){
-            for(let c=0; c<COLS; c++){
-                let t = grid[r][c];
+        // WORLD RENDERING WITH CAMERA
+        let tW = processedAssets.tiles.width; 
+        let tH = processedAssets.tiles.height/5;
+        
+        // Calculate visible range (Optimization: Don't draw whole world)
+        let startCol = Math.floor(camera.x / TILE_SIZE);
+        let endCol = startCol + (CANVAS_W / TILE_SIZE) + 1;
+        let startRow = Math.floor(camera.y / TILE_SIZE);
+        let endRow = startRow + (CANVAS_H / TILE_SIZE) + 1;
+
+        ctx.save();
+        ctx.translate(-camera.x, -camera.y); // Apply Camera Scroll
+
+        for(let row=startRow; row<=endRow; row++){
+            for(let col=startCol; col<=endCol; col++){
+                if(row<0 || row>=ROWS || col<0 || col>=COLS) continue;
+                let t = grid[row][col];
                 if(t>0) { 
                     let tidx = (t===9)?3 : (t-1); 
-                    // Draw Tile
-                    ctx.drawImage(processedAssets.tiles, 0, tidx*tH, tW, tH, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); 
+                    // DRAW WITH BLEED (+1 pixel) TO FIX SEAMS
+                    ctx.drawImage(processedAssets.tiles, 0, tidx*tH, tW, tH, col*TILE_SIZE, row*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); 
                 }
             }
         }
+
+        // Draw Entities (Relative to World)
         let cW = processedAssets.chars.width/3; let cH = processedAssets.chars.height/3;
         drawChar(0, 0, Math.floor(animTick/20)%2, player.x, player.y, player.facingLeft);
-        enemies.forEach(en => drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false));
-        ctx.font="20px Arial"; ctx.fillStyle="white"; particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
+        enemies.forEach(en => {
+            // Only draw if on screen
+            if(en.x >= startCol && en.x <= endCol) {
+                drawChar((en.type==='bat')?1:2, Math.floor(animTick/10)%3, 0, en.x, en.y, false);
+            }
+        });
+        ctx.font="20px Arial"; ctx.fillStyle="white"; 
+        particles.forEach(p => ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE));
+
+        ctx.restore(); // Undo Camera for HUD
+
         drawHUD(timeOfDay);
     }
 
@@ -386,35 +439,27 @@
         else { ctx.drawImage(processedAssets.chars, (col+animOffset)*cW, row*cH, cW, cH, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
         ctx.restore();
     }
-
     function drawHUD(time) {
-        // UI ICONS (Transparency Fixed)
         let uW = processedAssets.ui.width/2; let uH = processedAssets.ui.height/2;
         for(let i=0; i<player.maxHp; i++) if(i<player.hp) ctx.drawImage(processedAssets.ui, 0, 0, uW, uH, 10+(i*35), 10, 30, 30);
         ctx.drawImage(processedAssets.ui, uW, 0, uW, uH, 150, 10, 30, 30); ctx.fillText(player.fragments, 185, 33);
         if(player.hasQuill) ctx.drawImage(processedAssets.ui, 0, uH, uW, uH, 250, 10, 30, 30); else ctx.fillText("🔨", 250, 33);
-        
-        let isNight = time > NIGHT_START;
-        ctx.fillStyle = "white";
-        ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", W-100, 33);
+        let isNight = time > NIGHT_START; ctx.fillStyle = "white"; ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", CANVAS_W-100, 33);
     }
 
-    // --- UI FUNCTIONS ---
+    // --- SMART FORGE & UI ---
     function setGameState(s) {
         state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         if(s==='start') document.getElementById('screen-start').classList.add('active');
         if(s==='death') document.getElementById('screen-death').classList.add('active');
         if(s==='inventory') { document.getElementById('screen-inv').classList.add('active'); renderRoots(); }
     }
-    
     function toggleMonsters() {
         monstersEnabled = !monstersEnabled;
         let btn = document.getElementById('monster-toggle');
         let txt = document.getElementById('monster-status');
-        if(monstersEnabled) { btn.classList.add('on'); txt.innerText = "ON"; }
-        else { btn.classList.remove('on'); txt.innerText = "OFF"; }
+        if(monstersEnabled) { btn.classList.add('on'); txt.innerText = "ON"; } else { btn.classList.remove('on'); txt.innerText = "OFF"; }
     }
-
     function switchTab(t) {
         document.getElementById('tab-word').style.display = t==='word'?'block':'none';
         document.getElementById('tab-craft').style.display = t==='craft'?'block':'none';
@@ -427,16 +472,53 @@
     }
     function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
     function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
-    function forgeWord() {
-        if(!forge.root) return; let w = ((forge.pre||"")+forge.root+(forge.suf||"")).toLowerCase();
-        let m = document.getElementById('forge-msg');
-        if(DICTIONARY[w]) m.innerHTML=`<span style="color:green">✨ ${w.toUpperCase()}</span>: ${DICTIONARY[w]}`;
-        else m.innerHTML=`❌ ${w} is not a valid word.`;
-    }
     function craft(i) {
         if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Crafted Quill!"); }
         if(i==='potion' && player.fragments>=5 && player.hp<3) { player.fragments-=5; player.hp++; alert("Healed!"); }
-        if(i==='wall' && player.fragments>=2) { player.fragments-=2; player.walls+=5; alert("Walls Crafted! Press B to place."); }
+        if(i==='wall' && player.fragments>=2) { player.fragments-=2; player.walls+=5; alert("Walls Crafted!"); }
+    }
+    async function forgeWord() {
+        if(!forge.root) return;
+        let m = document.getElementById('forge-msg');
+        m.innerHTML = "Checking ancient texts..."; 
+        let base = forge.root; let pre = forge.pre || ""; let suf = forge.suf || "";
+        let rawWord = (pre + base + suf).toLowerCase();
+        let correctedWord = rawWord;
+        
+        if (suf.length > 0) {
+            if (base.endsWith('e') && isVowel(suf[0])) correctedWord = pre + base.slice(0, -1) + suf;
+            else if (isCVC(base) && isVowel(suf[0])) correctedWord = pre + base + base[base.length-1] + suf;
+            else if (base.endsWith('y') && !isVowel(base[base.length-2]) && suf[0] !== 'i') correctedWord = pre + base.slice(0, -1) + "i" + suf;
+        }
+
+        let definition = await checkValidity(correctedWord);
+        if (definition) {
+            m.innerHTML = `<span style="color:green">✨ ${correctedWord.toUpperCase()}</span>: ${definition}`;
+            if (rawWord !== correctedWord) m.innerHTML += `<br><small style="color:#555">(Spelling rule: ${rawWord} ➔ ${correctedWord})</small>`;
+            player.fragments += 5;
+        } else {
+            if (rawWord !== correctedWord) {
+                let rawDef = await checkValidity(rawWord);
+                if (rawDef) { m.innerHTML = `<span style="color:green">✨ ${rawWord.toUpperCase()}</span>: ${rawDef}`; return; }
+            }
+            m.innerHTML = `❌ "${correctedWord}" is not in the dictionary.`;
+        }
+    }
+    function isVowel(char) { return ['a','e','i','o','u','y'].includes(char); }
+    function isCVC(word) {
+        if(word.length < 3) return false;
+        let last = word[word.length-1]; let middle = word[word.length-2]; let first = word[word.length-3];
+        return !isVowel(last) && isVowel(middle) && !isVowel(first);
+    }
+    async function checkValidity(word) {
+        if (WORD_CACHE[word]) return WORD_CACHE[word];
+        try {
+            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            let def = data[0].meanings[0].definitions[0].definition;
+            WORD_CACHE[word] = def; return def;
+        } catch (e) { return null; }
     }
 </script>
 </body>
