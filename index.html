@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Fixed Crafting</title>
+    <title>WordCraft: Crafting Fixed</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -69,20 +69,26 @@
         .word-chip:hover { transform: scale(1.05); background: #ffe0b2; }
         .chip-pre { background-color: #e3f2fd; } .chip-suf { background-color: #f3e5f5; } .chip-inf { background-color: #fff3e0; }
 
-        /* CRAFTING ROWS */
+        /* --- NEW CRAFTING ROW STYLES --- */
         .craft-row {
-            display: flex; width: 100%; align-items: center; gap: 5px; margin-bottom: 5px;
-            background: rgba(255,255,255,0.5); padding: 4px; border-radius: 8px;
+            display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 5px;
+            background: rgba(255,255,255,0.6); padding: 5px; border-radius: 8px;
+            border-bottom: 1px solid #aaa;
         }
-        .craft-select { flex: 1; text-align: left; cursor: pointer; font-weight: bold; font-size: 12px; }
-        .craft-select:hover { color: #d35400; }
+        .craft-select { 
+            flex: 1; text-align: left; cursor: pointer; font-weight: bold; font-size: 12px; color: #2c3e50;
+        }
+        .craft-select:hover { color: #d35400; text-decoration: underline; }
+        
         .craft-btn { 
-            background: #27ae60; color: white; border: none; border-radius: 4px; 
+            background: #27ae60; color: white; border: 1px solid #1e8449; border-radius: 4px; 
             padding: 5px 10px; font-size: 11px; font-weight: bold; cursor: pointer; 
+            min-width: 80px;
         }
-        .craft-btn:hover { background: #219150; }
+        .craft-btn:hover { background: #219150; transform: scale(1.05); }
+        .craft-btn:active { transform: scale(0.95); }
 
-        /* CLEAR TEXT UPDATE: Fixed Message Box */
+        /* FIXED MESSAGE BOX */
         #forge-msg {
             min-height: 50px; height: auto; font-weight: bold; color: #2c3e50; font-size: 13px; 
             border: 2px solid #8d6e63; background: #fff8e1; padding: 10px; margin-bottom: 10px;
@@ -90,8 +96,9 @@
         }
 
         #resource-bar {
-            display: flex; justify-content: space-around; background: rgba(0,0,0,0.1); 
-            padding: 5px; border-radius: 4px; margin-bottom: 10px; font-size: 12px; font-weight: bold;
+            display: flex; justify-content: space-around; background: rgba(0,0,0,0.2); color: white;
+            padding: 5px; border-radius: 4px; margin-bottom: 10px; font-size: 14px; font-weight: bold;
+            text-shadow: 1px 1px 0 #000;
         }
 
         /* MOBILE CONTROLS */
@@ -145,9 +152,9 @@
                 <div style="text-align: left; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;">
                     <h2>⛏️ How to Build</h2>
                     <p><b>1. Mine:</b> Dig Dirt (🟫), Sand (🟡), or Stone (🌑).</p>
-                    <p><b>2. Craft:</b> Open Inventory ('I'). Click the <b>Green (+5)</b> button to turn raw resources into blocks.</p>
-                    <p><b>3. Select:</b> Click the block name to equip it.</p>
-                    <p><b>4. Place:</b> Press 'B' to build.</p>
+                    <p><b>2. Craft:</b> Open Inventory ('I'). Click the <b>Green Button</b> to turn raw resources into blocks!</p>
+                    <p><b>3. Select:</b> Click the block NAME to equip it.</p>
+                    <p><b>4. Place:</b> Press 'B' (or brick icon) to build.</p>
                     
                     <button onclick="toggleMobileControls()" class="secondary" style="background:#34495e; width:100%">Toggle Mobile Controls</button>
                 </div>
@@ -209,7 +216,7 @@
                         
                         <div class="craft-row">
                             <div class="craft-select" onclick="craft('quill')">Golden Quill (10 💎)</div>
-                            <button class="craft-btn" onclick="craft('quill')">Craft</button>
+                            <button class="craft-btn" onclick="craft('quill')">Buy</button>
                         </div>
                         <div class="craft-row">
                             <div class="craft-select">Arrows x10 (2💎 + 1🪵)</div>
@@ -218,39 +225,39 @@
                         </div>
                         <div class="craft-row">
                             <div class="craft-select" onclick="craft('potion')">Potion (5 💎)</div>
-                            <button class="craft-btn" onclick="craft('potion')">Craft</button>
+                            <button class="craft-btn" onclick="craft('potion')">Buy</button>
                         </div>
 
-                        <hr style="width:100%; border:1px solid #ccc;">
+                        <hr style="width:100%; border:1px solid #ccc; margin: 10px 0;">
 
                         <div class="craft-row">
                             <div class="craft-select" onclick="setActiveBlock(9, 'Wall')">Dirt Wall (Have: <span id="qty-9">5</span>)</div>
-                            <button class="craft-btn" onclick="craft('wall')">🔨 (+5) Cost: 1🟫</button>
+                            <button class="craft-btn" onclick="craft('wall')">🔨 (+5) Cost:1🟫</button>
                         </div>
                         
                         <div class="craft-row">
                             <div class="craft-select" onclick="setActiveBlock(4, 'Wood')">Wood Plank (Have: <span id="qty-4">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('wood')">🔨 (+5) Cost: 2🪵</button>
+                            <button class="craft-btn" onclick="craft('wood')">🔨 (+5) Cost:2🪵</button>
                         </div>
 
                         <div class="craft-row">
                             <div class="craft-select" onclick="setActiveBlock(5, 'Brick')">Stone Brick (Have: <span id="qty-5">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('brick')">🔨 (+5) Cost: 2🌑</button>
+                            <button class="craft-btn" onclick="craft('brick')">🔨 (+5) Cost:2🌑</button>
                         </div>
 
                         <div class="craft-row">
                             <div class="craft-select" onclick="setActiveBlock(11, 'Glass')">Glass (Have: <span id="qty-11">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('glass')">🔨 (+5) Cost: 2🟡</button>
+                            <button class="craft-btn" onclick="craft('glass')">🔨 (+5) Cost:2🟡</button>
                         </div>
 
                         <div class="craft-row">
                             <div class="craft-select" onclick="setActiveBlock(10, 'Ladder')">Ladder (Have: <span id="qty-10">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('ladder')">🔨 (+5) Cost: 1🪵</button>
+                            <button class="craft-btn" onclick="craft('ladder')">🔨 (+5) Cost:1🪵</button>
                         </div>
 
                         <div class="craft-row">
                             <div class="craft-select" onclick="setActiveBlock(8, 'Door')">Door (Have: <span id="qty-8">0</span>)</div>
-                            <button class="craft-btn" onclick="craft('door')">🔨 (+1) Cost: 3🪵</button>
+                            <button class="craft-btn" onclick="craft('door')">🔨 (+1) Cost:3🪵</button>
                         </div>
 
                     </div>
