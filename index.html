@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.1: Day & Night Update</title>
+    <title>WordCraft v2.2: High Sun Fix</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -131,11 +131,11 @@
                         <h3>Quest for Meaning</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 15px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.1:</b></p>
+                        <p><b>✨ Update v2.2:</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Sleepy Monsters:</b> Enemies now sleep during the day!</li>
-                            <li><b>Balanced Spawns:</b> Fewer monsters in the sky.</li>
-                            <li><b>Day/Night Cycle:</b> Clearer changes between light and dark.</li>
+                            <li><b>Fix:</b> Sun & Moon now arc high in the sky.</li>
+                            <li><b>Day/Night:</b> Monsters sleep in sun, hunt in dark.</li>
+                            <li><b>Balanced:</b> Fewer monsters in the sky area.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -236,7 +236,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.1;
+    const VERSION = 2.2;
     const CHAR_SCALE = 1.8; 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
@@ -499,34 +499,29 @@
     function draw() {
         let tod=gameTick%DAY_LENGTH; 
         // DAY/NIGHT COLOR MATH
-        // tod 0 to 1800 is Day. 1800 to 3600 is Night.
-        let cp = Math.sin((tod / DAY_LENGTH) * Math.PI); // 0 -> 1 -> 0
-        // Day Color: r135 g206 b235 (Sky Blue)
-        // Night Color: r20 g20 b60 (Dark Blue)
+        let cp = Math.sin((tod / DAY_LENGTH) * Math.PI); 
         
         let r,g,b;
         if(tod < DAY_LENGTH * 0.5) {
-             // DAY PHASE (Fade in/out slightly for noon)
-             r=135; g=206; b=235;
+             r=135; g=206; b=235; // Day Blue
         } else {
-             // NIGHT PHASE
-             r=20; g=20; b=60;
+             r=20; g=20; b=60; // Night Blue
         }
-
-        // Apply sine wave specifically for sunrise/sunset smoothing if desired, 
-        // but let's stick to hard cycle for clarity or smooth blend:
-        // Let's blend them based on CP.
         r = Math.floor(135 * cp + 20 * (1-cp));
         g = Math.floor(206 * cp + 20 * (1-cp));
         b = Math.floor(235 * cp + 60 * (1-cp));
 
         ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
 
-        // Draw Sun/Moon
-        let cx = CANVAS_W/2 + Math.cos((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 300;
-        let cy = CANVAS_H + Math.sin((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 300;
+        // --- SUN/MOON POSITION FIX ---
+        // Center of rotation is now (CANVAS_H + 400) = 1000
+        // Radius is 800
+        // Top of arc is 1000 - 800 = 200 (pixels from top).
+        let cx = CANVAS_W/2 + Math.cos((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 800;
+        let cy = (CANVAS_H + 400) + Math.sin((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 800;
+        
         ctx.fillStyle = (tod < DAY_LENGTH*0.5) ? "yellow" : "white";
-        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI*2); ctx.fill();
 
         let tW=useFallbackAssets?TILE_SIZE:processedAssets.tiles.width; 
         let tH=useFallbackAssets?TILE_SIZE:processedAssets.tiles.height/5;
@@ -598,7 +593,6 @@
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
         
-        // VISUAL CLOCK
         let isNight = tod > (DAY_LENGTH * 0.5);
         ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", 10, 70);
     }
