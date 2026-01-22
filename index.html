@@ -26,7 +26,7 @@
             border: 4px solid var(--ui-border);
             border-radius: 4px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-            line-height: 0;
+            line-height: 0; /* Keeps canvas tight */
             background: #000;
             cursor: crosshair;
             width: 100%; max-width: 800px;
@@ -47,6 +47,9 @@
             text-align: center; max-width: 95%;
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
             max-height: 95%; overflow-y: auto;
+            
+            /* --- TEXT FIX: Restore normal line height for menus --- */
+            line-height: 1.6 !important; 
         }
         .popup.active { display: block; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -54,7 +57,7 @@
         /* --- INVENTORY & CRAFTING --- */
         #screen-inv {
             width: 700px; height: 550px;
-            background-image: url('assets/bg.png'); /* Fallback handled in code if missing */
+            background-image: url('assets/bg.png'); 
             background-color: #f3e5f5;
             background-size: cover;
             color: #3e2723;
@@ -181,7 +184,7 @@
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
                 <h1 style="color:#c0392b; margin-top:0; font-size: 28px;">WordCraft</h1>
-                <h3 style="color:#555; margin-top:-10px;">The Etymology Update</h3>
+                <h3 style="color:#555; margin-top:0;">The Etymology Update</h3>
                 
                 <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
                     <p><b>✨ New Features:</b></p>
@@ -299,18 +302,44 @@
                         </div>
 
                         <hr style="width:100%; border:1px solid #ddd; margin: 10px 0;">
-                        <div style="font-size:10px; color:#999; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Building Blocks</div>
+                        <div style="font-size:10px; color:#999; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Building Blocks (Click Name to Equip)</div>
 
                         <div class="craft-row">
                             <div class="craft-icon">🧱</div>
-                            <div class="craft-desc"><span class="craft-title">Dirt Wall x5</span><span class="craft-cost">1 Dirt</span></div>
+                            <div class="craft-desc" onclick="setActiveBlock(9, 'Dirt Wall')" style="cursor:pointer;">
+                                <span class="craft-title" style="text-decoration:underline;">Dirt Wall x5</span>
+                                <span class="craft-cost">1 Dirt</span>
+                            </div>
                             <button class="craft-btn" onclick="craft('wall')">Make</button>
                         </div>
+
                         <div class="craft-row">
                             <div class="craft-icon">🪵</div>
-                            <div class="craft-desc"><span class="craft-title">Planks x5</span><span class="craft-cost">2 Wood</span></div>
+                            <div class="craft-desc" onclick="setActiveBlock(4, 'Wood Plank')" style="cursor:pointer;">
+                                <span class="craft-title" style="text-decoration:underline;">Planks x5</span>
+                                <span class="craft-cost">2 Wood</span>
+                            </div>
                             <button class="craft-btn" onclick="craft('wood')">Make</button>
                         </div>
+
+                        <div class="craft-row">
+                            <div class="craft-icon">🏛️</div>
+                            <div class="craft-desc" onclick="setActiveBlock(5, 'Stone Brick')" style="cursor:pointer;">
+                                <span class="craft-title" style="text-decoration:underline;">Brick x5</span>
+                                <span class="craft-cost">2 Stone</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('brick')">Make</button>
+                        </div>
+
+                        <div class="craft-row">
+                            <div class="craft-icon">🪟</div>
+                            <div class="craft-desc" onclick="setActiveBlock(11, 'Glass')" style="cursor:pointer;">
+                                <span class="craft-title" style="text-decoration:underline;">Glass x5</span>
+                                <span class="craft-cost">2 Sand</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('glass')">Make</button>
+                        </div>
+
                         <div class="craft-row">
                             <div class="craft-icon">🏹</div>
                             <div class="craft-desc"><span class="craft-title">Arrows x10</span><span class="craft-cost">2 Gem + 1 Wood</span></div>
@@ -363,7 +392,6 @@
     const processedAssets = { tiles: null, chars: null, ui: null };
     let loadedCount = 0; const requiredImages = 3;
 
-    // Use placeholder colored blocks if images fail to load
     let useFallbackAssets = false;
 
     function onAssetLoad() { loadedCount++; if(loadedCount === requiredImages) processAssets(); }
@@ -388,7 +416,6 @@
         initGame();
     }
     
-    // Attempt to load assets - You must have these files or it falls back
     assets.tiles.src = 'assets/tiles.png'; assets.tiles.onload = onAssetLoad; assets.tiles.onerror = onAssetError;
     assets.chars.src = 'assets/chars.png'; assets.chars.onload = onAssetLoad; assets.chars.onerror = onAssetError;
     assets.ui.src = 'assets/ui.png';       assets.ui.onload = onAssetLoad;    assets.ui.onerror = onAssetError;
@@ -402,7 +429,7 @@
     let gameTick = 0; let monstersEnabled = true;
     let camera = { x: 0, y: 0 }; let keys = {}; let mouse = { x: 0, y: 0 };
 
-    // --- GAME DATA ---
+    /* --- GAME DATA --- */
     const LAYER_ROOTS = {
         1: ["play", "help", "jump", "walk", "look", "ask", "wish", "hope", "make", "use", "like", "ride", "smile", "time", "run", "hop", "sit", "win", "cut", "shop", "swim", "sad"],
         2: ["happy", "funny", "penny", "baby", "carry", "cry", "try", "cycle", "angle", "view", "port", "form", "cover", "fair", "kind", "joy", "care", "fear", "pain", "dark"],
@@ -414,7 +441,6 @@
         3: [{val:"uni", type:"pre"}, {val:"bi", type:"pre"}, {val:"tri", type:"pre"}, {val:"sub", type:"pre"}, {val:"ment", type:"suf"}, {val:"able", type:"suf"}, {val:"ible", type:"suf"}, {val:"tion", type:"suf"}]
     };
     
-    // NEW: ARTIFACT LOOT TABLE
     const ARTIFACT_TABLE = [
         { name: "Mossy Spade", word: "REPLANTING", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}, {t:'suf',v:'ing'}], desc: "An old gardening tool." },
         { name: "Hidden Scroll", word: "UNCOVERED", parts: [{t:'pre',v:'un'}, {t:'root',v:'cover'}, {t:'suf',v:'ed'}], desc: "A map buried under leaves." },
@@ -432,11 +458,11 @@
         fragments:0, 
         resources: { dirt:0, sand:0, stone:0, wood:0, obsidian:0 },
         roots:[], affixes:[], 
-        artifacts: [], // Stores found artifacts
+        artifacts: [], 
         hasQuill:false, invinc:0, facingLeft:false,
         blocks: { 9: 5, 4: 0, 5: 0, 11:0, 7:0, 10:0, 8: 0 }, 
         arrows: 0, activeBlock: 9, activeBlockName: "Dirt Wall",
-        damageBuff: 0 // For Whetstone effect
+        damageBuff: 0 
     };
     let forge = { pre:null, root:null, suf:null };
 
@@ -448,11 +474,11 @@
             for(let c=0; c<COLS; c++){
                 let surface = 10 + Math.floor(Math.sin(c * 0.05) * 5); 
                 if(r < surface) row.push(0); 
-                else if(r < surface + 5) row.push(1); // Dirt
-                else if(r < surface + 15) row.push(12); // Sand
-                else if(r < surface + 60) row.push(2); // Stone
-                else if(r < ROWS - 2) row.push(3); // Deep Stone
-                else row.push(7); // Bedrock/Obsidian
+                else if(r < surface + 5) row.push(1); 
+                else if(r < surface + 15) row.push(12); 
+                else if(r < surface + 60) row.push(2); 
+                else if(r < ROWS - 2) row.push(3); 
+                else row.push(7); 
             }
             grid.push(row);
         }
@@ -491,7 +517,7 @@
         
         // Enemy Logic
         enemies.forEach((en,i) => {
-            if(en.stun > 0) { en.stun--; return; } // Stunned logic
+            if(en.stun > 0) { en.stun--; return; }
             if(Math.abs(en.x - player.x) < 30) {
                 if(animTick % en.speed === 0) {
                     let nextX = en.x; let nextY = en.y;
@@ -518,7 +544,7 @@
                     if(en.hp<=0) { enemies.splice(ei,1); player.fragments+=3; }
                 }
             });
-            if(player.damageBuff > 0) player.damageBuff--; // Decrease buff charges
+            if(player.damageBuff > 0) player.damageBuff--; 
             if(gx<0 || gx>=COLS || gy<0 || gy>=ROWS || (grid[gy][gx]!==0 && grid[gy][gx]!==8) || hit) projectiles.splice(i,1);
         }
 
@@ -552,7 +578,6 @@
             if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
                 let t = grid[ny][nx]; 
                 let currentTile = grid[player.y][player.x];
-                // 0=Air, 8=Door, 10=Ladder
                 if(t===0 || t===8 || t===10 || (currentTile===10 && dy!==0)) { player.x=nx; player.y=ny; }
             }
         }
@@ -590,7 +615,7 @@
     }
 
     function action() {
-        // Melee Attack (Quill)
+        // Melee
         let hit=false;
         if(player.hasQuill) {
             enemies.forEach((en,i)=>{
@@ -616,27 +641,21 @@
                 if(t===7) { addPart(tx,ty,"🛡️", "gray"); return; } 
                 grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨", "white");
                 
-                // Resources
                 if(t===1) { player.resources.dirt++; if(Math.random()>0.8) player.resources.wood++; }
                 else if(t===12) { player.resources.sand++; } 
                 else if(t===2) { player.resources.stone++; }
                 else if(t===3) { player.resources.obsidian++; } 
                 
-                // Monsters
                 if(Math.random() < 0.05 && t===1) spawnEnemy(tx, ty, 'slime'); 
                 if(Math.random() < 0.10 && t===2) spawnEnemy(tx, ty, 'bat');
 
-                // LOOT LOGIC: ARTIFACTS & WORDS
                 if(Math.random() > 0.6 && t <= 3) {
                     let roll = Math.random();
-                    // 15% Chance for Artifact (For Salvage Station)
                     if(roll < 0.15) {
                         let art = ARTIFACT_TABLE[Math.floor(Math.random() * ARTIFACT_TABLE.length)];
                         player.artifacts.push(art);
                         addPart(player.x, player.y-1, "🎁", "gold"); sfx.collect();
-                    } 
-                    // Standard Root/Affix
-                    else {
+                    } else {
                         if(Math.random() > 0.5) {
                             let list = LAYER_ROOTS[t]||["root"];
                             player.roots.push({word:list[Math.floor(Math.random()*list.length)], type:t}); 
@@ -669,7 +688,6 @@
 
     /* --- RENDERING --- */
     function draw() {
-        // Day/Night Cycle
         let timeOfDay = gameTick % DAY_LENGTH;
         let cyclePos = Math.sin((timeOfDay / DAY_LENGTH) * Math.PI);
         let r = Math.floor(135 * cyclePos + 20 * (1-cyclePos));
@@ -680,7 +698,6 @@
         
         ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H); 
 
-        // Tiles
         let tW = useFallbackAssets ? TILE_SIZE : processedAssets.tiles.width; 
         let tH = useFallbackAssets ? TILE_SIZE : processedAssets.tiles.height/5;
         let cropX = tW * 0.40; let cropY = tH * 0.20;
@@ -699,7 +716,6 @@
                 if(row<0 || row>=ROWS || col<0 || col>=COLS) continue;
                 let t = grid[row][col];
                 if(t>0) { 
-                    // Draw Block Logic (simplified for fallback or asset)
                     let color = "#5d4037";
                     if(t===2) color="#7f8c8d"; if(t===3) color="#ecf0f1"; if(t===12) color="#f1c40f"; 
                     if(t===11) color="rgba(0,255,255,0.2)"; if(t===7) color="#000";
@@ -717,11 +733,9 @@
             }
         }
 
-        // Chars
         let cW = useFallbackAssets ? 0 : processedAssets.chars.width/3; 
         let cH = useFallbackAssets ? 0 : processedAssets.chars.height/3;
         
-        // Draw Player
         if(useFallbackAssets) { ctx.fillStyle="blue"; ctx.fillRect(player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
         else {
              ctx.save();
@@ -730,7 +744,6 @@
              ctx.restore();
         }
 
-        // Draw Enemies
         enemies.forEach(en => { 
             if(en.x >= startCol && en.x <= endCol) {
                 if(useFallbackAssets) { ctx.fillStyle="red"; ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); }
@@ -739,11 +752,9 @@
             }
         });
         
-        // Projectiles
         ctx.fillStyle = "yellow";
         projectiles.forEach(p => { ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, 5, 5); });
 
-        // Particles
         ctx.font="bold 20px Arial"; 
         particles.forEach(p => { ctx.fillStyle=p.color; ctx.fillText(p.char, p.x*TILE_SIZE, p.y*TILE_SIZE); });
         
@@ -791,7 +802,6 @@
     }
     
     function renderInventory() {
-        // Roots
         let d = document.getElementById('list-roots'); d.innerHTML="";
         if(player.roots.length===0) d.innerHTML="<small>Empty. Go Dig!</small>";
         else player.roots.forEach(r => { 
@@ -799,7 +809,6 @@
             s.onclick=()=>setSlot('root',r.word); d.appendChild(s); 
         });
 
-        // Affixes
         let da = document.getElementById('list-affixes'); da.innerHTML="";
         if(player.affixes.length===0) da.innerHTML="<small>Empty.</small>";
         else player.affixes.forEach(a => {
@@ -812,7 +821,6 @@
             da.appendChild(s);
         });
         
-        // Resources
         document.getElementById('res-frag').innerText = player.fragments;
         document.getElementById('res-dirt').innerText = player.resources.dirt;
         document.getElementById('res-sand').innerText = player.resources.sand;
@@ -854,7 +862,7 @@
                 else player.affixes.push({val: p.v, type: p.t});
             });
             player.artifacts.splice(index, 1);
-            player.fragments += 5; // Bonus Gems
+            player.fragments += 5; 
             alert(`Salvaged: ${item.word}!\nReceived parts: ${item.parts.map(p => p.v).join(", ")}`);
             renderSalvage(); renderInventory();
         }, 400);
@@ -866,9 +874,13 @@
     function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
     function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
     
+    function setActiveBlock(id, name) {
+        player.activeBlock = id;
+        alert("Equipped: " + name);
+    }
+
     function craft(i) {
         let msg = "";
-        // --- NEW USEFUL ITEMS ---
         if(i==='heal_mud') {
             if(player.resources.dirt >= 3) { 
                 player.resources.dirt-=3; player.hp = Math.min(player.hp+1, player.maxHp); 
@@ -878,36 +890,37 @@
         else if(i==='stun_sand') {
             if(player.resources.sand >= 3) {
                 player.resources.sand-=3; 
-                enemies.forEach(en => en.stun = 100); // Stun for 100 frames
+                enemies.forEach(en => en.stun = 100); 
                 sfx.magic(); msg = "FLASH! Enemies stunned!";
             } else msg = "Need 3 Sand.";
         }
         else if(i==='buff_stone') {
             if(player.resources.stone >= 3) {
-                player.resources.stone-=3; player.damageBuff = 10; // 10 hits buffed
+                player.resources.stone-=3; player.damageBuff = 10; 
                 sfx.magic(); msg = "Blade sharpened! (Double Damage for 10 hits)";
             } else msg = "Need 3 Stone.";
         }
         else if(i==='time_wood') {
             if(player.resources.wood >= 3) {
-                player.resources.wood-=3; gameTick = 0; // Reset to Day 0 (simple hack)
+                player.resources.wood-=3; gameTick = 0; 
                 sfx.magic(); msg = "Campfire lit. The night recedes...";
             } else msg = "Need 3 Wood.";
         }
         else if(i==='nuke_obs') {
             if(player.resources.obsidian >= 3) {
                 player.resources.obsidian-=3; 
-                player.fragments += (enemies.length * 3); // Get loot for them
-                enemies = []; // Clear screen
+                player.fragments += (enemies.length * 3); 
+                enemies = []; 
                 sfx.magic(); msg = "VOID WARD ACTIVATED. Enemies banished.";
             } else msg = "Need 3 Obsidian.";
         }
         
-        // --- STANDARD ITEMS ---
         else if(i==='quill' && player.fragments>=10) { player.fragments-=10; player.hasQuill=true; sfx.craft(); msg="Crafted Quill!"; }
         else if(i==='arrows' && player.fragments>=2 && player.resources.wood>=1) { player.fragments-=2; player.resources.wood-=1; player.arrows+=10; sfx.craft(); msg="Crafted 10 Arrows"; }
         else if(i==='wall' && player.resources.dirt>=1) { player.resources.dirt-=1; player.blocks[9]+=5; sfx.craft(); msg="+5 Dirt Walls"; }
         else if(i==='wood' && player.resources.wood>=2) { player.resources.wood-=2; player.blocks[4]+=5; sfx.craft(); msg="+5 Planks"; }
+        else if(i==='brick' && player.resources.stone>=2) { player.resources.stone-=2; player.blocks[5]+=5; sfx.craft(); msg="+5 Stone Bricks"; }
+        else if(i==='glass' && player.resources.sand>=2) { player.resources.sand-=2; player.blocks[11]+=5; sfx.craft(); msg="+5 Glass Blocks"; }
         
         if(msg) alert(msg);
         renderInventory(); updateInvCounts();
@@ -920,7 +933,6 @@
         let rawWord = (pre + base + suf).toLowerCase();
         let correctedWord = rawWord;
         
-        // Basic Spelling Rules
         if (suf.length > 0) {
             if (base.endsWith('e') && isVowel(suf[0])) correctedWord = pre + base.slice(0, -1) + suf;
             else if (isCVC(base) && isVowel(suf[0])) correctedWord = pre + base + base[base.length-1] + suf;
@@ -932,7 +944,6 @@
             m.innerHTML = `<span style="color:green">✨ ${correctedWord.toUpperCase()}</span>: ${definition}`;
             player.fragments += 5; sfx.collect();
             
-            // Remove parts
             let rIdx = player.roots.findIndex(r => r.word === base);
             if(rIdx > -1) player.roots.splice(rIdx, 1);
             if(pre) { let pIdx = player.affixes.findIndex(a => a.val === pre && a.type === "pre"); if(pIdx > -1) player.affixes.splice(pIdx, 1); }
