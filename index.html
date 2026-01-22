@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Big Sprite Update</title>
+    <title>WordCraft v2.0: Quests & Doors</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -22,13 +22,12 @@
             border-radius: 8px; text-align: center; max-width: 95%; max-height: 95%; 
             display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
             padding: 0; overflow: hidden; 
-            /* FORCE NORMAL TEXT SPACING */
             line-height: 1.5 !important; font-size: 14px;
         }
         .popup.active { display: flex; flex-direction: column; animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* START SCREEN FIXES */
+        /* START SCREEN */
         .start-box { padding: 25px; display: flex; flex-direction: column; gap: 15px; }
         h1 { margin: 0; color: #c0392b; font-size: 32px; text-shadow: 2px 2px 0 #eee; line-height: 1.2; }
         h3 { margin: 0; color: #555; font-size: 18px; line-height: 1.2; }
@@ -132,11 +131,11 @@
                         <h3>Quest for Meaning</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 15px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v1.6:</b></p>
+                        <p><b>✨ Update v2.0:</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Big Sprites:</b> Characters are bigger and clearer!</li>
-                            <li><b>Smart Talk:</b> Stand <b>right next</b> to an NPC to talk.</li>
-                            <li><b>UI Fixes:</b> Menus are cleaner and easier to read.</li>
+                            <li><b>Multi-Part Quests:</b> Find the items first!</li>
+                            <li><b>Magic Doors:</b> Craft doors only YOU can pass.</li>
+                            <li><b>Sky Enemies:</b> Watch the skies!</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -208,6 +207,16 @@
                             <div class="craft-icon">🔥</div><div class="craft-desc"><span class="craft-title">Campfire</span><span class="craft-cost">3 Wood</span></div>
                             <button class="craft-btn" onclick="craft('time_wood')">Craft</button>
                         </div>
+                        
+                        <div class="craft-row" style="background:#f3e5f5; border:1px solid #ce93d8;">
+                            <div class="craft-icon">🚪</div>
+                            <div class="craft-desc" onclick="setActiveBlock(6, 'Magic Door')" style="cursor:pointer;">
+                                <span class="craft-title">Magic Door x3</span>
+                                <span class="craft-cost">2 Wood + 1 Stone</span>
+                            </div>
+                            <button class="craft-btn" onclick="craft('door')">Make</button>
+                        </div>
+
                         <hr style="width:100%; border:1px solid #ddd; margin: 15px 0;">
                         <div style="font-size:12px; color:#999; text-transform:uppercase; font-weight:bold; margin-bottom:8px;">Building Blocks (Click Name to Equip)</div>
                         <div class="craft-row"><div class="craft-icon">🧱</div><div class="craft-desc" onclick="setActiveBlock(9, 'Dirt Wall')" style="cursor:pointer;"><span class="craft-title">Dirt Wall x5</span><span class="craft-cost">1 Dirt</span></div><button class="craft-btn" onclick="craft('wall')">Make</button></div>
@@ -227,8 +236,8 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 1.6;
-    const CHAR_SCALE = 1.8; // BIGGER SPRITES
+    const VERSION = 2.0;
+    const CHAR_SCALE = 1.8; 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -255,13 +264,25 @@
     canvas.width=CANVAS_W; canvas.height=CANVAS_H;
     const DAY_LENGTH=3600, NIGHT_START=1800;
     let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
+    
+    // NEW: Flash Effect Variable for quests
+    let flashAlpha = 0;
 
     const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"], 12:["sand","dry","sun","hot"]};
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
+    // NPC UPDATE: Added Quests stages (0, 1=Find Item, 2=Forge Word, 3=Done)
     const NPCS = [
-        { id: "bark", name: "Elder Bark", x: 25, y: 10, spriteRow: 1, intro: ["Greetings, little one.", "My roots are weak.", "Can you forge REPLANT?"], questId: "bark", questWord: "replant", complete: ["Ah! The forest awakens!", "Take this Map."] },
-        { id: "rusty", name: "Rusty", x: 40, y: 55, spriteRow: 2, intro: ["Bzzz... Systems offline.", "I need to rebuild.", "Forge RECONSTRUCT?"], questId: "rusty", questWord: "reconstruct", complete: ["System Online.", "Take this Drill!"] }
+        { 
+            id: "bark", name: "Elder Bark", x: 25, y: 10, spriteRow: 1, 
+            intro: ["Greetings, little one.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."], 
+            questId: "bark", questWord: "replant" 
+        },
+        { 
+            id: "rusty", name: "Rusty", x: 40, y: 55, spriteRow: 2, 
+            intro: ["Bzzz... Systems offline.", "I need a GEAR.", "Dig deep in stone to find it."], 
+            questId: "rusty", questWord: "reconstruct" 
+        }
     ];
     
     const ARTIFACTS = [
@@ -271,7 +292,7 @@
     ];
     
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
-    let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0}, arrows:0, activeBlock:9, 
+    let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0}, arrows:0, activeBlock:9, 
     quests:{bark:0, rusty:0}, unlocks:{map:false, drill:false} };
     let forge={pre:null,root:null,suf:null};
     let currentDialogue = null;
@@ -287,7 +308,20 @@
             }
             grid.push(row);
         }
-        for(let r=20; r<ROWS-5; r++) for(let c=0; c<COLS; c++) if(grid[r][c]===0 && Math.random()<0.02) enemies.push({x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0});
+        
+        // ENEMY SPAWN UPDATE: Now checking surface (r=5) instead of just underground (r=20)
+        for(let r=5; r<ROWS-5; r++) {
+            for(let c=0; c<COLS; c++) {
+                 // 1.5% chance to spawn if empty space
+                if(grid[r][c]===0 && Math.random()<0.015) {
+                    enemies.push({
+                        x:c, y:r, 
+                        type: Math.random()>.5?'bat':'slime', 
+                        hp:2, speed:15, stun:0
+                    });
+                }
+            }
+        }
         
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
         
@@ -311,6 +345,8 @@
                 if(animTick%en.speed===0) {
                     let nx=en.x, ny=en.y;
                     if(en.x<player.x) nx++; else if(en.x>player.x) nx--; else if(en.y<player.y) ny++; else if(en.y>player.y) ny--;
+                    
+                    // Enemy cannot pass doors (ID 6) - only 0 (Air)
                     if(grid[ny][nx]===0) { en.x=nx; en.y=ny; }
                 }
                 if(en.x===player.x && en.y===player.y) hurtPlayer();
@@ -333,7 +369,13 @@
         let dx=0, dy=0;
         if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; } if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
         if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
-        if(dx!==0||dy!==0) { let nx=player.x+dx, ny=player.y+dy; if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&grid[ny][nx]===0) { player.x=nx; player.y=ny; } }
+        if(dx!==0||dy!==0) { 
+            let nx=player.x+dx, ny=player.y+dy; 
+            // PLAYER DOOR LOGIC: Player can walk through 0 (Air) OR 6 (Door)
+            if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && (grid[ny][nx]===0 || grid[ny][nx]===6)) { 
+                player.x=nx; player.y=ny; 
+            } 
+        }
         if(e.key===' ') interact();
         if(e.key==='f'||e.key==='F') shootArrow();
         if(e.key==='i'||e.key==='I') setGameState('inventory');
@@ -346,26 +388,23 @@
     function toggleMobileControls() {
         let el = document.getElementById('mobile-controls');
         let btn = document.getElementById('mob-toggle');
-        // Simple logic: if button has 'on', turn off. Else turn on.
         let isOn = btn.classList.contains('on');
         if(isOn) { el.style.display = 'none'; btn.classList.remove('on'); } 
         else { el.style.display = 'block'; btn.classList.add('on'); }
     }
 
-    // FIX: TIGHTER INTERACTION RANGE
     function interact() {
         let talked = false;
         NPCS.forEach(n => {
-            // Strict check: Must be within 1.5 blocks
             if(Math.abs(player.x - n.x) <= 1.5 && Math.abs(player.y - n.y) <= 1.5) {
                 startDialogue(n); talked = true;
             }
         });
-        // Only mine if no one to talk to
         if(talked) return;
         action();
     }
 
+    // MULTI-PART QUEST DIALOGUE LOGIC
     function startDialogue(npc) {
         let box = document.getElementById('dialogue-box');
         let text = document.getElementById('dialogue-text');
@@ -374,9 +413,18 @@
         
         let qState = player.quests[npc.id];
         let lines = [];
-        if(qState === 2) { lines = ["Thanks again!", "The world is healing."]; }
-        else if(qState === 1) { lines = [`I am still waiting for ${npc.questWord.toUpperCase()}.`, "Check your Artifacts for parts."]; }
-        else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started!"); }
+        
+        if(npc.id === 'bark') {
+            if(qState === 3) lines = ["The forest is safe now.", "Use the Map I gave you."];
+            else if(qState === 2) lines = ["You found the Seed!", "Now use the Forge to make REPLANT."];
+            else if(qState === 1) lines = ["Have you found the seed?", "Check the Dirt layers."];
+            else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Find the Seed!"); }
+        } else if(npc.id === 'rusty') {
+             if(qState === 3) lines = ["Systems optimized.", "The Drill is yours."];
+            else if(qState === 2) lines = ["Gear acquired.", "Forge RECONSTRUCT to fix me."];
+            else if(qState === 1) lines = ["I need the Gear...", "It is in the Stone."];
+            else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Find the Gear!"); }
+        }
         
         currentDialogue = { lines: lines, index: 0 };
         text.innerText = lines[0];
@@ -399,18 +447,24 @@
         if(tx>=0&&tx<COLS&&ty>=0&&ty<ROWS) {
             let t=grid[ty][tx];
             if(t>0) {
+                // Don't mine doors unless holding build
+                if(t===6 && !keys['b']) return; 
+                
                 grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨");
                 let gain = player.unlocks.drill ? 2 : 1;
-                if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain;
+                if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain; else if(t===6) { player.blocks[6]++; alert("Door recovered"); }
                 
+                // QUEST STAGE 1 LOGIC: FIND THE ITEM
                 let foundSpecial = false;
-                if(player.quests.bark === 1 && !player.artifacts.some(a=>a.word==="REPLANT") && Math.random() < 0.05) {
-                    player.artifacts.push({ name: "Ancient Seed", word: "REPLANT", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}], desc: "Quest Item" });
-                    addPart(player.x, player.y-1, "🌱", "green"); sfx.collect(); foundSpecial = true;
+                if(player.quests.bark === 1 && t === 1 && Math.random() < 0.15) { // 15% chance in Dirt
+                     player.quests.bark = 2; // Move to Stage 2
+                     addPart(player.x, player.y-1, "🌰", "lightgreen"); 
+                     alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
                 }
-                else if(player.quests.rusty === 1 && !player.artifacts.some(a=>a.word==="RECONSTRUCT") && Math.random() < 0.05) {
-                     player.artifacts.push({ name: "Rusted Gear", word: "RECONSTRUCT", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'tion'}], desc: "Quest Item" });
-                     addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect(); foundSpecial = true;
+                else if(player.quests.rusty === 1 && t === 2 && Math.random() < 0.15) { // 15% chance in Stone
+                     player.quests.rusty = 2; // Move to Stage 2
+                     addPart(player.x, player.y-1, "⚙️", "gray"); 
+                     alert("You found the RUSTY GEAR!"); sfx.quest(); foundSpecial = true;
                 }
 
                 if(!foundSpecial && Math.random() < 0.6) {
@@ -449,10 +503,15 @@
                     let t=grid[r][c];
                     if(player.unlocks.map && t>0) ctx.globalAlpha = 0.5; 
                     if(t>0) {
-                         if(useFallbackAssets) { ctx.fillStyle="brown"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); }
+                         if(useFallbackAssets) { ctx.fillStyle=t===6?"purple":"brown"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); }
                          else {
-                             let tidx = (t<=3) ? t-1 : (t===12?0:(t===9?3:0));
-                             ctx.drawImage(processedAssets.tiles, tW*0.4, (tidx*tH)+tH*0.2, tW*0.2, tH*0.6, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
+                             if(t===6) { // Draw Door
+                                 ctx.fillStyle="#9b59b6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE);
+                                 ctx.strokeStyle="#8e44ad"; ctx.lineWidth=3; ctx.strokeRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE);
+                             } else {
+                                 let tidx = (t<=3) ? t-1 : (t===12?0:(t===9?3:0));
+                                 ctx.drawImage(processedAssets.tiles, tW*0.4, (tidx*tH)+tH*0.2, tW*0.2, tH*0.6, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
+                             }
                          }
                     }
                     ctx.globalAlpha = 1.0;
@@ -466,7 +525,6 @@
         });
         ctx.textBaseline = "alphabetic";
 
-        // BIGGER SPRITES LOGIC
         if(!useFallbackAssets) {
             let cW=processedAssets.chars.width/3, cH=processedAssets.chars.height/3;
             let drawSize = TILE_SIZE * CHAR_SCALE;
@@ -492,6 +550,14 @@
         ctx.fillStyle="yellow"; projectiles.forEach(p=>ctx.fillRect(p.x*TILE_SIZE,p.y*TILE_SIZE,5,5));
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
+
+        // --- VISUAL FIX: FLASH EFFECT ---
+        // This ensures the screen doesn't "Stick" to a color. It just flashes and fades.
+        if(flashAlpha > 0) {
+            ctx.fillStyle = `rgba(255, 215, 0, ${flashAlpha})`;
+            ctx.fillRect(0,0,CANVAS_W, CANVAS_H);
+            flashAlpha -= 0.02; // Fade out speed
+        }
 
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
@@ -543,7 +609,6 @@
         
         document.getElementById('res-frag').innerText = player.fragments;
         document.getElementById('res-dirt').innerText = player.resources.dirt;
-        document.getElementById('res-sand').innerText = player.resources.sand;
         document.getElementById('res-stone').innerText = player.resources.stone;
         document.getElementById('res-wood').innerText = player.resources.wood;
     }
@@ -575,14 +640,28 @@
         if(!forge.root) return;
         let m=document.getElementById('forge-msg'); m.innerHTML="Checking..."; sfx.craft();
         let w = ((forge.pre||"") + forge.root + (forge.suf||"")).toLowerCase();
+        
+        // CHECK QUESTS
+        let questTriggered = false;
         NPCS.forEach(n => {
-            if(player.quests[n.id] === 1 && w === n.questWord) {
-                player.quests[n.id] = 2; 
+            // STAGE CHECK: Must have found item (Stage 2) to complete (Stage 3)
+            if(player.quests[n.id] === 2 && w === n.questWord) {
+                player.quests[n.id] = 3; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
+                
+                // FLASH TRIGGER
+                flashAlpha = 1.0;
+                
                 alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
+                questTriggered = true;
+            } else if (player.quests[n.id] === 1 && w === n.questWord) {
+                // Tried to forge before finding the item
+                alert("You need to find the Quest Item first!");
+                questTriggered = true; // Prevent consumption of resources? Maybe not.
             }
         });
+        
         m.innerHTML = `<span style="color:green">✨ ${w.toUpperCase()}</span>`;
         player.fragments+=10; sfx.collect();
         // Remove Used Parts
@@ -602,6 +681,11 @@
         if(i==='heal_mud'&&player.resources.dirt>=3) { player.resources.dirt-=3; player.hp=3; alert("Healed!"); }
         else if(i==='wall'&&player.resources.dirt>=1) { player.resources.dirt--; player.blocks[9]+=5; }
         else if(i==='wood'&&player.resources.wood>=2) { player.resources.wood-=2; player.blocks[4]+=5; }
+        else if(i==='door'&&player.resources.wood>=2&&player.resources.stone>=1) { 
+            player.resources.wood-=2; player.resources.stone-=1; 
+            if(!player.blocks[6]) player.blocks[6]=0; 
+            player.blocks[6]+=3; 
+        }
         updateInvCounts(); renderInventory();
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
