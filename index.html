@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Legends of Literacy v1.1</title>
+    <title>WordCraft: Fixed Loot</title>
     <style>
         :root { --bg-color: #1a1a2e; --ui-border: #5d4037; --accent: #d35400; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -101,11 +101,11 @@
                 <h1 style="color:#c0392b; margin-top:0; font-size: 28px;">WordCraft</h1>
                 <h3 style="color:#555; margin-top:0;">Legends of Literacy</h3>
                 <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
-                    <p><b>✨ Quest Update (v1.1):</b></p>
+                    <p><b>✨ Quest Update (v1.2):</b></p>
                     <ul style="padding-left:20px; margin:5px 0;">
-                        <li><b>NPC Teachers:</b> Find <b>Elder Bark</b> (Surface) and <b>Rusty</b> (Caves).</li>
-                        <li><b>Quests:</b> Solve their word puzzles to unlock the <b>Map</b> and <b>Super Drill</b>!</li>
-                        <li><b>Save Game:</b> Supports updates! Your progress is safe.</li>
+                        <li><b>Better Loot:</b> 50% chance to find items when mining!</li>
+                        <li><b>Quests:</b> Solve word puzzles for <b>Elder Bark</b> and <b>Rusty</b>.</li>
+                        <li><b>Salvage:</b> Now tells you exactly what you get when you break items.</li>
                     </ul>
                     <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
                         📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -194,7 +194,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 1.1; // VERSION CONTROL
+    const VERSION = 1.2;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -222,8 +222,9 @@
     const DAY_LENGTH=3600, NIGHT_START=1800;
     let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
 
-    const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"]};
-    const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}]};
+    // LOOT TABLES (Updated to include ID 12 for Sand)
+    const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"], 12:["sand","dry","sun","hot"]};
+    const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
     // --- NPC & QUEST DATA ---
     const NPCS = [
@@ -258,16 +259,9 @@
         
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
         
-        // NPC PLACEMENT FIX
         NPCS.forEach(n => {
-            if(n.id === 'bark') {
-                let s = 10 + Math.floor(Math.sin(n.x*0.05)*5);
-                n.y = s - 1; // Surface
-            }
-            if(n.id === 'rusty') {
-                grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; // Clear space
-                if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; // Floor
-            }
+            if(n.id === 'bark') { let s = 10 + Math.floor(Math.sin(n.x*0.05)*5); n.y = s - 1; }
+            if(n.id === 'rusty') { grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; }
         });
         requestAnimationFrame(loop);
     }
@@ -317,7 +311,6 @@
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
 
-    // MOBILE CONTROLS TOGGLE
     function toggleMobileControls() {
         let el = document.getElementById('mobile-controls');
         let btn = document.getElementById('mob-toggle');
@@ -345,7 +338,6 @@
         
         let qState = player.quests[npc.id];
         let lines = [];
-        
         if(qState === 2) { lines = ["Thanks again!", "The world is healing."]; }
         else if(qState === 1) { lines = [`I am still waiting for ${npc.questWord.toUpperCase()}.`, "Check your Artifacts for parts."]; }
         else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started!"); }
@@ -375,15 +367,22 @@
                 let gain = player.unlocks.drill ? 2 : 1;
                 if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain;
                 
+                // --- FIXED LOOT LOGIC ---
+                let foundSomething = false;
+
+                // 1. QUEST DROPS (25% chance)
                 if(player.quests.bark === 1 && Math.random() < 0.25) {
                     player.artifacts.push({ name: "Ancient Seed", word: "REPLANT", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}], desc: "Quest Item" });
-                    addPart(player.x, player.y-1, "🌱", "green"); sfx.collect();
+                    addPart(player.x, player.y-1, "🌱", "green"); sfx.collect(); foundSomething = true;
                 }
                 else if(player.quests.rusty === 1 && Math.random() < 0.25) {
                      player.artifacts.push({ name: "Rusted Gear", word: "RECONSTRUCT", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'tion'}], desc: "Quest Item" });
-                     addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect();
+                     addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect(); foundSomething = true;
                 }
-                else if(Math.random()>0.6) {
+
+                // 2. NORMAL DROPS (50% chance, separate from quests)
+                // If we didn't find a quest item, or if we want to allow double drops
+                if(!foundSomething && Math.random() < 0.5) {
                     let r=Math.random();
                     if(r<0.15) { let a=ARTIFACTS[Math.floor(Math.random()*ARTIFACTS.length)]; player.artifacts.push(a); addPart(player.x,player.y-1,"🎁","gold"); sfx.collect(); }
                     else {
@@ -462,8 +461,15 @@
         if(!player.artifacts[i]) return;
         btn.parentElement.classList.add('break-anim'); sfx.mine();
         setTimeout(()=>{
-            let it=player.artifacts[i]; it.parts.forEach(p=>{ if(p.t==='root')player.roots.push({word:p.v,type:1}); else player.affixes.push({val:p.v,type:p.t}); });
+            let it=player.artifacts[i]; 
+            let gotList = [];
+            it.parts.forEach(p=>{ 
+                if(p.t==='root') player.roots.push({word:p.v,type:1}); 
+                else player.affixes.push({val:p.v,type:p.t}); 
+                gotList.push(p.v);
+            });
             player.artifacts.splice(i,1); player.fragments+=5;
+            alert("Salvaged: " + it.word + "\nReceived: " + gotList.join(", ")); // FEEDBACK FIX
             renderSalvage(); renderInventory();
         },400);
     }
@@ -497,7 +503,6 @@
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
 
-    // SAVE SYSTEM (SMART MERGE)
     function saveGame() { 
         const saveData = { version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick };
         localStorage.setItem('wordcraft_save', JSON.stringify(saveData)); alert("Saved!"); 
@@ -509,7 +514,6 @@
             try {
                 const data = JSON.parse(savedData);
                 grid = data.grid; enemies = data.enemies; gameTick = data.gameTick;
-                // Smart Merge Logic
                 player = { 
                     ...player, ...data.player,
                     resources: { ...player.resources, ...data.player.resources },
