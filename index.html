@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: The Etymology Update</title>
+    <title>WordCraft: The Living Caves</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -26,7 +26,7 @@
             border: 4px solid var(--ui-border);
             border-radius: 4px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-            line-height: 0; /* Keeps canvas tight */
+            line-height: 0; 
             background: #000;
             cursor: crosshair;
             width: 100%; max-width: 800px;
@@ -47,8 +47,6 @@
             text-align: center; max-width: 95%;
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
             max-height: 95%; overflow-y: auto;
-            
-            /* --- TEXT FIX: Restore normal line height for menus --- */
             line-height: 1.6 !important; 
         }
         .popup.active { display: block; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
@@ -66,13 +64,11 @@
         }
         #screen-inv.active { display: flex; }
 
-        /* TABS */
         .forge-tabs { display: flex; border-bottom: 3px solid #5d4037; margin-bottom: 10px; background: rgba(0,0,0,0.1); }
         .tab { flex: 1; padding: 12px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.4); border-right: 1px solid rgba(0,0,0,0.1); transition: 0.2s; }
         .tab:hover { background: rgba(255,255,255,0.7); }
         .tab.active { background: #fff; border-bottom: 3px solid #d35400; color: #d35400; transform: translateY(2px); }
 
-        /* GRIDS & LISTS */
         .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 15px 0; }
         .craft-slot { width: 60px; height: 60px; border: 2px dashed #5d4037; display: flex; align-items: center; justify-content: center; font-weight: bold; background: rgba(255,255,255,0.5); cursor: pointer; border-radius: 8px; }
         
@@ -81,20 +77,16 @@
             flex: 1; overflow-y: auto; padding: 10px; 
             background: rgba(255,255,255,0.3); border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);
         }
-        /* Custom Scrollbar */
         .inv-grid::-webkit-scrollbar { width: 8px; }
         .inv-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         .inv-grid::-webkit-scrollbar-thumb { background: #8d6e63; border-radius: 4px; }
 
-        /* WORD CHIPS */
         .word-chip { background: #fff; border: 2px solid #5d4037; padding: 6px 10px; border-radius: 15px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 2px 2px 0px rgba(0,0,0,0.2); transition: 0.1s; }
         .word-chip:hover { transform: translateY(-2px); box-shadow: 2px 4px 0px rgba(0,0,0,0.2); }
         .word-chip:active { transform: translateY(0px); box-shadow: 0px 0px 0px rgba(0,0,0,0); }
         .chip-pre { background-color: #bbdefb; border-color: #1976d2; color: #0d47a1; } 
         .chip-suf { background-color: #e1bee7; border-color: #8e24aa; color: #4a148c; } 
-        .chip-inf { background-color: #fff9c4; border-color: #fbc02d; }
-
-        /* CRAFTING ROWS */
+        
         .craft-row {
             display: flex; width: 95%; align-items: center; gap: 10px; margin-bottom: 8px;
             background: #fff; padding: 8px; border-radius: 8px;
@@ -112,7 +104,6 @@
         }
         .craft-btn:active { transform: translateY(2px); border-bottom: 0px; margin-top: 3px; }
 
-        /* SALVAGE ITEMS */
         .artifact-item {
             width: 90%;
             background: #5d4037; color: #ffecb3;
@@ -127,7 +118,6 @@
         .break-anim { animation: shake 0.4s; background: #c0392b !important; }
         @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }
 
-        /* RESOURCE BAR */
         #resource-bar {
             display: flex; justify-content: space-around; background: #3e2723; color: white;
             padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 13px; font-weight: bold;
@@ -140,7 +130,6 @@
             line-height: 1.4; display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
 
-        /* MOBILE CONTROLS */
         #mobile-controls { position: absolute; bottom: 10px; left: 0; width: 100%; height: 160px; pointer-events: none; z-index: 5; display: none; }
         .control-group { pointer-events: auto; position: absolute; bottom: 10px; }
         .dpad { left: 20px; width: 120px; height: 120px; position: relative; }
@@ -163,7 +152,7 @@
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace;">
-            Forging World...
+            Forging Caves...
         </div>
 
         <div id="mobile-controls">
@@ -184,15 +173,14 @@
         <div id="overlay-layer">
             <div id="screen-start" class="popup active">
                 <h1 style="color:#c0392b; margin-top:0; font-size: 28px;">WordCraft</h1>
-                <h3 style="color:#555; margin-top:0;">The Etymology Update</h3>
+                <h3 style="color:#555; margin-top:0;">The Living Caves</h3>
                 
                 <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
-                    <p><b>✨ New Features:</b></p>
+                    <p><b>✨ Cave Update:</b></p>
                     <ul style="padding-left:20px; margin:5px 0;">
-                        <li><b>Salvage Station:</b> Find Ancient Artifacts while mining and break them down!</li>
-                        <li><b>Useful Crafting:</b> Every block now crafts a survival item!
-                            <br><small><i>(Dirt ➔ Heal, Sand ➔ Stun, Wood ➔ Torch)</i></small>
-                        </li>
+                        <li><b>Visible Monsters:</b> Slimes and Bats now roam freely in underground caves!</li>
+                        <li><b>Cave System:</b> Dig down to find open caverns and ancient loot.</li>
+                        <li><b>Artifacts:</b> Find rare items to salvage at your station.</li>
                     </ul>
                     <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
                         📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -473,15 +461,32 @@
             let row = [];
             for(let c=0; c<COLS; c++){
                 let surface = 10 + Math.floor(Math.sin(c * 0.05) * 5); 
-                if(r < surface) row.push(0); 
-                else if(r < surface + 5) row.push(1); 
-                else if(r < surface + 15) row.push(12); 
-                else if(r < surface + 60) row.push(2); 
-                else if(r < ROWS - 2) row.push(3); 
-                else row.push(7); 
+                
+                // Cave Generation Logic: Random air pockets underground
+                let isCave = (r > surface + 8) && (Math.random() < 0.12);
+
+                if(r < surface) row.push(0); // Sky
+                else if(isCave) row.push(0); // CAVE!
+                else if(r < surface + 5) row.push(1); // Dirt
+                else if(r < surface + 15) row.push(12); // Sand
+                else if(r < surface + 60) row.push(2); // Stone
+                else if(r < ROWS - 2) row.push(3); // Deep Stone
+                else row.push(7); // Bedrock
             }
             grid.push(row);
         }
+        
+        // Spawn Pre-Existing Monsters in Caves
+        if(monstersEnabled) {
+            for(let r=20; r<ROWS-5; r++) {
+                for(let c=0; c<COLS; c++) {
+                    if(grid[r][c] === 0 && Math.random() < 0.02) {
+                        enemies.push({ x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0 });
+                    }
+                }
+            }
+        }
+
         let groundY = 0; while(groundY < ROWS && grid[groundY][20] === 0) groundY++;
         player.y = groundY - 1; 
         requestAnimationFrame(loop);
@@ -506,19 +511,15 @@
         camera.x = Math.max(0, Math.min(targetCamX, (COLS * TILE_SIZE) - CANVAS_W));
         camera.y = Math.max(0, Math.min(targetCamY, (ROWS * TILE_SIZE) - CANVAS_H));
 
-        // Enemy Spawning
-        if(monstersEnabled && isNight && animTick % 200 === 0 && enemies.length < 8) {
-            let spawnX = player.x + (Math.random() > 0.5 ? 15 : -15);
-            let spawnY = player.y - 5 + Math.floor(Math.random()*10);
-            if(spawnX > 0 && spawnX < COLS && spawnY > 0 && spawnY < ROWS && grid[spawnY][spawnX] === 0) {
-                 enemies.push({ x:spawnX, y:spawnY, type:Math.random()>.5?'bat':'slime', hp:2, speed:20, stun:0 });
-            }
-        }
+        // Note: Monsters are now Pre-Spawned. No more night spawning needed near player, 
+        // but we can keep surface spawns if we want.
         
         // Enemy Logic
         enemies.forEach((en,i) => {
             if(en.stun > 0) { en.stun--; return; }
-            if(Math.abs(en.x - player.x) < 30) {
+            
+            // Only move if close to player
+            if(Math.abs(en.x - player.x) < 30 && Math.abs(en.y - player.y) < 20) {
                 if(animTick % en.speed === 0) {
                     let nextX = en.x; let nextY = en.y;
                     if(en.x < player.x) nextX++; else if(en.x > player.x) nextX--;
@@ -607,13 +608,6 @@
         projectiles.push({ x: player.x, y: player.y, vx: (dx/len) * 0.8, vy: (dy/len) * 0.8 });
     }
 
-    function spawnEnemy(x, y, type) {
-        if(!monstersEnabled) return;
-        enemies.push({ x:x, y:y, type:type, hp:2, speed:15, stun:0 });
-        sfx.monster();
-        addPart(x, y, "⚠️", "yellow");
-    }
-
     function action() {
         // Melee
         let hit=false;
@@ -646,8 +640,8 @@
                 else if(t===2) { player.resources.stone++; }
                 else if(t===3) { player.resources.obsidian++; } 
                 
-                if(Math.random() < 0.05 && t===1) spawnEnemy(tx, ty, 'slime'); 
-                if(Math.random() < 0.10 && t===2) spawnEnemy(tx, ty, 'bat');
+                // --- MONSTER SPAWN REMOVED FROM HERE ---
+                // Now they only spawn in initGame() inside caves
 
                 if(Math.random() > 0.6 && t <= 3) {
                     let roll = Math.random();
