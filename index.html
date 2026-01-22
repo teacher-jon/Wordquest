@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.8: Clean & Stable</title>
+    <title>WordCraft v2.9: Orthography Update</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
@@ -148,10 +148,10 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.8: Clean & Stable</b></p>
+                        <p><b>✨ Update v2.9: Orthography & Nights</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>No Glitches:</b> Quest flashes removed for stability.</li>
-                            <li><b>Monsters Restored:</b> Visible even without images.</li>
+                            <li><b>Spelling Rules:</b> Engine now fixes "Make + ing" to "Making".</li>
+                            <li><b>Dangerous Nights:</b> Monsters now spawn above ground at night!</li>
                             <li><b>Live API:</b> Real definitions + Morphology lessons.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
@@ -253,7 +253,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.8;
+    const VERSION = 2.9;
     
     const AFFIX_BRAIN = {
         "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
@@ -298,8 +298,8 @@
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
     const NPCS = [
-        { id: "bark", name: "Elder Bark", x: 25, y: 10, questWord: "replant", intro: ["Greetings.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."] },
-        { id: "rusty", name: "Rusty", x: 40, y: 55, questWord: "reconstruct", intro: ["Bzzz...", "I need a GEAR.", "Dig deep in stone to find it."] }
+        { id: "bark", name: "Elder Bark", x: 25, y: 10, questWord: "replanting", intro: ["Greetings.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."] },
+        { id: "rusty", name: "Rusty", x: 40, y: 55, questWord: "reconstruction", intro: ["Bzzz...", "I need a GEAR.", "Dig deep in stone to find it."] }
     ];
     
     const ARTIFACTS = [
@@ -359,19 +359,25 @@ function initGame() {
     function spawnEnemyBatch(count) { for(let i=0; i<count; i++) spawnEnemy(); }
     
     function spawnEnemy() {
-        // Try 20 times to find a valid air spot
         for(let i=0; i<20; i++) {
             let c = Math.floor(Math.random() * COLS);
-            let r = Math.floor(Math.random() * (ROWS - 5)) + 5;
-            let isNight = (gameTick % DAY_LENGTH) > (DAY_LENGTH * 0.5);
+            let r;
             
-            // Safety Check: Don't spawn on surface during day
-            if(!isNight && r < 20) continue; 
+            // NEW SPAWN LOGIC: 
+            // If night, force spawn in the sky/surface (0-30). 
+            // If day, only spawn deep (30+).
+            let isNight = (gameTick % DAY_LENGTH) > (DAY_LENGTH * 0.5);
+            if(isNight) {
+                 // Try to find a surface spot
+                 r = Math.floor(Math.random() * 30);
+            } else {
+                 r = Math.floor(Math.random() * (ROWS - 30)) + 30;
+            }
 
-            // Only spawn if the block is Air (0)
-            if(grid[r][c] === 0) { 
+            // Valid spawn check
+            if(r >= 0 && r < ROWS && grid[r][c] === 0) { 
                 enemies.push({ x:c, y:r, type: Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0 }); 
-                return; // Success! Stop trying.
+                return; 
             }
         }
     }
@@ -440,12 +446,12 @@ function initGame() {
         let qState = player.quests[npc.id]; let lines = [];
         if(npc.id === 'bark') {
             if(qState === 3) lines = ["The forest is safe now.", "Use the Map I gave you."];
-            else if(qState === 2) lines = ["You found the Seed!", "Now use the Forge to make REPLANT."];
+            else if(qState === 2) lines = ["You found the Seed!", "Now use the Forge to make REPLANTING."];
             else if(qState === 1) lines = ["Have you found the seed?", "Check the Dirt layers."];
             else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Find the Seed!"); }
         } else if(npc.id === 'rusty') {
                 if(qState === 3) lines = ["Systems optimized.", "The Drill is yours."];
-            else if(qState === 2) lines = ["Gear acquired.", "Forge RECONSTRUCT to fix me."];
+            else if(qState === 2) lines = ["Gear acquired.", "Forge RECONSTRUCTION to fix me."];
             else if(qState === 1) lines = ["I need the Gear...", "It is in the Stone."];
             else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Find the Gear!"); }
         }
@@ -631,13 +637,50 @@ function draw() {
         },400);
     }
     
-    // HYBRID FORGE FUNCTION
+    // NEW FUNCTION: SPELLING RULES
+    function fixSpelling(root, suf) {
+        if(!suf) return root;
+        const vowels = ['a','e','i','o','u','y'];
+        const isVowel = (c) => vowels.includes(c);
+        
+        let lastChar = root.slice(-1);
+        let secondLast = root.slice(-2, -1);
+        
+        // Rule 1: Silent 'e' (make + ing = making)
+        if(lastChar === 'e' && isVowel(suf[0])) {
+            // Exceptions could go here, but keep simple
+            return root.slice(0, -1) + suf;
+        }
+        
+        // Rule 2: Y to I (happy + ness = happiness)
+        if(lastChar === 'y' && !isVowel(secondLast) && suf[0] !== 'i') {
+            return root.slice(0, -1) + 'i' + suf;
+        }
+        
+        // Rule 3: Doubling (run + ing = running)
+        // Simple CVC check for short words
+        if(root.length < 5 && !isVowel(lastChar) && isVowel(secondLast) && !isVowel(root.slice(-3, -2))) {
+             if(isVowel(suf[0])) {
+                 return root + lastChar + suf;
+             }
+        }
+        
+        return root + suf;
+    }
+
     async function forgeWord() {
         if(!forge.root) return;
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
-        let w = ((forge.pre||"") + forge.root + (forge.suf||"")).toLowerCase();
+        // USE NEW SPELLING FIXER
+        let baseWord = forge.root.toLowerCase();
+        let suffix = forge.suf ? forge.suf.toLowerCase() : "";
+        let prefix = forge.pre ? forge.pre.toLowerCase() : "";
+        
+        let constructedPart = fixSpelling(baseWord, suffix);
+        let w = prefix + constructedPart;
+        
         let rootOnly = forge.root.toLowerCase();
 
         let questTriggered = false;
@@ -646,7 +689,6 @@ function draw() {
                 player.quests[n.id] = 3; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
-                // REMOVED FLASH EFFECT TRIGGER
                 alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
                 questTriggered = true; consumeItems();
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
@@ -659,7 +701,13 @@ function draw() {
         if(forge.pre && AFFIX_BRAIN[forge.pre]) { partsUsed.push(`<b>${forge.pre}-</b> (${AFFIX_BRAIN[forge.pre]})`); }
         if(forge.suf && AFFIX_BRAIN[forge.suf]) { partsUsed.push(`<b>-${forge.suf}</b> (${AFFIX_BRAIN[forge.suf]})`); }
         
-        if(partsUsed.length > 0) { grammarLesson = `The root <b>${rootOnly}</b> was changed by ` + partsUsed.join(" and ") + "."; } 
+        // Check for spelling change to explain it
+        let spellingNote = "";
+        if(constructedPart !== baseWord + suffix) {
+            spellingNote = " (Spelling changed!)";
+        }
+
+        if(partsUsed.length > 0) { grammarLesson = `The root <b>${rootOnly}</b> was changed by ` + partsUsed.join(" and ") + spellingNote + "."; } 
         else { grammarLesson = "This is a base root word."; }
 
         try {
@@ -707,6 +755,7 @@ function draw() {
         else if(i==='door'&&player.resources.wood>=2&&player.resources.stone>=1) { player.resources.wood-=2; player.resources.stone-=1; if(!player.blocks[6]) player.blocks[6]=0; player.blocks[6]+=3; }
         else if(i==='time_wood'&&player.resources.wood>=3) { player.resources.wood-=3; gameTick+=1800; alert("Campfire burning... Time passed."); }
         else if(i==='arrows'&&player.resources.wood>=1&&player.fragments>=2) { player.resources.wood--; player.fragments-=2; player.arrows+=10; }
+        else if(i==='quill'&&player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Golden Quill purchased! (Future Content)"); }
         updateInvCounts(); renderInventory();
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
