@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Quest Balanced</title>
+    <title>WordCraft: Quest Fixed</title>
     <style>
         :root { --bg-color: #1a1a2e; --ui-border: #5d4037; --accent: #d35400; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -12,7 +12,6 @@
             position: relative; border: 4px solid var(--ui-border); border-radius: 4px; 
             box-shadow: 0 10px 40px rgba(0,0,0,0.8); background: #000; 
             cursor: crosshair; width: 100%; max-width: 800px; height: auto; aspect-ratio: 4/3;
-            /* line-height:0 removed to fix UI glitch, handled by canvas block */
         }
         canvas { display: block; image-rendering: pixelated; width: 100%; height: 100%; }
         
@@ -22,14 +21,12 @@
             pointer-events: auto; background: #fff; border: 4px solid var(--ui-border); 
             border-radius: 8px; text-align: center; max-width: 95%; max-height: 95%; 
             display: none; box-shadow: 5px 5px 10px rgba(0,0,0,0.5); 
-            padding: 0; /* Padding removed for flex layout */
-            overflow: hidden; /* Manage scroll internally */
-            line-height: 1.5;
+            padding: 0; overflow: hidden; line-height: 1.5;
         }
         .popup.active { display: flex; flex-direction: column; animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* --- NEW INVENTORY LAYOUT (Fixed Header/Footer) --- */
+        /* INVENTORY LAYOUT */
         #screen-inv { width: 700px; height: 550px; background-image: url('assets/bg.png'); background-color: #f3e5f5; background-size: cover; color: #3e2723; }
         
         .inv-header { padding: 10px; background: rgba(255,255,255,0.9); border-bottom: 2px solid #5d4037; flex-shrink: 0; }
@@ -44,16 +41,18 @@
         .craft-slot { width: 50px; height: 50px; border: 2px dashed #5d4037; display: flex; align-items: center; justify-content: center; font-weight: bold; background: rgba(255,255,255,0.5); cursor: pointer; border-radius: 8px; font-size: 12px; }
         
         .inv-grid { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; background: rgba(255,255,255,0.3); border-radius: 4px; padding: 5px; min-height: 100px; }
-        
-        /* Scrollbar Styling */
         .inv-body::-webkit-scrollbar { width: 8px; }
         .inv-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         .inv-body::-webkit-scrollbar-thumb { background: #8d6e63; border-radius: 4px; }
 
+        /* WORD CHIPS */
         .word-chip { background: #fff; border: 2px solid #5d4037; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 1px 1px 0px rgba(0,0,0,0.2); }
         .word-chip:active { transform: translateY(1px); box-shadow: none; }
-        .chip-pre { background-color: #bbdefb; border-color: #1976d2; color: #0d47a1; } 
-        .chip-suf { background-color: #e1bee7; border-color: #8e24aa; color: #4a148c; } 
+        
+        /* NEW COLORS FOR PARTS */
+        .chip-pre { background-color: #bbdefb; border-color: #1976d2; color: #0d47a1; } /* Blue for Prefix */
+        .chip-root { background-color: #c8e6c9; border-color: #2e7d32; color: #1b5e20; } /* Green for Root */
+        .chip-suf { background-color: #e1bee7; border-color: #8e24aa; color: #4a148c; } /* Purple for Suffix */
         
         .craft-row { display: flex; width: 98%; align-items: center; gap: 10px; margin-bottom: 5px; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .craft-desc { flex: 1; text-align: left; font-size: 12px; }
@@ -97,7 +96,7 @@
 <body>
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace;">Loading World...</div>
+        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace;">Forging World...</div>
 
         <div id="dialogue-box">
             <span class="npc-name">NPC</span>
@@ -126,11 +125,11 @@
                     <h1>WordCraft</h1>
                     <h3>Quest for Meaning</h3>
                     <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
-                        <p><b>✨ Update v1.3:</b></p>
+                        <p><b>✨ Update v1.4:</b></p>
                         <ul style="padding-left:20px; margin:5px 0;">
+                            <li><b>Fixes:</b> Word Parts now appear correctly after Salvage!</li>
+                            <li><b>Colors:</b> Roots are Green, Prefixes are Blue.</li>
                             <li><b>Quests:</b> Find Elder Bark (Surface) & Rusty (Caves).</li>
-                            <li><b>Balanced Loot:</b> Rare items are now rare (5% chance).</li>
-                            <li><b>Inventory:</b> New layout so you can always close the book!</li>
                         </ul>
                         <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
                             📱 Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -221,7 +220,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 1.3;
+    const VERSION = 1.4;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -281,9 +280,7 @@
             grid.push(row);
         }
         for(let r=20; r<ROWS-5; r++) for(let c=0; c<COLS; c++) if(grid[r][c]===0 && Math.random()<0.02) enemies.push({x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0});
-        
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
-        
         NPCS.forEach(n => {
             if(n.id === 'bark') { let s = 10 + Math.floor(Math.sin(n.x*0.05)*5); n.y = s - 1; }
             if(n.id === 'rusty') { grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; }
@@ -392,23 +389,16 @@
                 let gain = player.unlocks.drill ? 2 : 1;
                 if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain;
                 
-                // --- FIXED LOOT LOGIC v1.3 ---
-                // Lower Drop Rate + Prevent Duplicates + Fallback to Normal Drops
-                
                 let foundSpecial = false;
-                
-                // QUEST 1: BARK
-                if(player.quests.bark === 1 && !player.artifacts.some(a=>a.word==="REPLANT") && Math.random() < 0.05) { // 5% chance
+                if(player.quests.bark === 1 && !player.artifacts.some(a=>a.word==="REPLANT") && Math.random() < 0.05) {
                     player.artifacts.push({ name: "Ancient Seed", word: "REPLANT", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}], desc: "Quest Item" });
                     addPart(player.x, player.y-1, "🌱", "green"); sfx.collect(); foundSpecial = true;
                 }
-                // QUEST 2: RUSTY
                 else if(player.quests.rusty === 1 && !player.artifacts.some(a=>a.word==="RECONSTRUCT") && Math.random() < 0.05) {
                      player.artifacts.push({ name: "Rusted Gear", word: "RECONSTRUCT", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'tion'}], desc: "Quest Item" });
                      addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect(); foundSpecial = true;
                 }
 
-                // NORMAL DROPS (If no special found)
                 if(!foundSpecial && Math.random() < 0.6) {
                     if(Math.random() < 0.1) { 
                         let a=ARTIFACTS[Math.floor(Math.random()*ARTIFACTS.length)]; 
@@ -479,13 +469,62 @@
         ctx.fillText(player.unlocks.map?"Map Active":"No Map", 10, 70);
     }
     
-    function setGameState(s) { state=s; document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active')); if(s==='start')document.getElementById('screen-start').classList.add('active'); if(s==='inventory'){document.getElementById('screen-inv').classList.add('active');renderInventory();} if(s==='playing') initAudio(); }
-    function switchTab(t) { document.getElementById('tab-word').style.display=t==='word'?'flex':'none'; document.getElementById('tab-craft').style.display=t==='craft'?'flex':'none'; document.getElementById('tab-salvage').style.display=t==='salvage'?'flex':'none'; if(t==='salvage')renderSalvage(); document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); event.target.classList.add('active'); }
+    function setGameState(s) { 
+        state=s; 
+        document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active')); 
+        if(s==='start')document.getElementById('screen-start').classList.add('active'); 
+        if(s==='inventory'){
+            document.getElementById('screen-inv').classList.add('active');
+            renderInventory(); // Force refresh when opening
+        } 
+        if(s==='playing') initAudio(); 
+    }
+
+    function switchTab(t) { 
+        document.getElementById('tab-word').style.display=t==='word'?'flex':'none'; 
+        document.getElementById('tab-craft').style.display=t==='craft'?'flex':'none'; 
+        document.getElementById('tab-salvage').style.display=t==='salvage'?'flex':'none'; 
+        if(t==='salvage') renderSalvage(); 
+        else renderInventory(); // FIX: Always refresh when switching tabs
+        document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); 
+        event.target.classList.add('active'); 
+    }
+
+    function renderInventory() { 
+        let d=document.getElementById('list-roots'); d.innerHTML=""; 
+        if(player.roots.length===0) d.innerHTML="<small>Empty. Go Dig!</small>";
+        else player.roots.forEach(r => { 
+            let s = document.createElement('div'); 
+            s.className="word-chip chip-root"; // Green for roots
+            s.innerText=r.word; 
+            s.onclick=()=>setSlot('root',r.word); d.appendChild(s); 
+        });
+
+        let da=document.getElementById('list-affixes'); da.innerHTML="";
+        if(player.affixes.length===0) da.innerHTML="<small>Empty.</small>";
+        else player.affixes.forEach(a => {
+            let s = document.createElement('div'); 
+            let typeClass = (a.type==="pre") ? "chip-pre" : "chip-suf";
+            s.className=`word-chip ${typeClass}`; 
+            let displayVal = (a.type==="pre") ? a.val+"-" : "-"+a.val;
+            s.innerText=displayVal;
+            s.onclick=()=>setSlot(a.type, a.val); 
+            da.appendChild(s);
+        });
+        
+        document.getElementById('res-frag').innerText = player.fragments;
+        document.getElementById('res-dirt').innerText = player.resources.dirt;
+        document.getElementById('res-sand').innerText = player.resources.sand;
+        document.getElementById('res-stone').innerText = player.resources.stone;
+        document.getElementById('res-wood').innerText = player.resources.wood;
+    }
+
     function renderSalvage() { 
         let d=document.getElementById('list-artifacts'); d.innerHTML=""; 
         if(player.artifacts.length===0) d.innerHTML="<div style='padding:20px'>Go mine!</div>";
         player.artifacts.forEach((a,i)=>{ d.innerHTML+=`<div class='artifact-item'><div><div class='artifact-word'>${a.word}</div><div style='font-size:10px;color:#f1c40f'>${a.desc}</div></div><button class='salvage-btn' onclick='salvageItem(${i},this)'>BREAK</button></div>`; });
     }
+
     function salvageItem(i,btn) {
         if(!player.artifacts[i]) return;
         btn.parentElement.classList.add('break-anim'); sfx.mine();
@@ -517,6 +556,12 @@
         });
         m.innerHTML = `<span style="color:green">✨ ${w.toUpperCase()}</span>`;
         player.fragments+=10; sfx.collect();
+        // Remove Used Parts
+        let rIdx = player.roots.findIndex(r => r.word === forge.root);
+        if(rIdx > -1) player.roots.splice(rIdx, 1);
+        if(forge.pre) { let pIdx = player.affixes.findIndex(a => a.val === forge.pre && a.type === "pre"); if(pIdx > -1) player.affixes.splice(pIdx, 1); }
+        if(forge.suf) { let sIdx = player.affixes.findIndex(a => a.val === forge.suf && a.type === "suf"); if(sIdx > -1) player.affixes.splice(sIdx, 1); }
+
         forge={pre:null,root:null,suf:null}; document.getElementById('slot-pre').innerText="[Pre]"; document.getElementById('slot-root').innerText="[Root]"; document.getElementById('slot-suf').innerText="[Suf]";
         renderInventory();
     }
