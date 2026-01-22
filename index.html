@@ -146,6 +146,9 @@
         .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
 
         h2 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; color: #d35400; margin-top:0; }
+        
+        .save-btn { background: #8e44ad; color: white; border: none; padding: 10px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .save-btn:hover { background: #9b59b6; }
     </style>
 </head>
 <body>
@@ -180,13 +183,17 @@
                     <ul style="padding-left:20px; margin:5px 0;">
                         <li><b>Visible Monsters:</b> Slimes and Bats now roam freely in underground caves!</li>
                         <li><b>Cave System:</b> Dig down to find open caverns and ancient loot.</li>
-                        <li><b>Artifacts:</b> Find rare items to salvage at your station.</li>
+                        <li><b>Save Game:</b> You can now save your progress in the Inventory menu!</li>
                     </ul>
                     <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
                         📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
                     </div>
                 </div>
-                <button onclick="initAudio(); setGameState('playing')" style="background:#d35400; color:white; border:none; padding:12px 25px; font-size:18px; border-radius:5px; cursor:pointer; font-weight:bold;">Start Adventure</button>
+                
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button id="btn-continue" onclick="loadGame()" style="display:none; background:#27ae60; color:white; border:none; padding:12px 25px; font-size:18px; border-radius:5px; cursor:pointer; font-weight:bold;">Resume Game</button>
+                    <button onclick="initAudio(); setGameState('playing')" style="background:#d35400; color:white; border:none; padding:12px 25px; font-size:18px; border-radius:5px; cursor:pointer; font-weight:bold;">New Adventure</button>
+                </div>
             </div>
             
             <div id="screen-death" class="popup">
@@ -341,7 +348,10 @@
                     </div>
                 </div>
                 
-                <button onclick="setGameState('playing')" style="margin-top:10px; background:#5d4037; color:white; border:none; padding:10px; font-weight:bold; cursor:pointer; border-radius:4px;">Close Book</button>
+                <div style="margin-top:10px; display:flex; gap:10px; justify-content:center;">
+                     <button class="save-btn" onclick="saveGame()">💾 Save Game</button>
+                     <button onclick="setGameState('playing')" style="background:#5d4037; color:white; border:none; padding:10px; font-weight:bold; cursor:pointer; border-radius:4px;">Close Book</button>
+                </div>
             </div>
         </div>
     </div>
@@ -401,6 +411,11 @@
             processedAssets.ui = removeWhiteBackground(assets.ui);
         }
         document.getElementById('loading').style.display = 'none';
+        
+        // CHECK FOR SAVE GAME ON LOAD
+        if(localStorage.getItem('wordcraft_save')) {
+            document.getElementById('btn-continue').style.display = 'inline-block';
+        }
         initGame();
     }
     
@@ -456,13 +471,13 @@
 
     /* --- INITIALIZATION --- */
     function initGame() {
+        // If we are just starting fresh, build the world
+        // (If loading from save, we will overwrite this later)
         grid = [];
         for(let r=0; r<ROWS; r++){
             let row = [];
             for(let c=0; c<COLS; c++){
                 let surface = 10 + Math.floor(Math.sin(c * 0.05) * 5); 
-                
-                // Cave Generation Logic: Random air pockets underground
                 let isCave = (r > surface + 8) && (Math.random() < 0.12);
 
                 if(r < surface) row.push(0); // Sky
@@ -489,7 +504,9 @@
 
         let groundY = 0; while(groundY < ROWS && grid[groundY][20] === 0) groundY++;
         player.y = groundY - 1; 
-        requestAnimationFrame(loop);
+        
+        // Don't start loop yet until we know if we are loading or playing new
+        // The buttons will trigger setGameState('playing')
     }
 
     function loop() {
@@ -497,6 +514,9 @@
         draw();
         requestAnimationFrame(loop);
     }
+    
+    // Start loop immediately so we can see the title screen render
+    requestAnimationFrame(loop);
 
     /* --- UPDATE LOGIC --- */
     function update() {
@@ -511,9 +531,6 @@
         camera.x = Math.max(0, Math.min(targetCamX, (COLS * TILE_SIZE) - CANVAS_W));
         camera.y = Math.max(0, Math.min(targetCamY, (ROWS * TILE_SIZE) - CANVAS_H));
 
-        // Note: Monsters are now Pre-Spawned. No more night spawning needed near player, 
-        // but we can keep surface spawns if we want.
-        
         // Enemy Logic
         enemies.forEach((en,i) => {
             if(en.stun > 0) { en.stun--; return; }
@@ -641,7 +658,6 @@
                 else if(t===3) { player.resources.obsidian++; } 
                 
                 // --- MONSTER SPAWN REMOVED FROM HERE ---
-                // Now they only spawn in initGame() inside caves
 
                 if(Math.random() > 0.6 && t <= 3) {
                     let roll = Math.random();
@@ -785,6 +801,9 @@
             renderInventory(); 
             updateInvCounts(); 
         }
+        if(s==='playing') {
+            initAudio(); // Ensure audio context starts
+        }
     }
 
     function switchTab(t) {
@@ -918,6 +937,42 @@
         
         if(msg) alert(msg);
         renderInventory(); updateInvCounts();
+    }
+    
+    /* --- SAVE / LOAD SYSTEM --- */
+    function saveGame() {
+        const saveData = {
+            player: player,
+            grid: grid,
+            enemies: enemies,
+            gameTick: gameTick
+        };
+        try {
+            localStorage.setItem('wordcraft_save', JSON.stringify(saveData));
+            alert("Game Saved Successfully!");
+        } catch(e) {
+            alert("Save Failed: Browser storage full or disabled.");
+        }
+    }
+
+    function loadGame() {
+        const saved = localStorage.getItem('wordcraft_save');
+        if(saved) {
+            try {
+                const data = JSON.parse(saved);
+                player = data.player;
+                grid = data.grid;
+                enemies = data.enemies;
+                gameTick = data.gameTick;
+                
+                alert("Game Loaded!");
+                setGameState('playing');
+            } catch(e) {
+                alert("Corrupted Save File.");
+            }
+        } else {
+            alert("No Save File Found.");
+        }
     }
     
     async function forgeWord() {
