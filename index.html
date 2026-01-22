@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Quest Fixed</title>
+    <title>WordCraft: v1.5 Balanced</title>
     <style>
         :root { --bg-color: #1a1a2e; --ui-border: #5d4037; --accent: #d35400; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -48,11 +48,9 @@
         /* WORD CHIPS */
         .word-chip { background: #fff; border: 2px solid #5d4037; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 1px 1px 0px rgba(0,0,0,0.2); }
         .word-chip:active { transform: translateY(1px); box-shadow: none; }
-        
-        /* NEW COLORS FOR PARTS */
-        .chip-pre { background-color: #bbdefb; border-color: #1976d2; color: #0d47a1; } /* Blue for Prefix */
-        .chip-root { background-color: #c8e6c9; border-color: #2e7d32; color: #1b5e20; } /* Green for Root */
-        .chip-suf { background-color: #e1bee7; border-color: #8e24aa; color: #4a148c; } /* Purple for Suffix */
+        .chip-pre { background-color: #bbdefb; border-color: #1976d2; color: #0d47a1; } 
+        .chip-root { background-color: #c8e6c9; border-color: #2e7d32; color: #1b5e20; }
+        .chip-suf { background-color: #e1bee7; border-color: #8e24aa; color: #4a148c; } 
         
         .craft-row { display: flex; width: 98%; align-items: center; gap: 10px; margin-bottom: 5px; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .craft-desc { flex: 1; text-align: left; font-size: 12px; }
@@ -125,11 +123,11 @@
                     <h1>WordCraft</h1>
                     <h3>Quest for Meaning</h3>
                     <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
-                        <p><b>✨ Update v1.4:</b></p>
+                        <p><b>✨ Update v1.5:</b></p>
                         <ul style="padding-left:20px; margin:5px 0;">
-                            <li><b>Fixes:</b> Word Parts now appear correctly after Salvage!</li>
-                            <li><b>Colors:</b> Roots are Green, Prefixes are Blue.</li>
-                            <li><b>Quests:</b> Find Elder Bark (Surface) & Rusty (Caves).</li>
+                            <li><b>Restored Drops:</b> You can now find Affixes & Roots again!</li>
+                            <li><b>Salvage:</b> Items go straight to your Word Forge.</li>
+                            <li><b>Quests:</b> Help the NPCs to unlock new tools.</li>
                         </ul>
                         <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
                             📱 Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -220,7 +218,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 1.4;
+    const VERSION = 1.5;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -280,7 +278,9 @@
             grid.push(row);
         }
         for(let r=20; r<ROWS-5; r++) for(let c=0; c<COLS; c++) if(grid[r][c]===0 && Math.random()<0.02) enemies.push({x:c, y:r, type:Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0});
+        
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
+        
         NPCS.forEach(n => {
             if(n.id === 'bark') { let s = 10 + Math.floor(Math.sin(n.x*0.05)*5); n.y = s - 1; }
             if(n.id === 'rusty') { grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; }
@@ -389,7 +389,11 @@
                 let gain = player.unlocks.drill ? 2 : 1;
                 if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain;
                 
+                // --- FIXED LOOT LOGIC v1.5 ---
+                
                 let foundSpecial = false;
+                
+                // 1. QUEST DROPS
                 if(player.quests.bark === 1 && !player.artifacts.some(a=>a.word==="REPLANT") && Math.random() < 0.05) {
                     player.artifacts.push({ name: "Ancient Seed", word: "REPLANT", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}], desc: "Quest Item" });
                     addPart(player.x, player.y-1, "🌱", "green"); sfx.collect(); foundSpecial = true;
@@ -399,13 +403,24 @@
                      addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect(); foundSpecial = true;
                 }
 
+                // 2. NORMAL DROPS (RESTORED!)
                 if(!foundSpecial && Math.random() < 0.6) {
-                    if(Math.random() < 0.1) { 
+                    let r = Math.random();
+                    // 10% Chance for Artifact
+                    if(r < 0.1) { 
                         let a=ARTIFACTS[Math.floor(Math.random()*ARTIFACTS.length)]; 
                         player.artifacts.push(a); addPart(player.x,player.y-1,"🎁","gold"); sfx.collect(); 
-                    } else {
+                    } 
+                    // 45% Chance for ROOT
+                    else if (r < 0.55) {
                          let l=LAYER_ROOTS[t]||["root"]; 
                          player.roots.push({word:l[Math.floor(Math.random()*l.length)],type:t}); addPart(player.x,player.y-1,"📜");
+                    }
+                    // 45% Chance for AFFIX
+                    else {
+                        let l=LAYER_AFFIXES[t]||LAYER_AFFIXES[1]; 
+                        let aff=l[Math.floor(Math.random()*l.length)];
+                        player.affixes.push(aff); addPart(player.x,player.y-1,"🧩", "cyan");
                     }
                 }
             }
@@ -485,7 +500,7 @@
         document.getElementById('tab-craft').style.display=t==='craft'?'flex':'none'; 
         document.getElementById('tab-salvage').style.display=t==='salvage'?'flex':'none'; 
         if(t==='salvage') renderSalvage(); 
-        else renderInventory(); // FIX: Always refresh when switching tabs
+        else renderInventory(); // Always refresh when switching tabs
         document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); 
         event.target.classList.add('active'); 
     }
@@ -495,7 +510,7 @@
         if(player.roots.length===0) d.innerHTML="<small>Empty. Go Dig!</small>";
         else player.roots.forEach(r => { 
             let s = document.createElement('div'); 
-            s.className="word-chip chip-root"; // Green for roots
+            s.className="word-chip chip-root"; 
             s.innerText=r.word; 
             s.onclick=()=>setSlot('root',r.word); d.appendChild(s); 
         });
