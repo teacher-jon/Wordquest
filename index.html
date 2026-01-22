@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.6: The Morphology Engine</title>
+    <title>WordCraft v2.7: Fixed & Complete</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
             background-color: var(--bg-color); color: #2c3e50; 
             font-family: 'Verdana', sans-serif; 
-            font-size: 16px; /* Optimized for Readability */
+            font-size: 16px; 
             display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; 
         }
         
@@ -148,11 +148,11 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.6: Knowledge Power</b></p>
+                        <p><b>✨ Update v2.7: Fixed & Stable</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Real Definitions:</b> The Forge is connected to the Dictionary.</li>
-                            <li><b>Grammar Lessons:</b> See <i>how</i> prefixes/suffixes change words.</li>
-                            <li><b>Fixed Mining:</b> Roots and Affixes now drop evenly!</li>
+                            <li><b>Monsters Restored:</b> Fallback sprites added back.</li>
+                            <li><b>Quest Fix:</b> Gold flash effect no longer sticks.</li>
+                            <li><b>Live API:</b> Real definitions + Morphology lessons.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -253,34 +253,16 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.6;
+    const VERSION = 2.7;
     
-    // MORPHOLOGY EXPLANATIONS
     const AFFIX_BRAIN = {
-        // Prefixes
-        "un": "not / opposite of",
-        "re": "again / back",
-        "sub": "under / below",
-        "dis": "not / apart",
-        "pre": "before",
-        "mis": "wrongly / bad",
-        "tri": "three",
-        "bi": "two",
-        
-        // Suffixes
-        "s": "more than one (plural)",
-        "ed": "happened in the past (past tense)",
-        "ing": "happening right now (present participle)",
-        "ly": "done in this way (adverb)",
-        "tion": "the action or result of",
-        "ment": "the process or state of",
-        "ness": "the state of being",
-        "less": "without",
-        "ful": "full of",
-        "er": "a person who does this",
-        "est": "the most (superlative)"
+        "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
+        "pre": "before", "mis": "wrongly / bad", "tri": "three", "bi": "two",
+        "s": "more than one (plural)", "ed": "happened in the past", "ing": "happening right now",
+        "ly": "done in this way (adverb)", "tion": "the action or result of", "ment": "the process or state of",
+        "ness": "the state of being", "less": "without", "ful": "full of", "er": "a person who does this", "est": "the most"
     };
-
+    
     const CHAR_SCALE = 1.8; 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
@@ -317,16 +299,8 @@
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
     const NPCS = [
-        { 
-            id: "bark", name: "Elder Bark", x: 25, y: 10, spriteRow: 1, 
-            intro: ["Greetings, little one.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."], 
-            questId: "bark", questWord: "replant" 
-        },
-        { 
-            id: "rusty", name: "Rusty", x: 40, y: 55, spriteRow: 2, 
-            intro: ["Bzzz... Systems offline.", "I need a GEAR.", "Dig deep in stone to find it."], 
-            questId: "rusty", questWord: "reconstruct" 
-        }
+        { id: "bark", name: "Elder Bark", x: 25, y: 10, questWord: "replant", intro: ["Greetings.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."] },
+        { id: "rusty", name: "Rusty", x: 40, y: 55, questWord: "reconstruct", intro: ["Bzzz...", "I need a GEAR.", "Dig deep in stone to find it."] }
     ];
     
     const ARTIFACTS = [
@@ -336,8 +310,7 @@
     ];
     
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
-    let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0}, arrows:0, activeBlock:9, 
-    quests:{bark:0, rusty:0}, unlocks:{map:false, drill:false} };
+    let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0}, unlocks:{map:false, drill:false} };
     let forge={pre:null,root:null,suf:null};
     let currentDialogue = null;
 
@@ -353,7 +326,7 @@
             grid.push(row);
         }
         
-        // PLANT TREES
+        // TREES
         for(let c=5; c<COLS-5; c++) {
             let s = 10 + Math.floor(Math.sin(c*0.05)*5);
             if(Math.random() < 0.08) {
@@ -368,7 +341,6 @@
             }
         }
 
-        // Generate Stars
         stars = [];
         for(let i=0; i<150; i++) {
             stars.push({ x: Math.random() * CANVAS_W, y: Math.random() * (CANVAS_H*0.6), size: Math.random() * 2 + 1, twinkleOffset: Math.random() * Math.PI * 2 });
@@ -461,7 +433,7 @@
             else if(qState === 1) lines = ["Have you found the seed?", "Check the Dirt layers."];
             else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Find the Seed!"); }
         } else if(npc.id === 'rusty') {
-             if(qState === 3) lines = ["Systems optimized.", "The Drill is yours."];
+                if(qState === 3) lines = ["Systems optimized.", "The Drill is yours."];
             else if(qState === 2) lines = ["Gear acquired.", "Forge RECONSTRUCT to fix me."];
             else if(qState === 1) lines = ["I need the Gear...", "It is in the Stone."];
             else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Find the Gear!"); }
@@ -476,7 +448,6 @@
         else { document.getElementById('dialogue-box').style.display = 'none'; currentDialogue = null; }
     }
 
-    // UPDATED MINING LOGIC (50/50 Split)
     function action() {
         let tx=player.x, ty=player.y;
         if(keys['ArrowUp']) ty--; else if(keys['ArrowDown']) ty++; else if(keys['ArrowLeft']) tx--; else if(keys['ArrowRight']) tx++; else { tx+=(player.facingLeft?-1:1); if(grid[ty][tx]===0) ty++; }
@@ -497,12 +468,12 @@
                 
                 let foundSpecial = false;
                 if(player.quests.bark === 1 && t === 1 && Math.random() < 0.15) { 
-                     player.quests.bark = 2; addPart(player.x, player.y-1, "🌰", "lightgreen"); 
-                     alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
+                        player.quests.bark = 2; addPart(player.x, player.y-1, "🌰", "lightgreen"); 
+                        alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
                 }
                 else if(player.quests.rusty === 1 && t === 2 && Math.random() < 0.15) { 
-                     player.quests.rusty = 2; addPart(player.x, player.y-1, "⚙️", "gray"); 
-                     alert("You found the RUSTY GEAR!"); sfx.quest(); foundSpecial = true;
+                        player.quests.rusty = 2; addPart(player.x, player.y-1, "⚙️", "gray"); 
+                        alert("You found the RUSTY GEAR!"); sfx.quest(); foundSpecial = true;
                 }
 
                 if(!foundSpecial && Math.random() < 0.6) {
@@ -510,14 +481,13 @@
                         let a=ARTIFACTS[Math.floor(Math.random()*ARTIFACTS.length)]; 
                         player.artifacts.push(a); addPart(player.x,player.y-1,"🎁","gold"); sfx.collect(); 
                     } else {
-                        // 50/50 Split for Root vs Affix
                         if(Math.random() < 0.5) {
-                             let l=LAYER_ROOTS[t]||["root"]; 
-                             player.roots.push({word:l[Math.floor(Math.random()*l.length)],type:t}); addPart(player.x,player.y-1,"📜");
+                                let l=LAYER_ROOTS[t]||["root"]; 
+                                player.roots.push({word:l[Math.floor(Math.random()*l.length)],type:t}); addPart(player.x,player.y-1,"📜");
                         } else {
-                             let l=LAYER_AFFIXES[t]||[{val:"ing",type:"suf"}];
-                             let p=l[Math.floor(Math.random()*l.length)];
-                             player.affixes.push({val:p.val,type:p.type}); addPart(player.x,player.y-1,"🧩","cyan");
+                                let l=LAYER_AFFIXES[t]||[{val:"ing",type:"suf"}];
+                                let p=l[Math.floor(Math.random()*l.length)];
+                                player.affixes.push({val:p.val,type:p.type}); addPart(player.x,player.y-1,"🧩","cyan");
                         }
                     }
                 }
@@ -536,9 +506,9 @@
         ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
 
         if(cp < 0.5) {
-             ctx.fillStyle = "white"; let starOpacity = 1 - (cp * 2); 
-             stars.forEach(s => { let twinkle = Math.sin((gameTick / 10) + s.twinkleOffset) * 0.3 + 0.7; ctx.globalAlpha = starOpacity * twinkle; ctx.fillRect(s.x, s.y, s.size, s.size); });
-             ctx.globalAlpha = 1.0; 
+                ctx.fillStyle = "white"; let starOpacity = 1 - (cp * 2); 
+                stars.forEach(s => { let twinkle = Math.sin((gameTick / 10) + s.twinkleOffset) * 0.3 + 0.7; ctx.globalAlpha = starOpacity * twinkle; ctx.fillRect(s.x, s.y, s.size, s.size); });
+                ctx.globalAlpha = 1.0; 
         }
 
         let tW=useFallbackAssets?TILE_SIZE:processedAssets.tiles.width; let tH=useFallbackAssets?TILE_SIZE:processedAssets.tiles.height/5;
@@ -553,16 +523,16 @@
                     let t=grid[r][c];
                     if(player.unlocks.map && t>0) ctx.globalAlpha = 0.5; 
                     if(t>0) {
-                         if(useFallbackAssets) { 
-                             if(t===6) ctx.fillStyle="purple"; else if(t===7) ctx.fillStyle="#5d4037"; else if(t===8) ctx.fillStyle="#2ecc71"; else ctx.fillStyle="brown"; 
-                             ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); 
-                         }
-                         else {
-                             if(t===6) { ctx.fillStyle="#9b59b6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#8e44ad"; ctx.lineWidth=3; ctx.strokeRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); } 
-                             else if(t===7) { ctx.fillStyle="#3e2723"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#5d4037"; ctx.lineWidth=2; ctx.strokeRect(c*TILE_SIZE+5,r*TILE_SIZE,TILE_SIZE-10,TILE_SIZE); }
-                             else if(t===8) { ctx.fillStyle="rgba(46, 204, 113, 0.8)"; ctx.fillRect(c*TILE_SIZE+2,r*TILE_SIZE+2,TILE_SIZE-4,TILE_SIZE-4); }
-                             else { let tidx = (t<=3) ? t-1 : (t===12?0:(t===9?3:0)); ctx.drawImage(processedAssets.tiles, tW*0.4, (tidx*tH)+tH*0.2, tW*0.2, tH*0.6, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
-                         }
+                            if(useFallbackAssets) { 
+                                if(t===6) ctx.fillStyle="purple"; else if(t===7) ctx.fillStyle="#5d4037"; else if(t===8) ctx.fillStyle="#2ecc71"; else ctx.fillStyle="brown"; 
+                                ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); 
+                            }
+                            else {
+                                if(t===6) { ctx.fillStyle="#9b59b6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#8e44ad"; ctx.lineWidth=3; ctx.strokeRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); } 
+                                else if(t===7) { ctx.fillStyle="#3e2723"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#5d4037"; ctx.lineWidth=2; ctx.strokeRect(c*TILE_SIZE+5,r*TILE_SIZE,TILE_SIZE-10,TILE_SIZE); }
+                                else if(t===8) { ctx.fillStyle="rgba(46, 204, 113, 0.8)"; ctx.fillRect(c*TILE_SIZE+2,r*TILE_SIZE+2,TILE_SIZE-4,TILE_SIZE-4); }
+                                else { let tidx = (t<=3) ? t-1 : (t===12?0:(t===9?3:0)); ctx.drawImage(processedAssets.tiles, tW*0.4, (tidx*tH)+tH*0.2, tW*0.2, tH*0.6, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
+                            }
                     }
                     ctx.globalAlpha = 1.0;
                 }
@@ -575,6 +545,7 @@
         });
         ctx.textBaseline = "alphabetic";
 
+        // FALLBACK ASSET LOGIC (FIXED)
         if(!useFallbackAssets) {
             let cW=processedAssets.chars.width/3, cH=processedAssets.chars.height/3; let drawSize = TILE_SIZE * CHAR_SCALE; let offset = (drawSize - TILE_SIZE) / 2;
             ctx.save(); 
@@ -582,6 +553,10 @@
             else { ctx.drawImage(processedAssets.chars, (Math.floor(animTick/20)%2)*cW, 0, cW, cH, (player.x*TILE_SIZE)-offset, (player.y*TILE_SIZE)-offset, drawSize, drawSize); }
             ctx.restore();
             enemies.forEach(en=>{ ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, (en.x*TILE_SIZE)-offset, (en.y*TILE_SIZE)-offset, drawSize, drawSize); });
+        } else {
+             // FALLBACK SQUARES (If images fail)
+             ctx.fillStyle="blue"; ctx.fillRect(player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+             enemies.forEach(en=>{ ctx.fillStyle=(en.type==='bat'?"black":"green"); ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); });
         }
         
         ctx.fillStyle="yellow"; projectiles.forEach(p=>ctx.fillRect(p.x*TILE_SIZE,p.y*TILE_SIZE,5,5));
@@ -655,7 +630,8 @@
                 player.quests[n.id] = 3; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
-                flashAlpha = 1.0; alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
+                flashAlpha = 0.5; // LOWERED FLASH OPACITY
+                alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
                 questTriggered = true; consumeItems();
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
             } else if (player.quests[n.id] === 1 && w === n.questWord) { alert("You need to find the Quest Item first!"); questTriggered = true; }
