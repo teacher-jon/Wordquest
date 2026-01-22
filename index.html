@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.9.1: Night Fix</title>
+    <title>WordCraft v3.0: Builder's Update</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
@@ -148,12 +148,12 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.9.1: Night Fix</b></p>
+                        <p><b>✨ Update v3.0: Builder's Update</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Fix:</b> Monster population cap raised.</li>
-                            <li><b>Spelling Rules:</b> Engine now fixes "Make + ing" to "Making".</li>
-                            <li><b>Dangerous Nights:</b> Monsters now spawn near you at night!</li>
-                            <li><b>Live API:</b> Real definitions + Morphology lessons.</li>
+                            <li><b>Fix:</b> Doors now confirm when crafted.</li>
+                            <li><b>New Item:</b> Stone Bricks (Strong).</li>
+                            <li><b>New Item:</b> Sun Lanterns (Bright).</li>
+                            <li><b>Gameplay:</b> Monsters spawn near you at night!</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -239,6 +239,10 @@
                         <div style="font-size:12px; color:#999; text-transform:uppercase; font-weight:bold; margin-bottom:8px;">Building Blocks (Click Name to Equip)</div>
                         <div class="craft-row"><div class="craft-icon">🧱</div><div class="craft-desc" onclick="setActiveBlock(9, 'Dirt Wall')" style="cursor:pointer;"><span class="craft-title">Dirt Wall x5</span><span class="craft-cost">1 Dirt</span></div><button class="craft-btn" onclick="craft('wall')">Make</button></div>
                         <div class="craft-row"><div class="craft-icon">🪵</div><div class="craft-desc" onclick="setActiveBlock(4, 'Plank')" style="cursor:pointer;"><span class="craft-title">Planks x5</span><span class="craft-cost">2 Wood</span></div><button class="craft-btn" onclick="craft('wood')">Make</button></div>
+                        
+                        <div class="craft-row"><div class="craft-icon">🏛️</div><div class="craft-desc" onclick="setActiveBlock(5, 'Stone Brick')" style="cursor:pointer;"><span class="craft-title">Stone Brick x5</span><span class="craft-cost">2 Stone</span></div><button class="craft-btn" onclick="craft('stone_brick')">Make</button></div>
+                        <div class="craft-row"><div class="craft-icon">💡</div><div class="craft-desc" onclick="setActiveBlock(11, 'Sun Lantern')" style="cursor:pointer;"><span class="craft-title">Sun Lantern x3</span><span class="craft-cost">1 Wood + 1 Gem</span></div><button class="craft-btn" onclick="craft('lantern')">Make</button></div>
+                        
                         <div class="craft-row"><div class="craft-icon">🏹</div><div class="craft-desc"><span class="craft-title">Arrows x10</span><span class="craft-cost">2 Gem + 1 Wood</span></div><button class="craft-btn" onclick="craft('arrows')">Make</button></div>
                          <div class="craft-row"><div class="craft-icon">✒️</div><div class="craft-desc"><span class="craft-title">Golden Quill</span><span class="craft-cost">10 Gem</span></div><button class="craft-btn" onclick="craft('quill')">Buy</button></div>
                     </div>
@@ -254,7 +258,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.91;
+    const VERSION = 3.0;
     
     const AFFIX_BRAIN = {
         "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
@@ -310,6 +314,7 @@
     ];
     
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
+    // ADDED ID 5 and 11 to blocks object
     let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0}, unlocks:{map:false, drill:false} };
     let forge={pre:null,root:null,suf:null};
     let currentDialogue = null;
@@ -395,7 +400,6 @@ function initGame() {
 
         let tod=gameTick%DAY_LENGTH; let isNight = tod > (DAY_LENGTH * 0.5);
         
-        // BUG FIX: POPULATION CAP RAISED TO 60 (Was 15, causing no night spawns because caves were full)
         if(gameTick % 200 === 0 && enemies.length < 60) { spawnEnemy(); }
 
         enemies.forEach((en,i)=>{
@@ -427,7 +431,7 @@ function initGame() {
         let dx=0, dy=0;
         if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; } if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
         if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
-        if(dx!==0||dy!==0) { let nx=player.x+dx, ny=player.y+dy; if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && (grid[ny][nx]===0 || grid[ny][nx]===6)) { player.x=nx; player.y=ny; } }
+        if(dx!==0||dy!==0) { let nx=player.x+dx, ny=player.y+dy; if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && (grid[ny][nx]===0 || grid[ny][nx]===6 || grid[ny][nx]===11)) { player.x=nx; player.y=ny; } }
         if(e.key===' ') interact(); if(e.key==='f'||e.key==='F') shootArrow();
         if(e.key==='i'||e.key==='I') setGameState('inventory'); if(e.key==='b'||e.key==='B') placeBlock();
         if(e.key==='t'||e.key==='T') interact(); if(e.key==='m'||e.key==='M') toggleMap();
@@ -477,7 +481,7 @@ function initGame() {
         if(tx>=0&&tx<COLS&&ty>=0&&ty<ROWS) {
             let t=grid[ty][tx];
             if(t>0) {
-                if(t===6 && !keys['b']) return; 
+                if((t===6||t===11) && !keys['b']) return; // Allow walking through open doors and lanterns
                 grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨");
                 let gain = player.unlocks.drill ? 2 : 1;
                 
@@ -486,6 +490,8 @@ function initGame() {
                 else if(t===2) player.resources.stone+=gain; 
                 else if(t===3) player.resources.obsidian+=gain; 
                 else if(t===6) { player.blocks[6]++; alert("Door recovered"); }
+                else if(t===5) { player.blocks[5]++; } // Recover brick
+                else if(t===11) { player.blocks[11]++; } // Recover lantern
                 else if(t===7) { player.resources.wood+=gain; } 
                 else if(t===8) { if(Math.random() < 0.2) { player.hp = Math.min(player.hp+1, player.maxHp); alert("Found an Apple! HP +1"); sfx.collect(); } }
                 
@@ -547,17 +553,25 @@ function draw() {
                     if(player.unlocks.map && t>0) ctx.globalAlpha = 0.5; 
                     if(t>0) {
                             if(useFallbackAssets) { 
-                                if(t===6) ctx.fillStyle="purple"; else if(t===7) ctx.fillStyle="#5d4037"; else if(t===8) ctx.fillStyle="#2ecc71"; else ctx.fillStyle="brown"; 
+                                if(t===6) ctx.fillStyle="purple"; 
+                                else if(t===5) ctx.fillStyle="#7f8c8d"; // Stone Brick
+                                else if(t===11) ctx.fillStyle="#f1c40f"; // Lantern
+                                else if(t===7) ctx.fillStyle="#5d4037"; 
+                                else if(t===8) ctx.fillStyle="#2ecc71"; 
+                                else ctx.fillStyle="brown"; 
                                 ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); 
                             }
                             else {
                                 if(t===6) { ctx.fillStyle="#9b59b6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#8e44ad"; ctx.lineWidth=3; ctx.strokeRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); } 
+                                else if(t===5) { ctx.fillStyle="#95a5a6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#7f8c8d"; ctx.lineWidth=2; ctx.strokeRect(c*TILE_SIZE+2,r*TILE_SIZE+2,TILE_SIZE-4,TILE_SIZE-4); }
+                                else if(t===11) { ctx.fillStyle="#f1c40f"; ctx.beginPath(); ctx.arc(c*TILE_SIZE+20, r*TILE_SIZE+20, 15, 0, 2*Math.PI); ctx.fill(); ctx.shadowBlur=20; ctx.shadowColor="yellow"; }
                                 else if(t===7) { ctx.fillStyle="#3e2723"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#5d4037"; ctx.lineWidth=2; ctx.strokeRect(c*TILE_SIZE+5,r*TILE_SIZE,TILE_SIZE-10,TILE_SIZE); }
                                 else if(t===8) { ctx.fillStyle="rgba(46, 204, 113, 0.8)"; ctx.fillRect(c*TILE_SIZE+2,r*TILE_SIZE+2,TILE_SIZE-4,TILE_SIZE-4); }
                                 else { let tidx = (t<=3) ? t-1 : (t===12?0:(t===9?3:0)); ctx.drawImage(processedAssets.tiles, tW*0.4, (tidx*tH)+tH*0.2, tW*0.2, tH*0.6, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
                             }
                     }
                     ctx.globalAlpha = 1.0;
+                    ctx.shadowBlur=0;
                 }
             }
         }
@@ -568,7 +582,6 @@ function draw() {
         });
         ctx.textBaseline = "alphabetic";
 
-        // FIXED MONSTER RENDERING (High Contrast)
         if(!useFallbackAssets) {
             let cW=processedAssets.chars.width/3, cH=processedAssets.chars.height/3; let drawSize = TILE_SIZE * CHAR_SCALE; let offset = (drawSize - TILE_SIZE) / 2;
             ctx.save(); 
@@ -577,10 +590,7 @@ function draw() {
             ctx.restore();
             enemies.forEach(en=>{ ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, (en.x*TILE_SIZE)-offset, (en.y*TILE_SIZE)-offset, drawSize, drawSize); });
         } else {
-             // FALLBACK SQUARES - HIGH VISIBILITY
-             // Player = Blue
              ctx.fillStyle="blue"; ctx.fillRect(player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-             // Enemies = Red (Bat) or Green (Slime)
              enemies.forEach(en=>{ 
                  ctx.fillStyle=(en.type==='bat'?"red":"lime"); 
                  ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); 
@@ -643,34 +653,15 @@ function draw() {
         },400);
     }
     
-    // NEW FUNCTION: SPELLING RULES
     function fixSpelling(root, suf) {
         if(!suf) return root;
         const vowels = ['a','e','i','o','u','y'];
         const isVowel = (c) => vowels.includes(c);
-        
         let lastChar = root.slice(-1);
         let secondLast = root.slice(-2, -1);
-        
-        // Rule 1: Silent 'e' (make + ing = making)
-        if(lastChar === 'e' && isVowel(suf[0])) {
-            // Exceptions could go here, but keep simple
-            return root.slice(0, -1) + suf;
-        }
-        
-        // Rule 2: Y to I (happy + ness = happiness)
-        if(lastChar === 'y' && !isVowel(secondLast) && suf[0] !== 'i') {
-            return root.slice(0, -1) + 'i' + suf;
-        }
-        
-        // Rule 3: Doubling (run + ing = running)
-        // Simple CVC check for short words
-        if(root.length < 5 && !isVowel(lastChar) && isVowel(secondLast) && !isVowel(root.slice(-3, -2))) {
-             if(isVowel(suf[0])) {
-                 return root + lastChar + suf;
-             }
-        }
-        
+        if(lastChar === 'e' && isVowel(suf[0])) { return root.slice(0, -1) + suf; }
+        if(lastChar === 'y' && !isVowel(secondLast) && suf[0] !== 'i') { return root.slice(0, -1) + 'i' + suf; }
+        if(root.length < 5 && !isVowel(lastChar) && isVowel(secondLast) && !isVowel(root.slice(-3, -2))) { if(isVowel(suf[0])) { return root + lastChar + suf; } }
         return root + suf;
     }
 
@@ -679,14 +670,11 @@ function draw() {
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
-        // USE NEW SPELLING FIXER
         let baseWord = forge.root.toLowerCase();
         let suffix = forge.suf ? forge.suf.toLowerCase() : "";
         let prefix = forge.pre ? forge.pre.toLowerCase() : "";
-        
         let constructedPart = fixSpelling(baseWord, suffix);
         let w = prefix + constructedPart;
-        
         let rootOnly = forge.root.toLowerCase();
 
         let questTriggered = false;
@@ -702,17 +690,10 @@ function draw() {
         });
         if(questTriggered) return;
 
-        // GENERATE MORPHOLOGY LESSON
         let grammarLesson = ""; let partsUsed = [];
         if(forge.pre && AFFIX_BRAIN[forge.pre]) { partsUsed.push(`<b>${forge.pre}-</b> (${AFFIX_BRAIN[forge.pre]})`); }
         if(forge.suf && AFFIX_BRAIN[forge.suf]) { partsUsed.push(`<b>-${forge.suf}</b> (${AFFIX_BRAIN[forge.suf]})`); }
-        
-        // Check for spelling change to explain it
-        let spellingNote = "";
-        if(constructedPart !== baseWord + suffix) {
-            spellingNote = " (Spelling changed!)";
-        }
-
+        let spellingNote = (constructedPart !== baseWord + suffix) ? " (Spelling changed!)" : "";
         if(partsUsed.length > 0) { grammarLesson = `The root <b>${rootOnly}</b> was changed by ` + partsUsed.join(" and ") + spellingNote + "."; } 
         else { grammarLesson = "This is a base root word."; }
 
@@ -720,9 +701,7 @@ function draw() {
             let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
             let isFallback = false;
             if(!response.ok) { response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`); if(response.ok) isFallback = true; }
-
             if(!response.ok) throw new Error("Word not found");
-            
             const data = await response.json();
             const def = data[0].meanings[0].definitions[0].definition;
             const pos = data[0].meanings[0].partOfSpeech;
@@ -730,13 +709,8 @@ function draw() {
             let titleHtml = isFallback 
                 ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div>`
                 : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${w.toUpperCase()}</div><small>(${pos})</small>`;
-
-            m.innerHTML = `${titleHtml}
-                <div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div>
-                <div style="font-size:12px; color:#d35400; margin-top:6px; font-weight:bold; border-top:1px solid #ddd; padding-top:4px;">📝 Morphology: <span style="font-weight:normal; color:#555;">${grammarLesson}</span></div>`;
-            
+            m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#d35400; margin-top:6px; font-weight:bold; border-top:1px solid #ddd; padding-top:4px;">📝 Morphology: <span style="font-weight:normal; color:#555;">${grammarLesson}</span></div>`;
             player.fragments+=15; sfx.collect(); consumeItems(); renderInventory();
-
         } catch(e) {
             sfx.error();
             m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${w}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
@@ -754,11 +728,14 @@ function draw() {
     function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
     function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
     function setActiveBlock(id,n) { player.activeBlock=id; alert("Equipped: "+n); }
+    
     function craft(i) {
         if(i==='heal_mud'&&player.resources.dirt>=3) { player.resources.dirt-=3; player.hp=3; alert("Healed!"); }
         else if(i==='wall'&&player.resources.dirt>=1) { player.resources.dirt--; player.blocks[9]+=5; }
         else if(i==='wood'&&player.resources.wood>=2) { player.resources.wood-=2; player.blocks[4]+=5; }
-        else if(i==='door'&&player.resources.wood>=2&&player.resources.stone>=1) { player.resources.wood-=2; player.resources.stone-=1; if(!player.blocks[6]) player.blocks[6]=0; player.blocks[6]+=3; }
+        else if(i==='stone_brick'&&player.resources.stone>=2) { player.resources.stone-=2; player.blocks[5]+=5; alert("Bricks crafted!"); }
+        else if(i==='lantern'&&player.resources.wood>=1&&player.fragments>=1) { player.resources.wood-=1; player.fragments-=1; player.blocks[11]+=3; alert("Lanterns crafted!"); }
+        else if(i==='door'&&player.resources.wood>=2&&player.resources.stone>=1) { player.resources.wood-=2; player.resources.stone-=1; if(!player.blocks[6]) player.blocks[6]=0; player.blocks[6]+=3; alert("Doors crafted!"); }
         else if(i==='time_wood'&&player.resources.wood>=3) { player.resources.wood-=3; gameTick+=1800; alert("Campfire burning... Time passed."); }
         else if(i==='arrows'&&player.resources.wood>=1&&player.fragments>=2) { player.resources.wood--; player.fragments-=2; player.arrows+=10; }
         else if(i==='quill'&&player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Golden Quill purchased! (Future Content)"); }
