@@ -150,15 +150,22 @@
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
                         <p><b>✨ Update v3.0: Builder's Update</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Fix:</b> Doors now confirm when crafted.</li>
-                            <li><b>New Item:</b> Stone Bricks (Strong).</li>
-                            <li><b>New Item:</b> Sun Lanterns (Bright).</li>
+                            <li><b>Fix:</b> Improved Grammar Engine (Double Consonants, Y to I).</li>
+                            <li><b>New Item:</b> Stone Bricks & Sun Lanterns.</li>
                             <li><b>Gameplay:</b> Monsters spawn near you at night!</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
                         </div>
                     </div>
+
+                    <div style="background: #e8f5e9; padding: 10px; border-radius: 6px; border: 1px solid #c8e6c9; text-align:left; display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" id="chk-teacher" checked onchange="teacherMode = this.checked" style="width:20px; height:20px;">
+                        <label for="chk-teacher" style="font-size:15px; font-weight:bold; color:#2e7d32; cursor:pointer;">
+                            👩‍🏫 Teacher Mode (Show Spelling Rules)
+                        </label>
+                    </div>
+
                     <div style="display:flex; gap:15px; justify-content:center; margin-top:10px;">
                         <button id="btn-continue" onclick="loadGame()" style="display:none; background:#27ae60; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #1e8449;">Resume</button>
                         <button onclick="initAudio(); setGameState('playing')" style="background:#d35400; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #a04000;">New Game</button>
@@ -259,6 +266,7 @@
 
 <script>
     const VERSION = 3.0;
+    let teacherMode = true; // Default to ON
     
     const AFFIX_BRAIN = {
         "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
@@ -653,16 +661,44 @@ function draw() {
         },400);
     }
     
+    // UPDATED SPELLING LOGIC V3.0
     function fixSpelling(root, suf) {
-        if(!suf) return root;
+        if(!suf) return { word: root, rule: null };
+        
         const vowels = ['a','e','i','o','u','y'];
         const isVowel = (c) => vowels.includes(c);
+        
+        // Helper: Checks for Consonant-Vowel-Consonant ending (e.g., "hop", "begin")
+        const endsInCVC = (str) => {
+            if(str.length < 3) return false;
+            const last3 = str.slice(-3);
+            // 'w', 'x', 'y' generally do not double (play -> playing, box -> boxing)
+            if(['w','x','y'].includes(str.slice(-1))) return false;
+            return !isVowel(last3[0]) && isVowel(last3[1]) && !isVowel(last3[2]);
+        };
+
         let lastChar = root.slice(-1);
         let secondLast = root.slice(-2, -1);
-        if(lastChar === 'e' && isVowel(suf[0])) { return root.slice(0, -1) + suf; }
-        if(lastChar === 'y' && !isVowel(secondLast) && suf[0] !== 'i') { return root.slice(0, -1) + 'i' + suf; }
-        if(root.length < 5 && !isVowel(lastChar) && isVowel(secondLast) && !isVowel(root.slice(-3, -2))) { if(isVowel(suf[0])) { return root + lastChar + suf; } }
-        return root + suf;
+
+        // RULE: Silent 'e' (make + ing = making)
+        if(lastChar === 'e' && isVowel(suf[0])) { 
+            return { word: root.slice(0, -1) + suf, rule: "Dropped the silent 'e'!" }; 
+        }
+
+        // RULE: Y to I (happy + est = happiest)
+        // Exception: If suffix starts with 'i' (cry + ing = crying), keep the y.
+        if(lastChar === 'y' && !isVowel(secondLast)) {
+            if(suf[0] === 'i') return { word: root + suf, rule: "Kept 'y' (suffix starts with 'i')." };
+            return { word: root.slice(0, -1) + 'i' + suf, rule: "Changed 'y' to 'i'!" }; 
+        }
+
+        // RULE: 1-1-1 Doubling (hop + ed = hopped)
+        if(endsInCVC(root) && isVowel(suf[0])) { 
+            return { word: root + lastChar + suf, rule: "Doubled the final consonant!" }; 
+        }
+
+        // DEFAULT
+        return { word: root + suf, rule: null };
     }
 
     async function forgeWord() {
@@ -673,10 +709,16 @@ function draw() {
         let baseWord = forge.root.toLowerCase();
         let suffix = forge.suf ? forge.suf.toLowerCase() : "";
         let prefix = forge.pre ? forge.pre.toLowerCase() : "";
-        let constructedPart = fixSpelling(baseWord, suffix);
+        
+        // NEW: Get both word and rule
+        let spellingObj = fixSpelling(baseWord, suffix);
+        let constructedPart = spellingObj.word;
+        let ruleApplied = spellingObj.rule;
+        
         let w = prefix + constructedPart;
         let rootOnly = forge.root.toLowerCase();
 
+        // Quest Logic
         let questTriggered = false;
         NPCS.forEach(n => {
             if(player.quests[n.id] === 2 && w === n.questWord) {
@@ -690,12 +732,22 @@ function draw() {
         });
         if(questTriggered) return;
 
-        let grammarLesson = ""; let partsUsed = [];
+        // Construction Logic
+        let partsUsed = [];
         if(forge.pre && AFFIX_BRAIN[forge.pre]) { partsUsed.push(`<b>${forge.pre}-</b> (${AFFIX_BRAIN[forge.pre]})`); }
         if(forge.suf && AFFIX_BRAIN[forge.suf]) { partsUsed.push(`<b>-${forge.suf}</b> (${AFFIX_BRAIN[forge.suf]})`); }
-        let spellingNote = (constructedPart !== baseWord + suffix) ? " (Spelling changed!)" : "";
-        if(partsUsed.length > 0) { grammarLesson = `The root <b>${rootOnly}</b> was changed by ` + partsUsed.join(" and ") + spellingNote + "."; } 
-        else { grammarLesson = "This is a base root word."; }
+        
+        // NEW: Detailed Grammar Lesson
+        let grammarLesson = "";
+        if(partsUsed.length > 0) { 
+            grammarLesson = `The root <b>${rootOnly}</b> was modified by ` + partsUsed.join(" and ") + ".";
+            // Show Rule if Teacher Mode is ON
+            if(teacherMode && ruleApplied) {
+                grammarLesson += `<br><span style="color:#d35400; font-weight:bold; background:#fff3e0; padding:2px 5px; border-radius:4px;">✨ Rule: ${ruleApplied}</span>`;
+            }
+        } else { 
+            grammarLesson = "This is a base root word."; 
+        }
 
         try {
             let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
@@ -709,6 +761,7 @@ function draw() {
             let titleHtml = isFallback 
                 ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div>`
                 : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${w.toUpperCase()}</div><small>(${pos})</small>`;
+            
             m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#d35400; margin-top:6px; font-weight:bold; border-top:1px solid #ddd; padding-top:4px;">📝 Morphology: <span style="font-weight:normal; color:#555;">${grammarLesson}</span></div>`;
             player.fragments+=15; sfx.collect(); consumeItems(); renderInventory();
         } catch(e) {
