@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.0: Quests & Doors</title>
+    <title>WordCraft v2.1: Day & Night Update</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -131,11 +131,11 @@
                         <h3>Quest for Meaning</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 15px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.0:</b></p>
+                        <p><b>✨ Update v2.1:</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Multi-Part Quests:</b> Find the items first!</li>
-                            <li><b>Magic Doors:</b> Craft doors only YOU can pass.</li>
-                            <li><b>Sky Enemies:</b> Watch the skies!</li>
+                            <li><b>Sleepy Monsters:</b> Enemies now sleep during the day!</li>
+                            <li><b>Balanced Spawns:</b> Fewer monsters in the sky.</li>
+                            <li><b>Day/Night Cycle:</b> Clearer changes between light and dark.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -236,7 +236,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.0;
+    const VERSION = 2.1;
     const CHAR_SCALE = 1.8; 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
@@ -262,16 +262,16 @@
     const TILE_SIZE=40, COLS=600, ROWS=150, CANVAS_W=800, CANVAS_H=600;
     const canvas=document.getElementById('gameCanvas'); const ctx=canvas.getContext('2d');
     canvas.width=CANVAS_W; canvas.height=CANVAS_H;
-    const DAY_LENGTH=3600, NIGHT_START=1800;
-    let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
     
-    // NEW: Flash Effect Variable for quests
+    // TIME SETTINGS
+    const DAY_LENGTH=3600;
+    const NIGHT_THRESHOLD = 0.5; // When CP drops below this, it is night
+    let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
     let flashAlpha = 0;
 
     const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"], 12:["sand","dry","sun","hot"]};
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
-    // NPC UPDATE: Added Quests stages (0, 1=Find Item, 2=Forge Word, 3=Done)
     const NPCS = [
         { 
             id: "bark", name: "Elder Bark", x: 25, y: 10, spriteRow: 1, 
@@ -309,16 +309,19 @@
             grid.push(row);
         }
         
-        // ENEMY SPAWN UPDATE: Now checking surface (r=5) instead of just underground (r=20)
+        // BALANCED SPAWNING LOGIC
         for(let r=5; r<ROWS-5; r++) {
             for(let c=0; c<COLS; c++) {
-                 // 1.5% chance to spawn if empty space
-                if(grid[r][c]===0 && Math.random()<0.015) {
-                    enemies.push({
-                        x:c, y:r, 
-                        type: Math.random()>.5?'bat':'slime', 
-                        hp:2, speed:15, stun:0
-                    });
+                if(grid[r][c]===0) {
+                     // Drastically reduced Sky Spawn Rate (0.2%) vs Cave (1.5%)
+                     let chance = (r < 20) ? 0.002 : 0.015;
+                     if(Math.random() < chance) {
+                        enemies.push({
+                            x:c, y:r, 
+                            type: Math.random()>.5?'bat':'slime', 
+                            hp:2, speed:15, stun:0
+                        });
+                     }
                 }
             }
         }
@@ -339,14 +342,27 @@
         let tX=(player.x*TILE_SIZE)-(CANVAS_W/2), tY=(player.y*TILE_SIZE)-(CANVAS_H/2);
         camera.x=Math.max(0,Math.min(tX,(COLS*TILE_SIZE)-CANVAS_W)); camera.y=Math.max(0,Math.min(tY,(ROWS*TILE_SIZE)-CANVAS_H));
 
+        // DAY/NIGHT LOGIC
+        let tod=gameTick%DAY_LENGTH; 
+        // 0-1800 is Day, 1800-3600 is Night for this Sine wave logic
+        let cp=Math.sin((tod/DAY_LENGTH)*Math.PI);
+        let isNight = tod > (DAY_LENGTH * 0.5); // Simple: Second half of cycle is Night
+
         enemies.forEach((en,i)=>{
             if(en.stun>0) { en.stun--; return; }
+            
+            // SLEEP LOGIC: If it is NOT night, enemies don't move
+            if(!isNight) {
+                // Occasionally add a Zzz particle
+                if(Math.random() < 0.02) addPart(en.x, en.y-1, "z", "#888");
+                return; // SKIP MOVEMENT
+            }
+
             if(Math.abs(en.x-player.x)<30 && Math.abs(en.y-player.y)<20) {
                 if(animTick%en.speed===0) {
                     let nx=en.x, ny=en.y;
                     if(en.x<player.x) nx++; else if(en.x>player.x) nx--; else if(en.y<player.y) ny++; else if(en.y>player.y) ny--;
                     
-                    // Enemy cannot pass doors (ID 6) - only 0 (Air)
                     if(grid[ny][nx]===0) { en.x=nx; en.y=ny; }
                 }
                 if(en.x===player.x && en.y===player.y) hurtPlayer();
@@ -371,7 +387,6 @@
         if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
         if(dx!==0||dy!==0) { 
             let nx=player.x+dx, ny=player.y+dy; 
-            // PLAYER DOOR LOGIC: Player can walk through 0 (Air) OR 6 (Door)
             if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && (grid[ny][nx]===0 || grid[ny][nx]===6)) { 
                 player.x=nx; player.y=ny; 
             } 
@@ -404,7 +419,6 @@
         action();
     }
 
-    // MULTI-PART QUEST DIALOGUE LOGIC
     function startDialogue(npc) {
         let box = document.getElementById('dialogue-box');
         let text = document.getElementById('dialogue-text');
@@ -447,22 +461,19 @@
         if(tx>=0&&tx<COLS&&ty>=0&&ty<ROWS) {
             let t=grid[ty][tx];
             if(t>0) {
-                // Don't mine doors unless holding build
                 if(t===6 && !keys['b']) return; 
-                
                 grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨");
                 let gain = player.unlocks.drill ? 2 : 1;
                 if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain; else if(t===6) { player.blocks[6]++; alert("Door recovered"); }
                 
-                // QUEST STAGE 1 LOGIC: FIND THE ITEM
                 let foundSpecial = false;
-                if(player.quests.bark === 1 && t === 1 && Math.random() < 0.15) { // 15% chance in Dirt
-                     player.quests.bark = 2; // Move to Stage 2
+                if(player.quests.bark === 1 && t === 1 && Math.random() < 0.15) { 
+                     player.quests.bark = 2; 
                      addPart(player.x, player.y-1, "🌰", "lightgreen"); 
                      alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
                 }
-                else if(player.quests.rusty === 1 && t === 2 && Math.random() < 0.15) { // 15% chance in Stone
-                     player.quests.rusty = 2; // Move to Stage 2
+                else if(player.quests.rusty === 1 && t === 2 && Math.random() < 0.15) { 
+                     player.quests.rusty = 2; 
                      addPart(player.x, player.y-1, "⚙️", "gray"); 
                      alert("You found the RUSTY GEAR!"); sfx.quest(); foundSpecial = true;
                 }
@@ -486,9 +497,36 @@
     function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; sfx.hit(); if(player.hp<=0) setGameState('death'); }
 
     function draw() {
-        let tod=gameTick%DAY_LENGTH; let cp=Math.sin((tod/DAY_LENGTH)*Math.PI);
-        let r=Math.floor(135*cp+20*(1-cp)), g=Math.floor(206*cp+20*(1-cp)), b=Math.floor(235*cp+60*(1-cp));
+        let tod=gameTick%DAY_LENGTH; 
+        // DAY/NIGHT COLOR MATH
+        // tod 0 to 1800 is Day. 1800 to 3600 is Night.
+        let cp = Math.sin((tod / DAY_LENGTH) * Math.PI); // 0 -> 1 -> 0
+        // Day Color: r135 g206 b235 (Sky Blue)
+        // Night Color: r20 g20 b60 (Dark Blue)
+        
+        let r,g,b;
+        if(tod < DAY_LENGTH * 0.5) {
+             // DAY PHASE (Fade in/out slightly for noon)
+             r=135; g=206; b=235;
+        } else {
+             // NIGHT PHASE
+             r=20; g=20; b=60;
+        }
+
+        // Apply sine wave specifically for sunrise/sunset smoothing if desired, 
+        // but let's stick to hard cycle for clarity or smooth blend:
+        // Let's blend them based on CP.
+        r = Math.floor(135 * cp + 20 * (1-cp));
+        g = Math.floor(206 * cp + 20 * (1-cp));
+        b = Math.floor(235 * cp + 60 * (1-cp));
+
         ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+
+        // Draw Sun/Moon
+        let cx = CANVAS_W/2 + Math.cos((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 300;
+        let cy = CANVAS_H + Math.sin((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 300;
+        ctx.fillStyle = (tod < DAY_LENGTH*0.5) ? "yellow" : "white";
+        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI*2); ctx.fill();
 
         let tW=useFallbackAssets?TILE_SIZE:processedAssets.tiles.width; 
         let tH=useFallbackAssets?TILE_SIZE:processedAssets.tiles.height/5;
@@ -551,17 +589,18 @@
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
 
-        // --- VISUAL FIX: FLASH EFFECT ---
-        // This ensures the screen doesn't "Stick" to a color. It just flashes and fades.
         if(flashAlpha > 0) {
             ctx.fillStyle = `rgba(255, 215, 0, ${flashAlpha})`;
             ctx.fillRect(0,0,CANVAS_W, CANVAS_H);
-            flashAlpha -= 0.02; // Fade out speed
+            flashAlpha -= 0.02; 
         }
 
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
-        ctx.fillText(player.unlocks.map?"Map Active":"No Map", 10, 70);
+        
+        // VISUAL CLOCK
+        let isNight = tod > (DAY_LENGTH * 0.5);
+        ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", 10, 70);
     }
     
     function setGameState(s) { 
@@ -570,7 +609,7 @@
         if(s==='start')document.getElementById('screen-start').classList.add('active'); 
         if(s==='inventory'){
             document.getElementById('screen-inv').classList.add('active');
-            renderInventory(); // Force refresh when opening
+            renderInventory(); 
         } 
         if(s==='playing') initAudio(); 
     }
@@ -580,7 +619,7 @@
         document.getElementById('tab-craft').style.display=t==='craft'?'flex':'none'; 
         document.getElementById('tab-salvage').style.display=t==='salvage'?'flex':'none'; 
         if(t==='salvage') renderSalvage(); 
-        else renderInventory(); // Always refresh when switching tabs
+        else renderInventory(); 
         document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); 
         event.target.classList.add('active'); 
     }
@@ -641,30 +680,23 @@
         let m=document.getElementById('forge-msg'); m.innerHTML="Checking..."; sfx.craft();
         let w = ((forge.pre||"") + forge.root + (forge.suf||"")).toLowerCase();
         
-        // CHECK QUESTS
         let questTriggered = false;
         NPCS.forEach(n => {
-            // STAGE CHECK: Must have found item (Stage 2) to complete (Stage 3)
             if(player.quests[n.id] === 2 && w === n.questWord) {
                 player.quests[n.id] = 3; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
-                
-                // FLASH TRIGGER
                 flashAlpha = 1.0;
-                
                 alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
                 questTriggered = true;
             } else if (player.quests[n.id] === 1 && w === n.questWord) {
-                // Tried to forge before finding the item
                 alert("You need to find the Quest Item first!");
-                questTriggered = true; // Prevent consumption of resources? Maybe not.
+                questTriggered = true; 
             }
         });
         
         m.innerHTML = `<span style="color:green">✨ ${w.toUpperCase()}</span>`;
         player.fragments+=10; sfx.collect();
-        // Remove Used Parts
         let rIdx = player.roots.findIndex(r => r.word === forge.root);
         if(rIdx > -1) player.roots.splice(rIdx, 1);
         if(forge.pre) { let pIdx = player.affixes.findIndex(a => a.val === forge.pre && a.type === "pre"); if(pIdx > -1) player.affixes.splice(pIdx, 1); }
