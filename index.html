@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.7: Fixed & Complete</title>
+    <title>WordCraft v2.8: Clean & Stable</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
@@ -148,10 +148,10 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.7: Fixed & Stable</b></p>
+                        <p><b>✨ Update v2.8: Clean & Stable</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Monsters Restored:</b> Fallback sprites added back.</li>
-                            <li><b>Quest Fix:</b> Gold flash effect no longer sticks.</li>
+                            <li><b>No Glitches:</b> Quest flashes removed for stability.</li>
+                            <li><b>Monsters Restored:</b> Visible even without images.</li>
                             <li><b>Live API:</b> Real definitions + Morphology lessons.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
@@ -253,7 +253,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.7;
+    const VERSION = 2.8;
     
     const AFFIX_BRAIN = {
         "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
@@ -292,7 +292,6 @@
     // TIME SETTINGS
     const DAY_LENGTH=3600;
     let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
-    let flashAlpha = 0;
     let stars = [];
 
     const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"], 12:["sand","dry","sun","hot"]};
@@ -545,7 +544,7 @@
         });
         ctx.textBaseline = "alphabetic";
 
-        // FALLBACK ASSET LOGIC (FIXED)
+        // FIXED MONSTER RENDERING WITH FALLBACKS
         if(!useFallbackAssets) {
             let cW=processedAssets.chars.width/3, cH=processedAssets.chars.height/3; let drawSize = TILE_SIZE * CHAR_SCALE; let offset = (drawSize - TILE_SIZE) / 2;
             ctx.save(); 
@@ -554,7 +553,7 @@
             ctx.restore();
             enemies.forEach(en=>{ ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, (en.x*TILE_SIZE)-offset, (en.y*TILE_SIZE)-offset, drawSize, drawSize); });
         } else {
-             // FALLBACK SQUARES (If images fail)
+             // FALLBACK SQUARES
              ctx.fillStyle="blue"; ctx.fillRect(player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
              enemies.forEach(en=>{ ctx.fillStyle=(en.type==='bat'?"black":"green"); ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); });
         }
@@ -563,7 +562,7 @@
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
 
-        if(flashAlpha > 0) { ctx.fillStyle = `rgba(255, 215, 0, ${flashAlpha})`; ctx.fillRect(0,0,CANVAS_W, CANVAS_H); flashAlpha -= 0.02; }
+        // REMOVED FLASH EFFECT HERE TO PREVENT GREY SCREEN
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
         let isNight = tod > (DAY_LENGTH * 0.5); ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", 10, 70);
@@ -630,7 +629,7 @@
                 player.quests[n.id] = 3; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
-                flashAlpha = 0.5; // LOWERED FLASH OPACITY
+                // REMOVED FLASH EFFECT TRIGGER
                 alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
                 questTriggered = true; consumeItems();
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
