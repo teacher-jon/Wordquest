@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Legends of Literacy</title>
+    <title>WordCraft: Fixed & Polished</title>
     <style>
         :root { --bg-color: #1a1a2e; --ui-border: #5d4037; --accent: #d35400; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -220,7 +220,7 @@
     
     // --- NPC & QUEST DATA ---
     const NPCS = [
-        { id: "bark", name: "Elder Bark", x: 25, y: 11, spriteRow: 1, intro: ["Greetings, little one.", "My roots are weak.", "Can you forge REPLANT?"], questId: "bark", questWord: "replant", complete: ["Ah! The forest awakens!", "Take this Map."] },
+        { id: "bark", name: "Elder Bark", x: 25, y: 10, spriteRow: 1, intro: ["Greetings, little one.", "My roots are weak.", "Can you forge REPLANT?"], questId: "bark", questWord: "replant", complete: ["Ah! The forest awakens!", "Take this Map."] },
         { id: "rusty", name: "Rusty", x: 40, y: 55, spriteRow: 2, intro: ["Bzzz... Systems offline.", "I need to rebuild.", "Forge RECONSTRUCT?"], questId: "rusty", questWord: "reconstruct", complete: ["System Online.", "Take this Drill!"] }
     ];
     
@@ -251,8 +251,22 @@
         
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
         
-        // Ensure NPCs have air to stand
-        NPCS.forEach(n => { grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; });
+        // FIX: Ensure NPCs are grounded correctly
+        NPCS.forEach(n => {
+            // Calculate Surface Height for Bark if he's on top
+            if(n.id === 'bark') {
+                let s = 10 + Math.floor(Math.sin(n.x*0.05)*5);
+                n.y = s - 1; // Stand on top of the grass
+            }
+            // Ensure Rusty has a floor
+            if(n.id === 'rusty') {
+                // Clear his body space
+                grid[n.y][n.x] = 0; 
+                grid[n.y-1][n.x] = 0;
+                // Build a floor underneath him
+                if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; // Stone Brick
+            }
+        });
         requestAnimationFrame(loop);
     }
 
@@ -300,6 +314,21 @@
         if(e.key==='m'||e.key==='M') toggleMap();
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
+
+    // FIX: Better Toggle Logic
+    function toggleMobileControls() {
+        let el = document.getElementById('mobile-controls');
+        // Check computed style or explicit inline
+        let isHidden = window.getComputedStyle(el).display === 'none';
+        
+        if(isHidden) {
+            el.style.display = 'block';
+            document.getElementById('mob-toggle').classList.add('on');
+        } else {
+            el.style.display = 'none';
+            document.getElementById('mob-toggle').classList.remove('on');
+        }
+    }
 
     function interact() {
         // 1. Check for NPCs
@@ -369,7 +398,7 @@
                 }
                 // If Rusty Quest Active, high chance for Gears
                 else if(player.quests.rusty === 1 && Math.random() < 0.25) {
-                     player.artifacts.push({ name: "Rusted Gear", word: "RECONSTRUCT", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'ion'}], desc: "Quest Item" });
+                     player.artifacts.push({ name: "Rusted Gear", word: "RECONSTRUCT", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'tion'}], desc: "Quest Item" });
                      addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect();
                 }
                 // Normal Loot
@@ -422,15 +451,16 @@
         
         // Draw NPCs
         NPCS.forEach(n => {
-            // Simple placeholder NPC logic
-            let charRow = (n.id==='bark') ? 1 : 2; 
+            // FIX: Draw text baseline top to match alignment
+            ctx.textBaseline = "top";
             ctx.font = "30px Arial";
             ctx.fillText(n.id==='bark'?"🌳":"🤖", n.x*TILE_SIZE, n.y*TILE_SIZE);
             if(Math.abs(player.x - n.x) < 3 && Math.abs(player.y - n.y) < 3) {
                  ctx.font = "14px Arial"; ctx.fillStyle = "white";
-                 ctx.fillText("PRESS T", n.x*TILE_SIZE-10, n.y*TILE_SIZE-10);
+                 ctx.fillText("PRESS T", n.x*TILE_SIZE-10, n.y*TILE_SIZE-20);
             }
         });
+        ctx.textBaseline = "alphabetic"; // Reset
 
         // Player & Enemies
         if(!useFallbackAssets) {
