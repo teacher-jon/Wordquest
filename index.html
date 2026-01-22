@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft: Fixed & Polished</title>
+    <title>WordCraft: Legends of Literacy v1.1</title>
     <style>
         :root { --bg-color: #1a1a2e; --ui-border: #5d4037; --accent: #d35400; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -90,7 +90,8 @@
             </div>
             <div class="control-group actions">
                 <div class="touch-btn act-btn act-sm" ontouchstart="setGameState('inventory')" style="background:rgba(200,100,0,0.4)">🎒</div>
-                <div class="touch-btn act-btn act-sm" ontouchstart="interact()" style="background:rgba(100,200,255,0.4)">💬</div> <div class="touch-btn act-btn" ontouchstart="shootArrow()" style="background:rgba(0,100,200,0.4)">🏹</div>
+                <div class="touch-btn act-btn act-sm" ontouchstart="interact()" style="background:rgba(100,200,255,0.4)">💬</div>
+                <div class="touch-btn act-btn" ontouchstart="shootArrow()" style="background:rgba(0,100,200,0.4)">🏹</div>
                 <div class="touch-btn act-btn" ontouchstart="action()" style="background:rgba(200,50,50,0.4)">⛏️</div>
             </div>
         </div>
@@ -100,11 +101,11 @@
                 <h1 style="color:#c0392b; margin-top:0; font-size: 28px;">WordCraft</h1>
                 <h3 style="color:#555; margin-top:0;">Legends of Literacy</h3>
                 <div style="text-align: left; background: #fff3e0; padding: 15px; border-radius: 4px; font-size: 14px; margin-bottom:15px; border:1px solid #ffe0b2;">
-                    <p><b>✨ Quest Update:</b></p>
+                    <p><b>✨ Quest Update (v1.1):</b></p>
                     <ul style="padding-left:20px; margin:5px 0;">
                         <li><b>NPC Teachers:</b> Find <b>Elder Bark</b> (Surface) and <b>Rusty</b> (Caves).</li>
                         <li><b>Quests:</b> Solve their word puzzles to unlock the <b>Map</b> and <b>Super Drill</b>!</li>
-                        <li><b>Save Game:</b> Use the inventory menu to save your progress.</li>
+                        <li><b>Save Game:</b> Supports updates! Your progress is safe.</li>
                     </ul>
                     <div style="margin-top:10px; font-weight:bold; cursor:pointer;" onclick="toggleMobileControls()">
                         📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -193,6 +194,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
+    const VERSION = 1.1; // VERSION CONTROL
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -204,7 +206,12 @@
     function onAssetLoad() { loadedCount++; if(loadedCount===3) processAssets(); }
     function onAssetError() { console.warn("Using fallback assets."); useFallbackAssets=true; loadedCount++; if(loadedCount===3) processAssets(); }
     function removeWhite(img) { const c=document.createElement('canvas'); const x=c.getContext('2d'); c.width=img.width; c.height=img.height; x.drawImage(img,0,0); const d=x.getImageData(0,0,c.width,c.height); for(let i=0;i<d.data.length;i+=4) { if(d.data[i]>240&&d.data[i+1]>240&&d.data[i+2]>240) d.data[i+3]=0; } x.putImageData(d,0,0); return c; }
-    function processAssets() { if(!useFallbackAssets) { processedAssets.tiles=removeWhite(assets.tiles); processedAssets.chars=removeWhite(assets.chars); processedAssets.ui=removeWhite(assets.ui); } document.getElementById('loading').style.display='none'; if(localStorage.getItem('wordcraft_save')) document.getElementById('btn-continue').style.display='inline-block'; initGame(); }
+    function processAssets() { 
+        if(!useFallbackAssets) { processedAssets.tiles=removeWhite(assets.tiles); processedAssets.chars=removeWhite(assets.chars); processedAssets.ui=removeWhite(assets.ui); } 
+        document.getElementById('loading').style.display='none'; 
+        if(localStorage.getItem('wordcraft_save')) document.getElementById('btn-continue').style.display='inline-block'; 
+        initGame(); 
+    }
     assets.tiles.src='assets/tiles.png'; assets.tiles.onload=onAssetLoad; assets.tiles.onerror=onAssetError;
     assets.chars.src='assets/chars.png'; assets.chars.onload=onAssetLoad; assets.chars.onerror=onAssetError;
     assets.ui.src='assets/ui.png'; assets.ui.onload=onAssetLoad; assets.ui.onerror=onAssetError;
@@ -251,20 +258,15 @@
         
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
         
-        // FIX: Ensure NPCs are grounded correctly
+        // NPC PLACEMENT FIX
         NPCS.forEach(n => {
-            // Calculate Surface Height for Bark if he's on top
             if(n.id === 'bark') {
                 let s = 10 + Math.floor(Math.sin(n.x*0.05)*5);
-                n.y = s - 1; // Stand on top of the grass
+                n.y = s - 1; // Surface
             }
-            // Ensure Rusty has a floor
             if(n.id === 'rusty') {
-                // Clear his body space
-                grid[n.y][n.x] = 0; 
-                grid[n.y-1][n.x] = 0;
-                // Build a floor underneath him
-                if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; // Stone Brick
+                grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; // Clear space
+                if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; // Floor
             }
         });
         requestAnimationFrame(loop);
@@ -315,23 +317,16 @@
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
 
-    // FIX: Better Toggle Logic
+    // MOBILE CONTROLS TOGGLE
     function toggleMobileControls() {
         let el = document.getElementById('mobile-controls');
-        // Check computed style or explicit inline
+        let btn = document.getElementById('mob-toggle');
         let isHidden = window.getComputedStyle(el).display === 'none';
-        
-        if(isHidden) {
-            el.style.display = 'block';
-            document.getElementById('mob-toggle').classList.add('on');
-        } else {
-            el.style.display = 'none';
-            document.getElementById('mob-toggle').classList.remove('on');
-        }
+        if(isHidden) { el.style.display = 'block'; btn.classList.add('on'); } 
+        else { el.style.display = 'none'; btn.classList.remove('on'); }
     }
 
     function interact() {
-        // 1. Check for NPCs
         let talked = false;
         NPCS.forEach(n => {
             if(Math.abs(player.x - n.x) < 3 && Math.abs(player.y - n.y) < 3) {
@@ -339,8 +334,6 @@
             }
         });
         if(talked) return;
-
-        // 2. Action (Mine/Fight)
         action();
     }
 
@@ -353,16 +346,9 @@
         let qState = player.quests[npc.id];
         let lines = [];
         
-        if(qState === 2) { // Done
-            lines = ["Thanks again!", "The world is healing."];
-        } else if(qState === 1) { // Active
-            lines = [`I am still waiting for ${npc.questWord.toUpperCase()}.`, "Check your Artifacts for parts."];
-        } else { // New
-            lines = npc.intro;
-            player.quests[npc.id] = 1; // Start Quest
-            alert("Quest Started! Find items to forge " + npc.questWord.toUpperCase());
-            // Force give first artifact hint?
-        }
+        if(qState === 2) { lines = ["Thanks again!", "The world is healing."]; }
+        else if(qState === 1) { lines = [`I am still waiting for ${npc.questWord.toUpperCase()}.`, "Check your Artifacts for parts."]; }
+        else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started!"); }
         
         currentDialogue = { lines: lines, index: 0 };
         text.innerText = lines[0];
@@ -386,22 +372,17 @@
             let t=grid[ty][tx];
             if(t>0) {
                 grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨");
-                // Resource Gain (Drill doubles it)
                 let gain = player.unlocks.drill ? 2 : 1;
                 if(t===1) player.resources.dirt+=gain; else if(t===12) player.resources.sand+=gain; else if(t===2) player.resources.stone+=gain; else if(t===3) player.resources.obsidian+=gain;
                 
-                // QUEST LOOT LOGIC
-                // If Bark Quest Active, high chance for Seeds
                 if(player.quests.bark === 1 && Math.random() < 0.25) {
                     player.artifacts.push({ name: "Ancient Seed", word: "REPLANT", parts: [{t:'pre',v:'re'}, {t:'root',v:'plant'}], desc: "Quest Item" });
                     addPart(player.x, player.y-1, "🌱", "green"); sfx.collect();
                 }
-                // If Rusty Quest Active, high chance for Gears
                 else if(player.quests.rusty === 1 && Math.random() < 0.25) {
                      player.artifacts.push({ name: "Rusted Gear", word: "RECONSTRUCT", parts: [{t:'pre',v:'re'}, {t:'root',v:'struct'}, {t:'suf',v:'tion'}], desc: "Quest Item" });
                      addPart(player.x, player.y-1, "⚙️", "gray"); sfx.collect();
                 }
-                // Normal Loot
                 else if(Math.random()>0.6) {
                     let r=Math.random();
                     if(r<0.15) { let a=ARTIFACTS[Math.floor(Math.random()*ARTIFACTS.length)]; player.artifacts.push(a); addPart(player.x,player.y-1,"🎁","gold"); sfx.collect(); }
@@ -434,9 +415,7 @@
             for(let c=cX; c<=eX; c++){
                 if(r>=0 && r<ROWS && c>=0 && c<COLS) {
                     let t=grid[r][c];
-                    // Map Overlay Effect
                     if(player.unlocks.map && t>0) ctx.globalAlpha = 0.5; 
-                    
                     if(t>0) {
                          if(useFallbackAssets) { ctx.fillStyle="brown"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); }
                          else {
@@ -449,36 +428,24 @@
             }
         }
         
-        // Draw NPCs
         NPCS.forEach(n => {
-            // FIX: Draw text baseline top to match alignment
-            ctx.textBaseline = "top";
-            ctx.font = "30px Arial";
-            ctx.fillText(n.id==='bark'?"🌳":"🤖", n.x*TILE_SIZE, n.y*TILE_SIZE);
-            if(Math.abs(player.x - n.x) < 3 && Math.abs(player.y - n.y) < 3) {
-                 ctx.font = "14px Arial"; ctx.fillStyle = "white";
-                 ctx.fillText("PRESS T", n.x*TILE_SIZE-10, n.y*TILE_SIZE-20);
-            }
+            ctx.textBaseline = "top"; ctx.font = "30px Arial"; ctx.fillText(n.id==='bark'?"🌳":"🤖", n.x*TILE_SIZE, n.y*TILE_SIZE);
+            if(Math.abs(player.x - n.x) < 3 && Math.abs(player.y - n.y) < 3) { ctx.font = "14px Arial"; ctx.fillStyle = "white"; ctx.fillText("PRESS T", n.x*TILE_SIZE-10, n.y*TILE_SIZE-20); }
         });
-        ctx.textBaseline = "alphabetic"; // Reset
+        ctx.textBaseline = "alphabetic";
 
-        // Player & Enemies
         if(!useFallbackAssets) {
             let cW=processedAssets.chars.width/3, cH=processedAssets.chars.height/3;
             ctx.save(); if(player.facingLeft) { ctx.translate((player.x*TILE_SIZE)+TILE_SIZE,player.y*TILE_SIZE); ctx.scale(-1,1); ctx.drawImage(processedAssets.chars, (Math.floor(animTick/20)%2)*cW, 0, cW, cH, 0, 0, TILE_SIZE, TILE_SIZE); }
             else ctx.drawImage(processedAssets.chars, (Math.floor(animTick/20)%2)*cW, 0, cW, cH, player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             ctx.restore();
-            
-            enemies.forEach(en=>{
-                ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            });
+            enemies.forEach(en=>{ ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); });
         }
         
         ctx.fillStyle="yellow"; projectiles.forEach(p=>ctx.fillRect(p.x*TILE_SIZE,p.y*TILE_SIZE,5,5));
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
 
-        // HUD
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
         ctx.fillText(player.unlocks.map?"Map Active":"No Map", 10, 70);
@@ -489,9 +456,7 @@
     function renderSalvage() { 
         let d=document.getElementById('list-artifacts'); d.innerHTML=""; 
         if(player.artifacts.length===0) d.innerHTML="<div style='padding:20px'>Go mine!</div>";
-        player.artifacts.forEach((a,i)=>{
-            d.innerHTML+=`<div class='artifact-item'><div><div class='artifact-word'>${a.word}</div><div style='font-size:10px;color:#f1c40f'>${a.desc}</div></div><button class='salvage-btn' onclick='salvageItem(${i},this)'>BREAK</button></div>`;
-        });
+        player.artifacts.forEach((a,i)=>{ d.innerHTML+=`<div class='artifact-item'><div><div class='artifact-word'>${a.word}</div><div style='font-size:10px;color:#f1c40f'>${a.desc}</div></div><button class='salvage-btn' onclick='salvageItem(${i},this)'>BREAK</button></div>`; });
     }
     function salvageItem(i,btn) {
         if(!player.artifacts[i]) return;
@@ -507,21 +472,16 @@
         if(!forge.root) return;
         let m=document.getElementById('forge-msg'); m.innerHTML="Checking..."; sfx.craft();
         let w = ((forge.pre||"") + forge.root + (forge.suf||"")).toLowerCase();
-        
-        // --- QUEST CHECK ---
         NPCS.forEach(n => {
             if(player.quests[n.id] === 1 && w === n.questWord) {
-                player.quests[n.id] = 2; // Complete
+                player.quests[n.id] = 2; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
-                alert(`QUEST COMPLETE: ${n.name} is happy! Reward Unlocked!`);
-                sfx.quest();
+                alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
             }
         });
-        
         m.innerHTML = `<span style="color:green">✨ ${w.toUpperCase()}</span>`;
         player.fragments+=10; sfx.collect();
-        // Clear slots
         forge={pre:null,root:null,suf:null}; document.getElementById('slot-pre').innerText="[Pre]"; document.getElementById('slot-root').innerText="[Root]"; document.getElementById('slot-suf').innerText="[Suf]";
         renderInventory();
     }
@@ -537,9 +497,35 @@
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
 
-    function saveGame() { localStorage.setItem('wordcraft_save', JSON.stringify({player, grid, enemies, gameTick})); alert("Saved!"); }
-    function loadGame() { let d=JSON.parse(localStorage.getItem('wordcraft_save')); player=d.player; grid=d.grid; enemies=d.enemies; gameTick=d.gameTick; alert("Loaded!"); setGameState('playing'); }
-    function toggleMap() { if(player.unlocks.map) alert("Map Active: You can see through walls!"); else alert("You need to help Elder Bark first."); }
+    // SAVE SYSTEM (SMART MERGE)
+    function saveGame() { 
+        const saveData = { version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick };
+        localStorage.setItem('wordcraft_save', JSON.stringify(saveData)); alert("Saved!"); 
+    }
+    
+    function loadGame() {
+        const savedData = localStorage.getItem('wordcraft_save');
+        if(savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                grid = data.grid; enemies = data.enemies; gameTick = data.gameTick;
+                // Smart Merge Logic
+                player = { 
+                    ...player, ...data.player,
+                    resources: { ...player.resources, ...data.player.resources },
+                    blocks: { ...player.blocks, ...data.player.blocks },
+                    quests: { ...player.quests, ...data.player.quests },
+                    unlocks: { ...player.unlocks, ...data.player.unlocks }
+                };
+                if(data.player.roots) player.roots = data.player.roots;
+                if(data.player.affixes) player.affixes = data.player.affixes;
+                if(data.player.artifacts) player.artifacts = data.player.artifacts;
+                alert("Loaded!"); setGameState('playing');
+            } catch(e) { console.error(e); alert("Error loading save."); }
+        }
+    }
+
+    function toggleMap() { if(player.unlocks.map) alert("Map Active!"); else alert("Help Elder Bark first."); }
     function simKey(k,s) { keys[k]=s; if(s) initAudio(); }
 </script>
 </body>
