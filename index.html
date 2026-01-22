@@ -313,7 +313,7 @@
     let forge={pre:null,root:null,suf:null};
     let currentDialogue = null;
 
-    function initGame() {
+function initGame() {
         grid=[];
         for(let r=0; r<ROWS; r++){
             let row=[];
@@ -345,7 +345,9 @@
             stars.push({ x: Math.random() * CANVAS_W, y: Math.random() * (CANVAS_H*0.6), size: Math.random() * 2 + 1, twinkleOffset: Math.random() * Math.PI * 2 });
         }
         
-        spawnEnemyBatch(10);
+        // SPAWN MORE MONSTERS (Increased to 50)
+        spawnEnemyBatch(50);
+        
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
         NPCS.forEach(n => {
             if(n.id === 'bark') { let s = 10 + Math.floor(Math.sin(n.x*0.05)*5); n.y = s - 1; }
@@ -357,11 +359,21 @@
     function spawnEnemyBatch(count) { for(let i=0; i<count; i++) spawnEnemy(); }
     
     function spawnEnemy() {
-        let c = Math.floor(Math.random() * COLS);
-        let r = Math.floor(Math.random() * (ROWS - 5)) + 5;
-        let isNight = (gameTick % DAY_LENGTH) > (DAY_LENGTH * 0.5);
-        if(!isNight && r < 20) return; 
-        if(grid[r][c] === 0) { enemies.push({ x:c, y:r, type: Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0 }); }
+        // Try 20 times to find a valid air spot
+        for(let i=0; i<20; i++) {
+            let c = Math.floor(Math.random() * COLS);
+            let r = Math.floor(Math.random() * (ROWS - 5)) + 5;
+            let isNight = (gameTick % DAY_LENGTH) > (DAY_LENGTH * 0.5);
+            
+            // Safety Check: Don't spawn on surface during day
+            if(!isNight && r < 20) continue; 
+
+            // Only spawn if the block is Air (0)
+            if(grid[r][c] === 0) { 
+                enemies.push({ x:c, y:r, type: Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0 }); 
+                return; // Success! Stop trying.
+            }
+        }
     }
 
     function loop() { if(state==='playing') update(); draw(); requestAnimationFrame(loop); }
@@ -499,7 +511,7 @@
     function addPart(x,y,c,cl="white") { particles.push({x:x,y:y,char:c,color:cl,life:30}); }
     function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; sfx.hit(); if(player.hp<=0) setGameState('death'); }
 
-    function draw() {
+function draw() {
         let tod=gameTick%DAY_LENGTH; let cp = Math.sin((tod / DAY_LENGTH) * Math.PI); 
         let r = Math.floor(135 * cp + 20 * (1-cp)); let g = Math.floor(206 * cp + 20 * (1-cp)); let b = Math.floor(235 * cp + 60 * (1-cp));
         ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
@@ -544,7 +556,7 @@
         });
         ctx.textBaseline = "alphabetic";
 
-        // FIXED MONSTER RENDERING WITH FALLBACKS
+        // FIXED MONSTER RENDERING (High Contrast)
         if(!useFallbackAssets) {
             let cW=processedAssets.chars.width/3, cH=processedAssets.chars.height/3; let drawSize = TILE_SIZE * CHAR_SCALE; let offset = (drawSize - TILE_SIZE) / 2;
             ctx.save(); 
@@ -553,16 +565,21 @@
             ctx.restore();
             enemies.forEach(en=>{ ctx.drawImage(processedAssets.chars, (Math.floor(animTick/10)%3)*cW, (en.type==='bat'?1:2)*cH, cW, cH, (en.x*TILE_SIZE)-offset, (en.y*TILE_SIZE)-offset, drawSize, drawSize); });
         } else {
-             // FALLBACK SQUARES
+             // FALLBACK SQUARES - HIGH VISIBILITY
+             // Player = Blue
              ctx.fillStyle="blue"; ctx.fillRect(player.x*TILE_SIZE, player.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-             enemies.forEach(en=>{ ctx.fillStyle=(en.type==='bat'?"black":"green"); ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); });
+             // Enemies = Red (Bat) or Green (Slime)
+             enemies.forEach(en=>{ 
+                 ctx.fillStyle=(en.type==='bat'?"red":"lime"); 
+                 ctx.fillRect(en.x*TILE_SIZE, en.y*TILE_SIZE, TILE_SIZE, TILE_SIZE); 
+             });
         }
         
         ctx.fillStyle="yellow"; projectiles.forEach(p=>ctx.fillRect(p.x*TILE_SIZE,p.y*TILE_SIZE,5,5));
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
 
-        // REMOVED FLASH EFFECT HERE TO PREVENT GREY SCREEN
+        // NO FLASH EFFECT
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
         let isNight = tod > (DAY_LENGTH * 0.5); ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", 10, 70);
