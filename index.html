@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v2.2: High Sun Fix</title>
+    <title>WordCraft v2.3: Starry Night</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { background-color: var(--bg-color); color: #2c3e50; font-family: 'Verdana', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; }
@@ -131,11 +131,10 @@
                         <h3>Quest for Meaning</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 15px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v2.2:</b></p>
+                        <p><b>✨ Update v2.3: Starry Night</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Fix:</b> Sun & Moon now arc high in the sky.</li>
-                            <li><b>Day/Night:</b> Monsters sleep in sun, hunt in dark.</li>
-                            <li><b>Balanced:</b> Fewer monsters in the sky area.</li>
+                            <li><b>New Sky:</b> Sun removed. The sky dims and stars come out at night.</li>
+                            <li><b>Day/Night:</b> Monsters sleep in the light, hunt in the dark.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -236,7 +235,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 2.2;
+    const VERSION = 2.3;
     const CHAR_SCALE = 1.8; 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
@@ -265,9 +264,10 @@
     
     // TIME SETTINGS
     const DAY_LENGTH=3600;
-    const NIGHT_THRESHOLD = 0.5; // When CP drops below this, it is night
     let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
     let flashAlpha = 0;
+    // NEW: Stars array
+    let stars = [];
 
     const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"], 12:["sand","dry","sun","hot"]};
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
@@ -308,12 +308,22 @@
             }
             grid.push(row);
         }
+
+        // NEW: GENERATE STARS ONCE
+        stars = [];
+        for(let i=0; i<150; i++) {
+            stars.push({
+                x: Math.random() * CANVAS_W,
+                y: Math.random() * (CANVAS_H*0.6), // Keep stars in upper 60% of screen
+                size: Math.random() * 2 + 1,
+                twinkleOffset: Math.random() * Math.PI * 2
+            });
+        }
         
         // BALANCED SPAWNING LOGIC
         for(let r=5; r<ROWS-5; r++) {
             for(let c=0; c<COLS; c++) {
                 if(grid[r][c]===0) {
-                     // Drastically reduced Sky Spawn Rate (0.2%) vs Cave (1.5%)
                      let chance = (r < 20) ? 0.002 : 0.015;
                      if(Math.random() < chance) {
                         enemies.push({
@@ -344,16 +354,13 @@
 
         // DAY/NIGHT LOGIC
         let tod=gameTick%DAY_LENGTH; 
-        // 0-1800 is Day, 1800-3600 is Night for this Sine wave logic
-        let cp=Math.sin((tod/DAY_LENGTH)*Math.PI);
-        let isNight = tod > (DAY_LENGTH * 0.5); // Simple: Second half of cycle is Night
+        let isNight = tod > (DAY_LENGTH * 0.5);
 
         enemies.forEach((en,i)=>{
             if(en.stun>0) { en.stun--; return; }
             
-            // SLEEP LOGIC: If it is NOT night, enemies don't move
+            // SLEEP LOGIC
             if(!isNight) {
-                // Occasionally add a Zzz particle
                 if(Math.random() < 0.02) addPart(en.x, en.y-1, "z", "#888");
                 return; // SKIP MOVEMENT
             }
@@ -498,30 +505,34 @@
 
     function draw() {
         let tod=gameTick%DAY_LENGTH; 
-        // DAY/NIGHT COLOR MATH
         let cp = Math.sin((tod / DAY_LENGTH) * Math.PI); 
         
-        let r,g,b;
-        if(tod < DAY_LENGTH * 0.5) {
-             r=135; g=206; b=235; // Day Blue
-        } else {
-             r=20; g=20; b=60; // Night Blue
-        }
-        r = Math.floor(135 * cp + 20 * (1-cp));
-        g = Math.floor(206 * cp + 20 * (1-cp));
-        b = Math.floor(235 * cp + 60 * (1-cp));
+        // Background Color Blending (Dims the sky)
+        let r = Math.floor(135 * cp + 20 * (1-cp));
+        let g = Math.floor(206 * cp + 20 * (1-cp));
+        let b = Math.floor(235 * cp + 60 * (1-cp));
 
         ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
 
-        // --- SUN/MOON POSITION FIX ---
-        // Center of rotation is now (CANVAS_H + 400) = 1000
-        // Radius is 800
-        // Top of arc is 1000 - 800 = 200 (pixels from top).
-        let cx = CANVAS_W/2 + Math.cos((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 800;
-        let cy = (CANVAS_H + 400) + Math.sin((tod/DAY_LENGTH) * Math.PI * 2 + Math.PI) * 800;
-        
-        ctx.fillStyle = (tod < DAY_LENGTH*0.5) ? "yellow" : "white";
-        ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI*2); ctx.fill();
+        // --- SUN REMOVED ---
+
+        // --- NEW: DRAW STARS ---
+        // Only draw if it's getting dark (cp is low)
+        if(cp < 0.5) {
+             ctx.fillStyle = "white";
+             // Calculate opacity based on how dark it is. 
+             // As cp goes from 0.5 down to 0, opacity goes from 0 up to 1.
+             let starOpacity = 1 - (cp * 2); 
+             
+             stars.forEach(s => {
+                 // Add a simple twinkle effect using sine wave on gameTick
+                 let twinkle = Math.sin((gameTick / 10) + s.twinkleOffset) * 0.3 + 0.7;
+                 ctx.globalAlpha = starOpacity * twinkle;
+                 ctx.fillRect(s.x, s.y, s.size, s.size);
+             });
+             ctx.globalAlpha = 1.0; // Reset alpha for the rest of the drawing
+        }
+        // ---------------------
 
         let tW=useFallbackAssets?TILE_SIZE:processedAssets.tiles.width; 
         let tH=useFallbackAssets?TILE_SIZE:processedAssets.tiles.height/5;
