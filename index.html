@@ -326,6 +326,16 @@
         "s": "more than one (plural)", "ed": "happened in the past", "ing": "happening right now",
         "ly": "done in this way (adverb)", "tion": "the action or result of", "ment": "the process or state of",
         "ness": "the state of being", "less": "without", "ful": "full of", "er": "a person who does this", "est": "the most"
+    };  // <--- MAKE SURE THIS CLOSING BRACKET AND SEMICOLON ARE HERE
+
+    // === PASTE THE NEW RULES HERE (OUTSIDE THE BRACKETS ABOVE) ===
+    const SUFFIX_RULES = {
+        "s":    ["noun", "verb"],      
+        "ed":   ["verb"],              
+        "ing":  ["verb"],              
+        "er":   ["verb", "adjective"], 
+        "est":  ["adjective"],         
+        "ly":   ["adjective"]          
     };
     
     const CHAR_SCALE = 1.8; 
@@ -801,6 +811,7 @@ function draw() {
     // === STRICT FORGE PROCESSOR (With Timeout & No False Positives) ===
     // === SMART FORGE PROCESSOR v3.3 ===
    // === GRAMMAR GUARD FORGE PROCESSOR v3.4 ===
+    // === FINAL STRICT PROCESSOR v3.5 ===
     async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
@@ -814,7 +825,6 @@ function draw() {
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
-        // 1. Construct the word string
         let currentWord = forge.root.toLowerCase();
         let ruleLog = []; 
         forge.sufs.forEach(suf => {
@@ -826,7 +836,7 @@ function draw() {
         let finalWord = prefixStr + currentWord;
         let rootOnly = forge.root.toLowerCase();
 
-        // 2. Quest Logic (Always check strict match first for quests)
+        // Quest Logic
         let questTriggered = false;
         NPCS.forEach(n => {
             if(player.quests[n.id] === 2 && finalWord === n.questWord) {
@@ -840,7 +850,7 @@ function draw() {
         });
         if(questTriggered) { isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled'); return; }
 
-        // 3. Prepare Lesson Text
+        // Grammar Lesson
         let grammarLesson = `Built from <b>${rootOnly}</b>`;
         if(forge.pres.length > 0) grammarLesson += ` with prefix(es) ${forge.pres.join(", ")}`;
         if(forge.sufs.length > 0) grammarLesson += ` and suffix(es) ${forge.sufs.join(", ")}`;
@@ -854,7 +864,7 @@ function draw() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
-            // STEP A: Try to fetch the FINAL word directly
+            // STEP 1: Strict Dictionary Check
             let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`, { signal: controller.signal });
             
             let isValid = false;
@@ -862,30 +872,25 @@ function draw() {
             let partOfSpeech = "";
 
             if(response.ok) {
-                // Perfect Match found (e.g., "playful")
+                // IT IS A REAL WORD (e.g. "Playfulness")
                 isValid = true;
                 const data = await response.json();
                 definition = data[0]?.meanings[0]?.definitions[0]?.definition;
                 partOfSpeech = data[0]?.meanings[0]?.partOfSpeech;
             } else {
-                // STEP B: The "Grammar Guard" Fallback
-                // If strict match fails, we check if the morphology is legally valid.
-                
-                // 1. Only allow fallback if we have NO prefixes and only 1 suffix (Simple inflection)
+                // STEP 2: Conditional Fallback (ONLY for inflectional suffixes)
+                // If it's not in the dictionary, we ONLY check the root if the suffix is in our Safe List (s, ed, ing, etc.)
                 if(forge.pres.length === 0 && forge.sufs.length === 1) {
                     let suffix = forge.sufs[0];
-                    let allowedPOS = SUFFIX_RULES[suffix];
+                    let allowedPOS = SUFFIX_RULES[suffix]; // Will be UNDEFINED for 'less', 'ness', etc.
 
                     if(allowedPOS) {
-                        // Fetch the ROOT to check its Part of Speech
+                        // It is a safe suffix (like -ed), so we check the root
                         let rootResp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`, { signal: controller.signal });
                         
                         if(rootResp.ok) {
                             let rootData = await rootResp.json();
-                            // Check ALL meanings of the root (it can be both Noun and Verb)
                             let rootMeanings = rootData[0].meanings.map(m => m.partOfSpeech);
-                            
-                            // Does the root have a POS that matches the Suffix's requirement?
                             let match = rootMeanings.find(pos => allowedPOS.includes(pos));
                             
                             if(match) {
@@ -894,10 +899,13 @@ function draw() {
                                 partOfSpeech = "derivative";
                                 grammarLesson += `<br><span style='color:green;font-size:11px;'>(Validated via Grammar: ${rootOnly} is a ${match})</span>`;
                             } else {
-                                // Specific error: "Portness" fails here because Port (noun) != Ness (needs Adj)
                                 throw new Error(`Grammar Mismatch: -${suffix} needs a ${allowedPOS.join(' or ')}.`);
                             }
                         }
+                    } else {
+                         // Suffix is NOT in the safe list (e.g. -less, -ness). 
+                         // Since the main dictionary check failed, this is NOT a word.
+                         throw new Error(`"${finalWord}" is not in the dictionary.`);
                     }
                 }
             }
@@ -920,7 +928,6 @@ function draw() {
             if (e.name === 'AbortError') {
                 m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">⚠️ Connection Timed Out.</span>`;
             } else if (e.message.includes("Grammar Mismatch")) {
-                // Show the specific grammar error to the student
                 m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ Grammar Error</span><br><span style="font-size:12px;">${e.message}</span>`;
             } else {
                 m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${finalWord}" is not a word.</span>`;
