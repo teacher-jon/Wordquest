@@ -760,40 +760,32 @@ function draw() {
 
     function clearForgeRoot() { forge.root = null; renderForgeUI(); }
 
-function renderForgeUI() {
-        // Render Prefixes (Show placeholder if empty)
+    // === UI FIX: Show placeholders when empty ===
+    function renderForgeUI() {
+        // Prefixes
         const zPre = document.getElementById('zone-pre');
         zPre.innerHTML = "";
         if (forge.pres.length === 0) {
             zPre.innerHTML = `<div style="color:#aaa; font-size:12px; border: 2px dashed #ccc; padding:5px 10px; border-radius:8px;">[Pre]</div>`;
         } else {
-            forge.pres.forEach((p, i) => { 
-                zPre.innerHTML += `<div class="mini-chip chip-pre" onclick="removeForgeItem('pre', ${i})">${p}-</div>`; 
-            });
+            forge.pres.forEach((p, i) => { zPre.innerHTML += `<div class="mini-chip chip-pre" onclick="removeForgeItem('pre', ${i})">${p}-</div>`; });
         }
 
-        // Render Root
+        // Root
         const zRoot = document.getElementById('zone-root');
         if(forge.root) {
-            zRoot.innerText = forge.root; 
-            zRoot.classList.add('occupied'); 
-            zRoot.classList.remove('chip-root'); 
-            zRoot.style.background = "#c8e6c9"; 
+            zRoot.innerText = forge.root; zRoot.classList.add('occupied'); zRoot.classList.remove('chip-root'); zRoot.style.background = "#c8e6c9"; 
         } else {
-            zRoot.innerText = "[ROOT]"; 
-            zRoot.classList.remove('occupied'); 
-            zRoot.style.background = "rgba(255,255,255,0.8)";
+            zRoot.innerText = "[ROOT]"; zRoot.classList.remove('occupied'); zRoot.style.background = "rgba(255,255,255,0.8)";
         }
 
-        // Render Suffixes (Show placeholder if empty)
+        // Suffixes
         const zSuf = document.getElementById('zone-suf');
         zSuf.innerHTML = "";
         if (forge.sufs.length === 0) {
             zSuf.innerHTML = `<div style="color:#aaa; font-size:12px; border: 2px dashed #ccc; padding:5px 10px; border-radius:8px;">[Suf]</div>`;
         } else {
-            forge.sufs.forEach((s, i) => { 
-                zSuf.innerHTML += `<div class="mini-chip chip-suf" onclick="removeForgeItem('suf', ${i})">-${s}</div>`; 
-            });
+            forge.sufs.forEach((s, i) => { zSuf.innerHTML += `<div class="mini-chip chip-suf" onclick="removeForgeItem('suf', ${i})">-${s}</div>`; });
         }
     }
 
@@ -806,7 +798,7 @@ function renderForgeUI() {
         renderForgeUI();
     }
     
-    // === UPDATED FORGE PROCESSOR V3.2 ===
+    // === STRICT FORGE PROCESSOR (With Timeout & No False Positives) ===
     async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
@@ -857,9 +849,13 @@ function renderForgeUI() {
         }
 
         try {
-            let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`);
-            let isFallback = false;
-            if(!response.ok) { response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`); if(response.ok) isFallback = true; }
+            // 5 Second Timeout Protection
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); 
+
+            let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             if(!response.ok) throw new Error("Word not found");
             const data = await response.json();
             const def = data[0].meanings[0].definitions[0].definition;
@@ -867,9 +863,7 @@ function renderForgeUI() {
             
             let visualHTML = `<span style='color:#0d47a1'>${prefixStr}</span><b>${rootOnly}</b><span style='color:#7b1fa2'>${forge.sufs.join("")}</span>`;
             
-            let titleHtml = isFallback 
-                ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div><div style="font-size:20px; margin:5px 0;">${finalWord}</div>`
-                : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${pos})</small>`;
+            let titleHtml = `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${pos})</small>`;
             
             m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
             
@@ -878,7 +872,11 @@ function renderForgeUI() {
             sfx.collect(); consumeItems(); renderInventory();
         } catch(e) {
             sfx.error();
-            m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${finalWord}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
+            if (e.name === 'AbortError') {
+                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">⚠️ Connection Timed Out.</span><br><span style="font-size:12px;">The dictionary took too long. Try again.</span>`;
+            } else {
+                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${finalWord}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
+            }
         } finally {
             isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled');
         }
