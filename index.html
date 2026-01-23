@@ -760,21 +760,41 @@ function draw() {
 
     function clearForgeRoot() { forge.root = null; renderForgeUI(); }
 
-    function renderForgeUI() {
+function renderForgeUI() {
+        // Render Prefixes (Show placeholder if empty)
         const zPre = document.getElementById('zone-pre');
         zPre.innerHTML = "";
-        forge.pres.forEach((p, i) => { zPre.innerHTML += `<div class="mini-chip chip-pre" onclick="removeForgeItem('pre', ${i})">${p}-</div>`; });
-
-        const zRoot = document.getElementById('zone-root');
-        if(forge.root) {
-            zRoot.innerText = forge.root; zRoot.classList.add('occupied'); zRoot.classList.remove('chip-root'); zRoot.style.background = "#c8e6c9"; 
+        if (forge.pres.length === 0) {
+            zPre.innerHTML = `<div style="color:#aaa; font-size:12px; border: 2px dashed #ccc; padding:5px 10px; border-radius:8px;">[Pre]</div>`;
         } else {
-            zRoot.innerText = "[ROOT]"; zRoot.classList.remove('occupied'); zRoot.style.background = "rgba(255,255,255,0.8)";
+            forge.pres.forEach((p, i) => { 
+                zPre.innerHTML += `<div class="mini-chip chip-pre" onclick="removeForgeItem('pre', ${i})">${p}-</div>`; 
+            });
         }
 
+        // Render Root
+        const zRoot = document.getElementById('zone-root');
+        if(forge.root) {
+            zRoot.innerText = forge.root; 
+            zRoot.classList.add('occupied'); 
+            zRoot.classList.remove('chip-root'); 
+            zRoot.style.background = "#c8e6c9"; 
+        } else {
+            zRoot.innerText = "[ROOT]"; 
+            zRoot.classList.remove('occupied'); 
+            zRoot.style.background = "rgba(255,255,255,0.8)";
+        }
+
+        // Render Suffixes (Show placeholder if empty)
         const zSuf = document.getElementById('zone-suf');
         zSuf.innerHTML = "";
-        forge.sufs.forEach((s, i) => { zSuf.innerHTML += `<div class="mini-chip chip-suf" onclick="removeForgeItem('suf', ${i})">-${s}</div>`; });
+        if (forge.sufs.length === 0) {
+            zSuf.innerHTML = `<div style="color:#aaa; font-size:12px; border: 2px dashed #ccc; padding:5px 10px; border-radius:8px;">[Suf]</div>`;
+        } else {
+            forge.sufs.forEach((s, i) => { 
+                zSuf.innerHTML += `<div class="mini-chip chip-suf" onclick="removeForgeItem('suf', ${i})">-${s}</div>`; 
+            });
+        }
     }
 
     function consumeItems() {
