@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v3.0: Builder's Update</title>
+    <title>WordCraft v3.1: Archivist Update</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
@@ -38,7 +38,7 @@
         h3 { margin: 0; color: #555; font-size: 20px; line-height: 1.2; }
         
         /* INVENTORY LAYOUT */
-        #screen-inv { width: 750px; height: 580px; background-image: url('assets/bg.png'); background-color: #f3e5f5; background-size: cover; color: #3e2723; }
+        #screen-inv, #screen-saves { width: 750px; height: 580px; background-image: url('assets/bg.png'); background-color: #f3e5f5; background-size: cover; color: #3e2723; }
         .inv-header { padding: 15px; background: rgba(255,255,255,0.95); border-bottom: 3px solid #5d4037; flex-shrink: 0; }
         .inv-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .inv-footer { padding: 15px; background: rgba(255,255,255,0.95); border-top: 3px solid #5d4037; flex-shrink: 0; display: flex; justify-content: center; gap: 20px; }
@@ -87,6 +87,18 @@
             font-size: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; 
             border-radius: 6px; color: #d35400; font-weight: normal; 
         }
+
+        /* NEW STYLES V3.1 */
+        .morph-highlight { color: #e74c3c; font-weight: bold; text-decoration: underline; text-decoration-thickness: 2px; }
+        .btn-disabled { background-color: #95a5a6 !important; cursor: not-allowed !important; box-shadow: none !important; }
+        
+        .save-slot-row { background: white; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ccc; box-shadow: 0 2px 2px rgba(0,0,0,0.1); }
+        .save-info { text-align: left; }
+        .save-title { font-weight: bold; font-size: 18px; color: #2c3e50; }
+        .save-meta { font-size: 12px; color: #7f8c8d; }
+        .save-actions { display: flex; gap: 10px; }
+        .btn-load { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .btn-del { background: #c0392b; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
         /* DIALOGUE & HUD */
         #dialogue-box { position: absolute; bottom: 20px; left: 5%; width: 90%; background: #fff; border: 4px solid #3e2723; padding: 25px; border-radius: 12px; display: none; font-family: 'Courier New', monospace; font-size: 20px; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.5); pointer-events: auto; z-index: 20; box-sizing: border-box; }
@@ -148,11 +160,11 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v3.0: Builder's Update</b></p>
+                        <p><b>✨ Update v3.1: Archivist Update</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Fix:</b> Improved Grammar Engine (Double Consonants, Y to I).</li>
-                            <li><b>New Item:</b> Stone Bricks & Sun Lanterns.</li>
-                            <li><b>Gameplay:</b> Monsters spawn near you at night!</li>
+                            <li><b>Save Slots:</b> Name your worlds and keep multiples!</li>
+                            <li><b>Visual Grammar:</b> See exactly which letters change.</li>
+                            <li><b>Fixes:</b> Spam protection and Migration tools.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -167,9 +179,24 @@
                     </div>
 
                     <div style="display:flex; gap:15px; justify-content:center; margin-top:10px;">
-                        <button id="btn-continue" onclick="loadGame()" style="display:none; background:#27ae60; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #1e8449;">Resume</button>
+                        <button onclick="toggleSaveMenu(true)" style="background:#2980b9; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #1f618d;">Load Game</button>
                         <button onclick="initAudio(); setGameState('playing')" style="background:#d35400; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #a04000;">New Game</button>
                     </div>
+                </div>
+            </div>
+            
+            <div id="screen-saves" class="popup">
+                <div class="inv-header">
+                    <h2 style="margin:0; color:#3e2723;">💾 Save Manager</h2>
+                </div>
+                <div class="inv-body" id="save-list-container">
+                    </div>
+                <div class="inv-footer" style="flex-direction:column; gap:10px;">
+                    <div id="save-input-area" style="display:none; width:100%; gap:10px; justify-content:center;">
+                        <input type="text" id="save-name-input" placeholder="World Name (e.g. Class 2A)" style="padding:10px; font-size:16px; border-radius:4px; border:1px solid #aaa; flex:1;">
+                        <button onclick="doSave()" style="background:#27ae60; color:white; border:none; padding:10px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">Save</button>
+                    </div>
+                    <button class="close-btn" onclick="closeSaveMenu()">Cancel / Close</button>
                 </div>
             </div>
             
@@ -200,7 +227,7 @@
                             <div id="slot-pre" class="craft-slot" onclick="clearSlot('pre')">[Pre]</div> +
                             <div id="slot-root" class="craft-slot" onclick="clearSlot('root')">[ROOT]</div> +
                             <div id="slot-suf" class="craft-slot" onclick="clearSlot('suf')">[Suf]</div>
-                            <button onclick="forgeWord()" style="height:70px; background:#27ae60; border:none; color:white; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:10px; font-size:24px; width:70px;">🔨</button>
+                            <button id="btn-forge" onclick="forgeWord()" style="height:70px; background:#27ae60; border:none; color:white; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:10px; font-size:24px; width:70px;">🔨</button>
                         </div>
                         <div id="forge-msg">Drag items here to forge!<br>I will check the dictionary.</div>
                         <div style="display:flex; gap:10px; margin-top:10px;">
@@ -256,7 +283,7 @@
                 </div>
 
                 <div class="inv-footer">
-                     <button class="save-btn" onclick="saveGame()">💾 Save</button>
+                     <button class="save-btn" onclick="toggleSaveMenu(false)">💾 Save Game</button>
                      <button class="close-btn" onclick="setGameState('playing')">Close</button>
                 </div>
             </div>
@@ -265,8 +292,9 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 3.0;
-    let teacherMode = true; // Default to ON
+    const VERSION = 3.1;
+    let teacherMode = true; 
+    let isForging = false; // Spam protection
     
     const AFFIX_BRAIN = {
         "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
@@ -291,8 +319,15 @@
     function processAssets() { 
         if(!useFallbackAssets) { processedAssets.tiles=removeWhite(assets.tiles); processedAssets.chars=removeWhite(assets.chars); processedAssets.ui=removeWhite(assets.ui); } 
         document.getElementById('loading').style.display='none'; 
-        if(localStorage.getItem('wordcraft_save')) document.getElementById('btn-continue').style.display='inline-block'; 
         initGame(); 
+        
+        // MIGRATION: Check for old save and move it
+        if(localStorage.getItem('wordcraft_save') && !localStorage.getItem('wordcraft_v3_saves')) {
+            const oldData = JSON.parse(localStorage.getItem('wordcraft_save'));
+            const newStruct = { "Legacy_Backup": oldData };
+            localStorage.setItem('wordcraft_v3_saves', JSON.stringify(newStruct));
+            console.log("Migrated legacy save.");
+        }
     }
     assets.tiles.src='assets/tiles.png'; assets.tiles.onload=onAssetLoad; assets.tiles.onerror=onAssetError;
     assets.chars.src='assets/chars.png'; assets.chars.onload=onAssetLoad; assets.chars.onerror=onAssetError;
@@ -322,7 +357,6 @@
     ];
     
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
-    // ADDED ID 5 and 11 to blocks object
     let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0}, unlocks:{map:false, drill:false} };
     let forge={pre:null,root:null,suf:null};
     let currentDialogue = null;
@@ -359,7 +393,6 @@ function initGame() {
             stars.push({ x: Math.random() * CANVAS_W, y: Math.random() * (CANVAS_H*0.6), size: Math.random() * 2 + 1, twinkleOffset: Math.random() * Math.PI * 2 });
         }
         
-        // SPAWN INITIAL BATCH (Underground)
         spawnEnemyBatch(40, true);
         
         let gy=0; while(gy<ROWS && grid[gy][20]===0) gy++; player.y=gy-1;
@@ -378,20 +411,15 @@ function initGame() {
             let isNight = (gameTick % DAY_LENGTH) > (DAY_LENGTH * 0.5);
 
             if(!forceDeep && isNight) {
-                 // NIGHT SPAWN: Try to spawn horizontally near player, but on surface
                  let offsetX = Math.floor(Math.random() * 40) - 20; 
                  c = Math.max(0, Math.min(COLS-1, player.x + offsetX));
-                 r = Math.floor(Math.random() * 25); // Surface/Sky area
-                 
-                 // Alert player if spawn is close
+                 r = Math.floor(Math.random() * 25); 
                  if(i===0 && Math.abs(c-player.x) < 20) addPart(player.x, player.y-2, "!", "red");
             } else {
-                 // DAY/DEEP SPAWN
                  c = Math.floor(Math.random() * COLS);
                  r = Math.floor(Math.random() * (ROWS - 30)) + 30;
             }
 
-            // Valid spawn check: Must be air (0)
             if(r >= 0 && r < ROWS && grid[r][c] === 0) { 
                 enemies.push({ x:c, y:r, type: Math.random()>.5?'bat':'slime', hp:2, speed:15, stun:0 }); 
                 return; 
@@ -407,7 +435,6 @@ function initGame() {
         camera.x=Math.max(0,Math.min(tX,(COLS*TILE_SIZE)-CANVAS_W)); camera.y=Math.max(0,Math.min(tY,(ROWS*TILE_SIZE)-CANVAS_H));
 
         let tod=gameTick%DAY_LENGTH; let isNight = tod > (DAY_LENGTH * 0.5);
-        
         if(gameTick % 200 === 0 && enemies.length < 60) { spawnEnemy(); }
 
         enemies.forEach((en,i)=>{
@@ -489,7 +516,7 @@ function initGame() {
         if(tx>=0&&tx<COLS&&ty>=0&&ty<ROWS) {
             let t=grid[ty][tx];
             if(t>0) {
-                if((t===6||t===11) && !keys['b']) return; // Allow walking through open doors and lanterns
+                if((t===6||t===11) && !keys['b']) return; 
                 grid[ty][tx]=0; sfx.mine(); addPart(tx,ty,"✨");
                 let gain = player.unlocks.drill ? 2 : 1;
                 
@@ -498,8 +525,8 @@ function initGame() {
                 else if(t===2) player.resources.stone+=gain; 
                 else if(t===3) player.resources.obsidian+=gain; 
                 else if(t===6) { player.blocks[6]++; alert("Door recovered"); }
-                else if(t===5) { player.blocks[5]++; } // Recover brick
-                else if(t===11) { player.blocks[11]++; } // Recover lantern
+                else if(t===5) { player.blocks[5]++; } 
+                else if(t===11) { player.blocks[11]++; } 
                 else if(t===7) { player.resources.wood+=gain; } 
                 else if(t===8) { if(Math.random() < 0.2) { player.hp = Math.min(player.hp+1, player.maxHp); alert("Found an Apple! HP +1"); sfx.collect(); } }
                 
@@ -562,8 +589,8 @@ function draw() {
                     if(t>0) {
                             if(useFallbackAssets) { 
                                 if(t===6) ctx.fillStyle="purple"; 
-                                else if(t===5) ctx.fillStyle="#7f8c8d"; // Stone Brick
-                                else if(t===11) ctx.fillStyle="#f1c40f"; // Lantern
+                                else if(t===5) ctx.fillStyle="#7f8c8d"; 
+                                else if(t===11) ctx.fillStyle="#f1c40f"; 
                                 else if(t===7) ctx.fillStyle="#5d4037"; 
                                 else if(t===8) ctx.fillStyle="#2ecc71"; 
                                 else ctx.fillStyle="brown"; 
@@ -609,7 +636,6 @@ function draw() {
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
 
-        // NO FLASH EFFECT
         ctx.fillStyle="white"; ctx.font="bold 20px Verdana"; ctx.fillText(player.fragments, 100, 30);
         ctx.font="14px Verdana"; ctx.fillText(player.unlocks.drill?"Drill Active!":"Pickaxe", 10, 50);
         let isNight = tod > (DAY_LENGTH * 0.5); ctx.fillText(isNight ? "🌙 Night" : "☀️ Day", 10, 70);
@@ -661,48 +687,43 @@ function draw() {
         },400);
     }
     
-    // UPDATED SPELLING LOGIC V3.0
+    // === UPDATED SPELLING LOGIC V3.1 ===
     function fixSpelling(root, suf) {
-        if(!suf) return { word: root, rule: null };
-        
+        if(!suf) return { word: root, rule: null, displayHTML: root };
         const vowels = ['a','e','i','o','u','y'];
         const isVowel = (c) => vowels.includes(c);
-        
-        // Helper: Checks for Consonant-Vowel-Consonant ending (e.g., "hop", "begin")
         const endsInCVC = (str) => {
             if(str.length < 3) return false;
             const last3 = str.slice(-3);
-            // 'w', 'x', 'y' generally do not double (play -> playing, box -> boxing)
             if(['w','x','y'].includes(str.slice(-1))) return false;
             return !isVowel(last3[0]) && isVowel(last3[1]) && !isVowel(last3[2]);
         };
-
         let lastChar = root.slice(-1);
         let secondLast = root.slice(-2, -1);
 
-        // RULE: Silent 'e' (make + ing = making)
         if(lastChar === 'e' && isVowel(suf[0])) { 
-            return { word: root.slice(0, -1) + suf, rule: "Dropped the silent 'e'!" }; 
+            let cutRoot = root.slice(0, -1);
+            return { word: cutRoot + suf, rule: "Dropped the silent 'e'!", displayHTML: `${cutRoot}<span class='morph-highlight'>${suf.charAt(0)}</span>${suf.slice(1)}` }; 
         }
-
-        // RULE: Y to I (happy + est = happiest)
-        // Exception: If suffix starts with 'i' (cry + ing = crying), keep the y.
         if(lastChar === 'y' && !isVowel(secondLast)) {
-            if(suf[0] === 'i') return { word: root + suf, rule: "Kept 'y' (suffix starts with 'i')." };
-            return { word: root.slice(0, -1) + 'i' + suf, rule: "Changed 'y' to 'i'!" }; 
+            if(suf[0] === 'i') return { word: root + suf, rule: "Kept 'y' (suffix starts with 'i').", displayHTML: root + suf };
+            return { word: root.slice(0, -1) + 'i' + suf, rule: "Changed 'y' to 'i'!", displayHTML: `${root.slice(0,-1)}<span class='morph-highlight'>i</span>${suf}` }; 
         }
-
-        // RULE: 1-1-1 Doubling (hop + ed = hopped)
         if(endsInCVC(root) && isVowel(suf[0])) { 
-            return { word: root + lastChar + suf, rule: "Doubled the final consonant!" }; 
+            return { word: root + lastChar + suf, rule: "Doubled the final consonant!", displayHTML: `${root}<span class='morph-highlight'>${lastChar}</span>${suf}` }; 
         }
-
-        // DEFAULT
-        return { word: root + suf, rule: null };
+        return { word: root + suf, rule: null, displayHTML: root + suf };
     }
 
     async function forgeWord() {
+        if(isForging) return; 
         if(!forge.root) return;
+
+        isForging = true;
+        let btn = document.getElementById('btn-forge');
+        let originalBtnText = btn.innerText;
+        btn.innerText = "⏳"; btn.classList.add('btn-disabled');
+
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
@@ -710,15 +731,11 @@ function draw() {
         let suffix = forge.suf ? forge.suf.toLowerCase() : "";
         let prefix = forge.pre ? forge.pre.toLowerCase() : "";
         
-        // NEW: Get both word and rule
         let spellingObj = fixSpelling(baseWord, suffix);
-        let constructedPart = spellingObj.word;
-        let ruleApplied = spellingObj.rule;
-        
-        let w = prefix + constructedPart;
+        let w = prefix + spellingObj.word;
+        let fullVisualHTML = (forge.pre ? forge.pre : "") + spellingObj.displayHTML;
         let rootOnly = forge.root.toLowerCase();
 
-        // Quest Logic
         let questTriggered = false;
         NPCS.forEach(n => {
             if(player.quests[n.id] === 2 && w === n.questWord) {
@@ -730,24 +747,20 @@ function draw() {
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
             } else if (player.quests[n.id] === 1 && w === n.questWord) { alert("You need to find the Quest Item first!"); questTriggered = true; }
         });
-        if(questTriggered) return;
+        
+        if(questTriggered) { isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled'); return; }
 
-        // Construction Logic
         let partsUsed = [];
         if(forge.pre && AFFIX_BRAIN[forge.pre]) { partsUsed.push(`<b>${forge.pre}-</b> (${AFFIX_BRAIN[forge.pre]})`); }
         if(forge.suf && AFFIX_BRAIN[forge.suf]) { partsUsed.push(`<b>-${forge.suf}</b> (${AFFIX_BRAIN[forge.suf]})`); }
         
-        // NEW: Detailed Grammar Lesson
         let grammarLesson = "";
         if(partsUsed.length > 0) { 
             grammarLesson = `The root <b>${rootOnly}</b> was modified by ` + partsUsed.join(" and ") + ".";
-            // Show Rule if Teacher Mode is ON
-            if(teacherMode && ruleApplied) {
-                grammarLesson += `<br><span style="color:#d35400; font-weight:bold; background:#fff3e0; padding:2px 5px; border-radius:4px;">✨ Rule: ${ruleApplied}</span>`;
+            if(teacherMode && spellingObj.rule) {
+                grammarLesson += `<br><span style="color:#d35400; font-weight:bold; background:#fff3e0; padding:2px 5px; border-radius:4px;">✨ Rule: ${spellingObj.rule}</span>`;
             }
-        } else { 
-            grammarLesson = "This is a base root word."; 
-        }
+        } else { grammarLesson = "This is a base root word."; }
 
         try {
             let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
@@ -759,14 +772,16 @@ function draw() {
             const pos = data[0].meanings[0].partOfSpeech;
             
             let titleHtml = isFallback 
-                ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div>`
-                : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${w.toUpperCase()}</div><small>(${pos})</small>`;
+                ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div><div style="font-size:20px; margin:5px 0;">${fullVisualHTML}</div>`
+                : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${w.toUpperCase()}</div><div style="font-size:24px; margin:5px 0; font-family:monospace;">${fullVisualHTML}</div><small>(${pos})</small>`;
             
             m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#d35400; margin-top:6px; font-weight:bold; border-top:1px solid #ddd; padding-top:4px;">📝 Morphology: <span style="font-weight:normal; color:#555;">${grammarLesson}</span></div>`;
             player.fragments+=15; sfx.collect(); consumeItems(); renderInventory();
         } catch(e) {
             sfx.error();
             m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${w}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
+        } finally {
+            isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled');
         }
     }
 
@@ -796,29 +811,87 @@ function draw() {
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
 
-    function saveGame() { 
-        const saveData = { version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick };
-        localStorage.setItem('wordcraft_save', JSON.stringify(saveData)); alert("Saved!"); 
+    // === NEW SAVE MANAGER ===
+    function toggleSaveMenu(forLoading) {
+        document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
+        document.getElementById('screen-saves').classList.add('active');
+        document.getElementById('save-input-area').style.display = forLoading ? 'none' : 'flex';
+        renderSaveList(forLoading);
     }
     
-    function loadGame() {
-        const savedData = localStorage.getItem('wordcraft_save');
-        if(savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                grid = data.grid; enemies = data.enemies; gameTick = data.gameTick;
-                player = { 
-                    ...player, ...data.player,
-                    resources: { ...player.resources, ...data.player.resources },
-                    blocks: { ...player.blocks, ...data.player.blocks },
-                    quests: { ...player.quests, ...data.player.quests },
-                    unlocks: { ...player.unlocks, ...data.player.unlocks }
-                };
-                if(data.player.roots) player.roots = data.player.roots;
-                if(data.player.affixes) player.affixes = data.player.affixes;
-                if(data.player.artifacts) player.artifacts = data.player.artifacts;
-                alert("Loaded!"); setGameState('playing');
-            } catch(e) { console.error(e); alert("Error loading save."); }
+    function closeSaveMenu() {
+        document.getElementById('screen-saves').classList.remove('active');
+        if(state === 'start') document.getElementById('screen-start').classList.add('active');
+        else if(state === 'inventory') document.getElementById('screen-inv').classList.add('active');
+    }
+
+    function getSaves() { return JSON.parse(localStorage.getItem('wordcraft_v3_saves') || "{}"); }
+    
+    function renderSaveList(forLoading) {
+        let container = document.getElementById('save-list-container');
+        container.innerHTML = "";
+        let saves = getSaves();
+        let keys = Object.keys(saves);
+        
+        if(keys.length === 0) { container.innerHTML = "<div style='text-align:center; margin-top:50px; color:#777;'>No saved worlds found.</div>"; return; }
+        
+        keys.forEach(k => {
+            let s = saves[k];
+            let date = new Date(s.timestamp || Date.now()).toLocaleDateString();
+            let div = document.createElement('div');
+            div.className = "save-slot-row";
+            div.innerHTML = `
+                <div class="save-info">
+                    <div class="save-title">${k}</div>
+                    <div class="save-meta">Fragments: ${s.player.fragments} | Day: ${Math.floor(s.gameTick/3600)} | ${date}</div>
+                </div>
+                <div class="save-actions">
+                    ${forLoading ? `<button class="btn-load" onclick="loadSaveSlot('${k}')">LOAD</button>` : ''}
+                    <button class="btn-del" onclick="deleteSaveSlot('${k}', ${forLoading})">DEL</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function doSave() {
+        let name = document.getElementById('save-name-input').value.trim();
+        if(!name) { alert("Please enter a name!"); return; }
+        
+        let saves = getSaves();
+        if(saves[name] && !confirm("Overwrite existing save '" + name + "'?")) return;
+        
+        saves[name] = { 
+            version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick, timestamp: Date.now() 
+        };
+        localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
+        alert("Saved!");
+        toggleSaveMenu(false); // Refresh list
+        document.getElementById('save-name-input').value = "";
+    }
+
+    function loadSaveSlot(name) {
+        let saves = getSaves();
+        if(saves[name]) {
+            let data = saves[name];
+            grid = data.grid; enemies = data.enemies; gameTick = data.gameTick;
+            player = { ...player, ...data.player }; // Merge to ensure structure
+            // Deep merge vital objects
+            player.resources = { ...player.resources, ...data.player.resources };
+            player.blocks = { ...player.blocks, ...data.player.blocks };
+            player.quests = { ...player.quests, ...data.player.quests };
+            player.unlocks = { ...player.unlocks, ...data.player.unlocks };
+            
+            setGameState('playing');
+        }
+    }
+
+    function deleteSaveSlot(name, forLoading) {
+        if(confirm("Delete '" + name + "' forever?")) {
+            let saves = getSaves();
+            delete saves[name];
+            localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
+            renderSaveList(forLoading);
         }
     }
 
