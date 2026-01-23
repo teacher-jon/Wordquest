@@ -799,6 +799,7 @@ function draw() {
     }
     
     // === STRICT FORGE PROCESSOR (With Timeout & No False Positives) ===
+    // === SMART FORGE PROCESSOR v3.3 ===
     async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
@@ -806,11 +807,13 @@ function draw() {
         isForging = true;
         let btn = document.getElementById('btn-forge');
         let originalBtnText = btn.innerText;
-        btn.innerText = "⏳"; btn.classList.add('btn-disabled');
+        btn.innerText = "⏳"; 
+        btn.classList.add('btn-disabled');
 
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
+        // 1. Build Word
         let currentWord = forge.root.toLowerCase();
         let ruleLog = []; 
 
@@ -824,6 +827,7 @@ function draw() {
         let finalWord = prefixStr + currentWord;
         let rootOnly = forge.root.toLowerCase();
 
+        // 2. Quest Logic
         let questTriggered = false;
         NPCS.forEach(n => {
             if(player.quests[n.id] === 2 && finalWord === n.questWord) {
@@ -833,11 +837,12 @@ function draw() {
                 alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
                 questTriggered = true; consumeItems();
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
-            } else if (player.quests[n.id] === 1 && finalWord === n.questWord) { alert("You need to find the Quest Item first!"); questTriggered = true; }
+            }
         });
         
         if(questTriggered) { isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled'); return; }
 
+        // 3. Grammar Display
         let grammarLesson = `Built from <b>${rootOnly}</b>`;
         if(forge.pres.length > 0) grammarLesson += ` with prefix(es) ${forge.pres.join(", ")}`;
         if(forge.sufs.length > 0) grammarLesson += ` and suffix(es) ${forge.sufs.join(", ")}`;
@@ -849,17 +854,38 @@ function draw() {
         }
 
         try {
-            // 5 Second Timeout Protection
+            // TIMEOUT PROTECTION
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
+            // ATTEMPT 1: Strict Check (Full Word)
             let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`, { signal: controller.signal });
+            
+            // === SMART FALLBACK LOGIC ===
+            // If strict check fails...
+            if(!response.ok) {
+                // Check if this is a "Simple" word (No prefixes, only 1 suffix)
+                // This allows "looked", "cats", "runner" to pass by checking the root "look", "cat", "run"
+                if(forge.pres.length === 0 && forge.sufs.length === 1) {
+                    // Fetch the ROOT instead
+                    response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`, { signal: controller.signal });
+                    if(response.ok) {
+                        // Success! We assume look+ed is valid because 'look' is valid.
+                        // We set a flag to show a slightly different message
+                        grammarLesson += "<br><span style='color:green;font-size:11px;'>(Validated via Root Word)</span>";
+                    }
+                }
+            }
+            
             clearTimeout(timeoutId);
 
             if(!response.ok) throw new Error("Word not found");
+            
             const data = await response.json();
-            const def = data[0].meanings[0].definitions[0].definition;
-            const pos = data[0].meanings[0].partOfSpeech;
+            // Try to get definition, but if we used fallback, data might be for the ROOT, not the final word.
+            // We safely check if definitions exist.
+            const def = data[0]?.meanings[0]?.definitions[0]?.definition || "A valid derivative of " + rootOnly + ".";
+            const pos = data[0]?.meanings[0]?.partOfSpeech || "word";
             
             let visualHTML = `<span style='color:#0d47a1'>${prefixStr}</span><b>${rootOnly}</b><span style='color:#7b1fa2'>${forge.sufs.join("")}</span>`;
             
