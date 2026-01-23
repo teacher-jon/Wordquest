@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v3.8: The Quest Tree Update</title>
+    <title>WordCraft v3.9: The Titans Update</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
@@ -178,11 +178,11 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v3.8: The Quest Tree Update</b></p>
+                        <p><b>✨ Update v3.9: The Titans Update</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>New NPCs:</b> Cloudia (Sky) and Magma Mike (Deep Earth).</li>
-                            <li><b>New Quests:</b> Build Ladders to find Cloudia! Dig deep for Mike.</li>
-                            <li><b>New Rewards:</b> Golden Quill and Magnet Aura.</li>
+                            <li><b>Giant NPCs:</b> Meet the towering guardians of language!</li>
+                            <li><b>Grammar Guard:</b> Rejects nonsense like "Playless".</li>
+                            <li><b>Fix:</b> "Dry" + "s" now correctly becomes "Dries".</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -312,7 +312,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 3.8;
+    const VERSION = 3.9;
     let teacherMode = true; 
     let isForging = false; // Spam protection
     
@@ -698,8 +698,43 @@ function draw() {
         }
         
         NPCS.forEach(n => {
-            ctx.textBaseline = "top"; ctx.font = "30px Arial"; ctx.fillText(n.id==='bark'?"🌳":(n.id==='cloudia'?"🧚":(n.id==='mike'?"🌋":"🤖")), n.x*TILE_SIZE, n.y*TILE_SIZE);
-            if(Math.abs(player.x - n.x) < 3 && Math.abs(player.y - n.y) < 3) { ctx.font = "14px Arial"; ctx.fillStyle = "white"; ctx.fillText("PRESS T", n.x*TILE_SIZE-10, n.y*TILE_SIZE-20); }
+            // === NEW TITAN RENDER LOGIC v3.9 ===
+            ctx.save();
+            ctx.shadowBlur = 30; // Strong glow
+            
+            // Set Glow Colors
+            if (n.id === 'bark') ctx.shadowColor = "lime";
+            else if (n.id === 'rusty') ctx.shadowColor = "cyan";
+            else if (n.id === 'cloudia') ctx.shadowColor = "white";
+            else if (n.id === 'mike') ctx.shadowColor = "orange";
+            else ctx.shadowColor = "white";
+
+            // Determine Character
+            let char = "🤖";
+            if (n.id === 'bark') char = "🌳";
+            if (n.id === 'cloudia') char = "🧚";
+            if (n.id === 'mike') char = "🌋";
+
+            // Draw Giant Emoji (Approx 3x Tile Size)
+            ctx.font = "100px Arial"; 
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillStyle = "white"; // Fallback color if emoji fails
+            
+            // Position: Center horizontally, Bottom aligned to tile + slight offset
+            ctx.fillText(char, (n.x * TILE_SIZE) + (TILE_SIZE/2), (n.y * TILE_SIZE) + TILE_SIZE + 10);
+            ctx.restore();
+
+            // Interaction Prompt (Floating above head)
+            if(Math.abs(player.x - n.x) <= 3 && Math.abs(player.y - n.y) <= 3) {
+                ctx.font = "bold 16px Verdana";
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.strokeText("PRESS T", (n.x * TILE_SIZE) + (TILE_SIZE/2), (n.y * TILE_SIZE) - 80);
+                ctx.fillText("PRESS T", (n.x * TILE_SIZE) + (TILE_SIZE/2), (n.y * TILE_SIZE) - 80);
+            }
         });
         ctx.textBaseline = "alphabetic";
 
