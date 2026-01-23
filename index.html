@@ -722,6 +722,7 @@ function draw() {
     
     // === UPDATED SPELLING LOGIC V3.1 ===
     // === UPDATED SPELLING LOGIC v3.6 (Fixes 'dries', 'flies') ===
+// === UPDATED SPELLING LOGIC v3.6 (Fixes 'dries', 'flies') ===
     function fixSpelling(root, suf) {
         if(!suf) return { word: root, rule: null, displayHTML: root };
         
@@ -786,7 +787,6 @@ function draw() {
         // DEFAULT (No change)
         return { word: root + suf, rule: null, displayHTML: root + suf };
     }
-
     // === NEW MULTI-SLOT FORGE LOGIC V3.2 ===
     let forge = { pres: [], root: null, sufs: [] };
 
