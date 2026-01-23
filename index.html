@@ -721,30 +721,69 @@ function draw() {
     }
     
     // === UPDATED SPELLING LOGIC V3.1 ===
+    // === UPDATED SPELLING LOGIC v3.6 (Fixes 'dries', 'flies') ===
     function fixSpelling(root, suf) {
         if(!suf) return { word: root, rule: null, displayHTML: root };
+        
         const vowels = ['a','e','i','o','u','y'];
         const isVowel = (c) => vowels.includes(c);
+        
+        // Helper: CVC check for doubling (hop -> hopped)
         const endsInCVC = (str) => {
             if(str.length < 3) return false;
             const last3 = str.slice(-3);
-            if(['w','x','y'].includes(str.slice(-1))) return false;
+            if(['w','x','y'].includes(str.slice(-1))) return false; // Never double w, x, y
             return !isVowel(last3[0]) && isVowel(last3[1]) && !isVowel(last3[2]);
         };
+
         let lastChar = root.slice(-1);
         let secondLast = root.slice(-2, -1);
 
+        // RULE: Silent 'e' (make + ing = making)
         if(lastChar === 'e' && isVowel(suf[0])) { 
             let cutRoot = root.slice(0, -1);
-            return { word: cutRoot + suf, rule: "Dropped the silent 'e'!", displayHTML: `${cutRoot}<span class='morph-highlight'>${suf.charAt(0)}</span>${suf.slice(1)}` }; 
+            return { 
+                word: cutRoot + suf, 
+                rule: "Dropped the silent 'e'!", 
+                displayHTML: `${cutRoot}<span class='morph-highlight'>${suf.charAt(0)}</span>${suf.slice(1)}` 
+            }; 
         }
+
+        // RULE: Y to I (happy -> happiest, dry -> dries)
         if(lastChar === 'y' && !isVowel(secondLast)) {
-            if(suf[0] === 'i') return { word: root + suf, rule: "Kept 'y' (suffix starts with 'i').", displayHTML: root + suf };
-            return { word: root.slice(0, -1) + 'i' + suf, rule: "Changed 'y' to 'i'!", displayHTML: `${root.slice(0,-1)}<span class='morph-highlight'>i</span>${suf}` }; 
+            // EXCEPTION: If suffix starts with 'i', keep the y (cry + ing = crying)
+            if(suf[0] === 'i') {
+                return { word: root + suf, rule: "Kept 'y' (suffix starts with 'i').", displayHTML: root + suf };
+            }
+            
+            // SPECIAL CASE: If suffix is 's', change to 'ies' (dry + s = dries)
+            if(suf === 's') {
+                 let cutRoot = root.slice(0, -1);
+                 return {
+                    word: cutRoot + "ies",
+                    rule: "Changed 'y' to 'i' and added 'es'!",
+                    displayHTML: `${cutRoot}<span class='morph-highlight'>ies</span>`
+                 };
+            }
+
+            // STANDARD CASE: Change y to i (happy + est = happiest)
+            return { 
+                word: root.slice(0, -1) + 'i' + suf, 
+                rule: "Changed 'y' to 'i'!", 
+                displayHTML: `${root.slice(0,-1)}<span class='morph-highlight'>i</span>${suf}` 
+            }; 
         }
+
+        // RULE: 1-1-1 Doubling (hop + ed = hopped)
         if(endsInCVC(root) && isVowel(suf[0])) { 
-            return { word: root + lastChar + suf, rule: "Doubled the final consonant!", displayHTML: `${root}<span class='morph-highlight'>${lastChar}</span>${suf}` }; 
+            return { 
+                word: root + lastChar + suf, 
+                rule: "Doubled the final consonant!", 
+                displayHTML: `${root}<span class='morph-highlight'>${lastChar}</span>${suf}` 
+            }; 
         }
+
+        // DEFAULT (No change)
         return { word: root + suf, rule: null, displayHTML: root + suf };
     }
 
