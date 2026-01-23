@@ -800,6 +800,7 @@ function draw() {
     
     // === STRICT FORGE PROCESSOR (With Timeout & No False Positives) ===
     // === SMART FORGE PROCESSOR v3.3 ===
+   // === GRAMMAR GUARD FORGE PROCESSOR v3.4 ===
     async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
@@ -813,21 +814,19 @@ function draw() {
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
-        // 1. Build Word
+        // 1. Construct the word string
         let currentWord = forge.root.toLowerCase();
         let ruleLog = []; 
-
         forge.sufs.forEach(suf => {
             let res = fixSpelling(currentWord, suf.toLowerCase());
             currentWord = res.word;
             if(res.rule) ruleLog.push(res.rule);
         });
-
         let prefixStr = forge.pres.join("");
         let finalWord = prefixStr + currentWord;
         let rootOnly = forge.root.toLowerCase();
 
-        // 2. Quest Logic
+        // 2. Quest Logic (Always check strict match first for quests)
         let questTriggered = false;
         NPCS.forEach(n => {
             if(player.quests[n.id] === 2 && finalWord === n.questWord) {
@@ -839,14 +838,12 @@ function draw() {
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
             }
         });
-        
         if(questTriggered) { isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled'); return; }
 
-        // 3. Grammar Display
+        // 3. Prepare Lesson Text
         let grammarLesson = `Built from <b>${rootOnly}</b>`;
         if(forge.pres.length > 0) grammarLesson += ` with prefix(es) ${forge.pres.join(", ")}`;
         if(forge.sufs.length > 0) grammarLesson += ` and suffix(es) ${forge.sufs.join(", ")}`;
-        
         if(teacherMode && ruleLog.length > 0) {
             grammarLesson += `<br><br><b>📝 Rules Applied:</b><ul style='text-align:left; margin:5px 0 0 20px; color:#d35400;'>`;
             ruleLog.forEach(r => grammarLesson += `<li>${r}</li>`);
@@ -854,54 +851,79 @@ function draw() {
         }
 
         try {
-            // TIMEOUT PROTECTION
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
-            // ATTEMPT 1: Strict Check (Full Word)
+            // STEP A: Try to fetch the FINAL word directly
             let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`, { signal: controller.signal });
             
-            // === SMART FALLBACK LOGIC ===
-            // If strict check fails...
-            if(!response.ok) {
-                // Check if this is a "Simple" word (No prefixes, only 1 suffix)
-                // This allows "looked", "cats", "runner" to pass by checking the root "look", "cat", "run"
+            let isValid = false;
+            let definition = "";
+            let partOfSpeech = "";
+
+            if(response.ok) {
+                // Perfect Match found (e.g., "playful")
+                isValid = true;
+                const data = await response.json();
+                definition = data[0]?.meanings[0]?.definitions[0]?.definition;
+                partOfSpeech = data[0]?.meanings[0]?.partOfSpeech;
+            } else {
+                // STEP B: The "Grammar Guard" Fallback
+                // If strict match fails, we check if the morphology is legally valid.
+                
+                // 1. Only allow fallback if we have NO prefixes and only 1 suffix (Simple inflection)
                 if(forge.pres.length === 0 && forge.sufs.length === 1) {
-                    // Fetch the ROOT instead
-                    response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`, { signal: controller.signal });
-                    if(response.ok) {
-                        // Success! We assume look+ed is valid because 'look' is valid.
-                        // We set a flag to show a slightly different message
-                        grammarLesson += "<br><span style='color:green;font-size:11px;'>(Validated via Root Word)</span>";
+                    let suffix = forge.sufs[0];
+                    let allowedPOS = SUFFIX_RULES[suffix];
+
+                    if(allowedPOS) {
+                        // Fetch the ROOT to check its Part of Speech
+                        let rootResp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`, { signal: controller.signal });
+                        
+                        if(rootResp.ok) {
+                            let rootData = await rootResp.json();
+                            // Check ALL meanings of the root (it can be both Noun and Verb)
+                            let rootMeanings = rootData[0].meanings.map(m => m.partOfSpeech);
+                            
+                            // Does the root have a POS that matches the Suffix's requirement?
+                            let match = rootMeanings.find(pos => allowedPOS.includes(pos));
+                            
+                            if(match) {
+                                isValid = true;
+                                definition = `A valid ${suffix === 's' ? 'plural/form' : 'form'} of <b>${rootOnly}</b>.`;
+                                partOfSpeech = "derivative";
+                                grammarLesson += `<br><span style='color:green;font-size:11px;'>(Validated via Grammar: ${rootOnly} is a ${match})</span>`;
+                            } else {
+                                // Specific error: "Portness" fails here because Port (noun) != Ness (needs Adj)
+                                throw new Error(`Grammar Mismatch: -${suffix} needs a ${allowedPOS.join(' or ')}.`);
+                            }
+                        }
                     }
                 }
             }
             
             clearTimeout(timeoutId);
 
-            if(!response.ok) throw new Error("Word not found");
+            if(!isValid) throw new Error("Word not found");
             
-            const data = await response.json();
-            // Try to get definition, but if we used fallback, data might be for the ROOT, not the final word.
-            // We safely check if definitions exist.
-            const def = data[0]?.meanings[0]?.definitions[0]?.definition || "A valid derivative of " + rootOnly + ".";
-            const pos = data[0]?.meanings[0]?.partOfSpeech || "word";
-            
+            // Render Success
             let visualHTML = `<span style='color:#0d47a1'>${prefixStr}</span><b>${rootOnly}</b><span style='color:#7b1fa2'>${forge.sufs.join("")}</span>`;
-            
-            let titleHtml = `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${pos})</small>`;
-            
-            m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
+            let titleHtml = `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${partOfSpeech})</small>`;
+            m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${definition}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
             
             let bonus = (forge.pres.length + forge.sufs.length) * 5;
             player.fragments += (10 + bonus); 
             sfx.collect(); consumeItems(); renderInventory();
+
         } catch(e) {
             sfx.error();
             if (e.name === 'AbortError') {
-                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">⚠️ Connection Timed Out.</span><br><span style="font-size:12px;">The dictionary took too long. Try again.</span>`;
+                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">⚠️ Connection Timed Out.</span>`;
+            } else if (e.message.includes("Grammar Mismatch")) {
+                // Show the specific grammar error to the student
+                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ Grammar Error</span><br><span style="font-size:12px;">${e.message}</span>`;
             } else {
-                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${finalWord}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
+                m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${finalWord}" is not a word.</span>`;
             }
         } finally {
             isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled');
