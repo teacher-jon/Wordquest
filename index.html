@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v3.1: Archivist Update</title>
+    <title>WordCraft v3.2: The Linguist Update</title>
     <style>
         :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
         body { 
@@ -46,14 +46,34 @@
         .forge-tabs { display: flex; background: rgba(0,0,0,0.1); border-radius: 6px; overflow: hidden; }
         .tab { flex: 1; padding: 15px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.5); border-right: 1px solid rgba(0,0,0,0.1); transition: 0.2s; font-size: 16px; }
         .tab.active { background: #fff; color: #d35400; box-shadow: inset 0 -3px 0 #d35400; }
-
-        .crafting-grid { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
-        .craft-slot { 
-            width: 70px; height: 70px; border: 3px dashed #5d4037; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; background: rgba(255,255,255,0.6); cursor: pointer; border-radius: 8px; font-size: 14px; 
+        
+        /* === NEW V3.2: Multi-Slot Forge Layout === */
+        .forge-assembly {
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px;
+            border: 2px solid #bcaaa4; min-height: 90px;
+        }
+        .forge-zone {
+            display: flex; gap: 4px; align-items: center; min-width: 40px; justify-content: center;
             transition: 0.2s;
         }
-        .craft-slot:hover { background: #fff; border-color: #e67e22; }
+        #zone-pre { justify-content: flex-end; }
+        #zone-suf { justify-content: flex-start; }
+
+        #zone-root { 
+            transform: scale(1.1); margin: 0 10px; z-index: 2; 
+            border: 3px dashed #5d4037; border-radius: 8px; width: 80px; height: 60px;
+            display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.8);
+            cursor: pointer; font-weight: bold; color: #8d6e63;
+        }
+        #zone-root.occupied { border-style: solid; background: #fff; color: #2e7d32; border-color: #2e7d32; }
+
+        /* Small chips inside the forge */
+        .mini-chip {
+            padding: 4px 10px; border-radius: 15px; font-size: 14px; font-weight: bold; cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.2); box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+        }
+        .mini-chip:hover { transform: scale(1.1); color: red; border-color: red; } /* Red indicates delete */
         
         .inv-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; background: rgba(255,255,255,0.4); border-radius: 6px; padding: 15px; min-height: 120px; border: 1px solid rgba(0,0,0,0.1); }
         .inv-body::-webkit-scrollbar { width: 12px; }
@@ -88,7 +108,6 @@
             border-radius: 6px; color: #d35400; font-weight: normal; 
         }
 
-        /* NEW STYLES V3.1 */
         .morph-highlight { color: #e74c3c; font-weight: bold; text-decoration: underline; text-decoration-thickness: 2px; }
         .btn-disabled { background-color: #95a5a6 !important; cursor: not-allowed !important; box-shadow: none !important; }
         
@@ -160,11 +179,11 @@
                         <h3>The Morphology Engine</h3>
                     </div>
                     <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v3.1: Archivist Update</b></p>
+                        <p><b>✨ Update v3.2: The Linguist Update</b></p>
                         <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Save Slots:</b> Name your worlds and keep multiples!</li>
+                            <li><b>Word Stacking:</b> Create complex words like "Un-help-ful-ness"!</li>
+                            <li><b>Multi-Save:</b> Name and manage multiple class worlds.</li>
                             <li><b>Visual Grammar:</b> See exactly which letters change.</li>
-                            <li><b>Fixes:</b> Spam protection and Migration tools.</li>
                         </ul>
                         <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
                             📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
@@ -223,12 +242,17 @@
 
                 <div class="inv-body">
                     <div id="tab-word" style="display:flex; flex-direction:column;">
-                        <div class="crafting-grid">
-                            <div id="slot-pre" class="craft-slot" onclick="clearSlot('pre')">[Pre]</div> +
-                            <div id="slot-root" class="craft-slot" onclick="clearSlot('root')">[ROOT]</div> +
-                            <div id="slot-suf" class="craft-slot" onclick="clearSlot('suf')">[Suf]</div>
-                            <button id="btn-forge" onclick="forgeWord()" style="height:70px; background:#27ae60; border:none; color:white; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:10px; font-size:24px; width:70px;">🔨</button>
+                        
+                        <div class="forge-assembly">
+                            <div id="zone-pre" class="forge-zone"></div>
+                            
+                            <div id="zone-root" onclick="clearForgeRoot()">[ROOT]</div>
+                            
+                            <div id="zone-suf" class="forge-zone"></div>
+
+                            <button id="btn-forge" onclick="forgeWord()" style="height:60px; background:#27ae60; border:none; color:white; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:15px; font-size:24px; width:60px; box-shadow: 0 4px 0 #1e8449;">🔨</button>
                         </div>
+
                         <div id="forge-msg">Drag items here to forge!<br>I will check the dictionary.</div>
                         <div style="display:flex; gap:10px; margin-top:10px;">
                             <div style="flex:1;">
@@ -292,7 +316,7 @@
     <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
 
 <script>
-    const VERSION = 3.1;
+    const VERSION = 3.2;
     let teacherMode = true; 
     let isForging = false; // Spam protection
     
@@ -358,7 +382,6 @@
     
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
     let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0}, unlocks:{map:false, drill:false} };
-    let forge={pre:null,root:null,suf:null};
     let currentDialogue = null;
 
 function initGame() {
@@ -645,7 +668,7 @@ function draw() {
         state=s; 
         document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active')); 
         if(s==='start')document.getElementById('screen-start').classList.add('active'); 
-        if(s==='inventory'){ document.getElementById('screen-inv').classList.add('active'); renderInventory(); } 
+        if(s==='inventory'){ document.getElementById('screen-inv').classList.add('active'); renderInventory(); renderForgeUI(); } 
         if(s==='playing') initAudio(); 
     }
 
@@ -715,9 +738,58 @@ function draw() {
         return { word: root + suf, rule: null, displayHTML: root + suf };
     }
 
+    // === NEW MULTI-SLOT FORGE LOGIC V3.2 ===
+    let forge = { pres: [], root: null, sufs: [] };
+
+    function setSlot(type, val) {
+        if(type === 'root') {
+            forge.root = val; 
+        } else if (type === 'pre') {
+            if(forge.pres.length < 3) forge.pres.push(val); else alert("Too many prefixes!");
+        } else if (type === 'suf') {
+            if(forge.sufs.length < 3) forge.sufs.push(val); else alert("Too many suffixes!");
+        }
+        renderForgeUI();
+    }
+
+    function removeForgeItem(type, index) {
+        if(type === 'pre') forge.pres.splice(index, 1);
+        if(type === 'suf') forge.sufs.splice(index, 1);
+        renderForgeUI();
+    }
+
+    function clearForgeRoot() { forge.root = null; renderForgeUI(); }
+
+    function renderForgeUI() {
+        const zPre = document.getElementById('zone-pre');
+        zPre.innerHTML = "";
+        forge.pres.forEach((p, i) => { zPre.innerHTML += `<div class="mini-chip chip-pre" onclick="removeForgeItem('pre', ${i})">${p}-</div>`; });
+
+        const zRoot = document.getElementById('zone-root');
+        if(forge.root) {
+            zRoot.innerText = forge.root; zRoot.classList.add('occupied'); zRoot.classList.remove('chip-root'); zRoot.style.background = "#c8e6c9"; 
+        } else {
+            zRoot.innerText = "[ROOT]"; zRoot.classList.remove('occupied'); zRoot.style.background = "rgba(255,255,255,0.8)";
+        }
+
+        const zSuf = document.getElementById('zone-suf');
+        zSuf.innerHTML = "";
+        forge.sufs.forEach((s, i) => { zSuf.innerHTML += `<div class="mini-chip chip-suf" onclick="removeForgeItem('suf', ${i})">-${s}</div>`; });
+    }
+
+    function consumeItems() {
+        let rIdx = player.roots.findIndex(r => r.word === forge.root);
+        if(rIdx > -1) player.roots.splice(rIdx, 1);
+        forge.pres.forEach(pVal => { let idx = player.affixes.findIndex(a => a.val === pVal && a.type === "pre"); if(idx > -1) player.affixes.splice(idx, 1); });
+        forge.sufs.forEach(sVal => { let idx = player.affixes.findIndex(a => a.val === sVal && a.type === "suf"); if(idx > -1) player.affixes.splice(idx, 1); });
+        forge = { pres: [], root: null, sufs: [] };
+        renderForgeUI();
+    }
+    
+    // === UPDATED FORGE PROCESSOR V3.2 ===
     async function forgeWord() {
         if(isForging) return; 
-        if(!forge.root) return;
+        if(!forge.root) { alert("You need a Root word!"); return; }
 
         isForging = true;
         let btn = document.getElementById('btn-forge');
@@ -727,43 +799,45 @@ function draw() {
         let m = document.getElementById('forge-msg');
         m.innerHTML = "Consulting the Lexicon..."; sfx.craft();
         
-        let baseWord = forge.root.toLowerCase();
-        let suffix = forge.suf ? forge.suf.toLowerCase() : "";
-        let prefix = forge.pre ? forge.pre.toLowerCase() : "";
-        
-        let spellingObj = fixSpelling(baseWord, suffix);
-        let w = prefix + spellingObj.word;
-        let fullVisualHTML = (forge.pre ? forge.pre : "") + spellingObj.displayHTML;
+        let currentWord = forge.root.toLowerCase();
+        let ruleLog = []; 
+
+        forge.sufs.forEach(suf => {
+            let res = fixSpelling(currentWord, suf.toLowerCase());
+            currentWord = res.word;
+            if(res.rule) ruleLog.push(res.rule);
+        });
+
+        let prefixStr = forge.pres.join("");
+        let finalWord = prefixStr + currentWord;
         let rootOnly = forge.root.toLowerCase();
 
         let questTriggered = false;
         NPCS.forEach(n => {
-            if(player.quests[n.id] === 2 && w === n.questWord) {
+            if(player.quests[n.id] === 2 && finalWord === n.questWord) {
                 player.quests[n.id] = 3; 
                 if(n.id === 'bark') player.unlocks.map = true;
                 if(n.id === 'rusty') player.unlocks.drill = true;
                 alert(`QUEST COMPLETE: Reward Unlocked!`); sfx.quest();
                 questTriggered = true; consumeItems();
                 m.innerHTML = `<span style="color:green;font-weight:bold">QUEST COMPLETE!</span>`;
-            } else if (player.quests[n.id] === 1 && w === n.questWord) { alert("You need to find the Quest Item first!"); questTriggered = true; }
+            } else if (player.quests[n.id] === 1 && finalWord === n.questWord) { alert("You need to find the Quest Item first!"); questTriggered = true; }
         });
         
         if(questTriggered) { isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled'); return; }
 
-        let partsUsed = [];
-        if(forge.pre && AFFIX_BRAIN[forge.pre]) { partsUsed.push(`<b>${forge.pre}-</b> (${AFFIX_BRAIN[forge.pre]})`); }
-        if(forge.suf && AFFIX_BRAIN[forge.suf]) { partsUsed.push(`<b>-${forge.suf}</b> (${AFFIX_BRAIN[forge.suf]})`); }
+        let grammarLesson = `Built from <b>${rootOnly}</b>`;
+        if(forge.pres.length > 0) grammarLesson += ` with prefix(es) ${forge.pres.join(", ")}`;
+        if(forge.sufs.length > 0) grammarLesson += ` and suffix(es) ${forge.sufs.join(", ")}`;
         
-        let grammarLesson = "";
-        if(partsUsed.length > 0) { 
-            grammarLesson = `The root <b>${rootOnly}</b> was modified by ` + partsUsed.join(" and ") + ".";
-            if(teacherMode && spellingObj.rule) {
-                grammarLesson += `<br><span style="color:#d35400; font-weight:bold; background:#fff3e0; padding:2px 5px; border-radius:4px;">✨ Rule: ${spellingObj.rule}</span>`;
-            }
-        } else { grammarLesson = "This is a base root word."; }
+        if(teacherMode && ruleLog.length > 0) {
+            grammarLesson += `<br><br><b>📝 Rules Applied:</b><ul style='text-align:left; margin:5px 0 0 20px; color:#d35400;'>`;
+            ruleLog.forEach(r => grammarLesson += `<li>${r}</li>`);
+            grammarLesson += `</ul>`;
+        }
 
         try {
-            let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
+            let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`);
             let isFallback = false;
             if(!response.ok) { response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${rootOnly}`); if(response.ok) isFallback = true; }
             if(!response.ok) throw new Error("Word not found");
@@ -771,30 +845,25 @@ function draw() {
             const def = data[0].meanings[0].definitions[0].definition;
             const pos = data[0].meanings[0].partOfSpeech;
             
-            let titleHtml = isFallback 
-                ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div><div style="font-size:20px; margin:5px 0;">${fullVisualHTML}</div>`
-                : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${w.toUpperCase()}</div><div style="font-size:24px; margin:5px 0; font-family:monospace;">${fullVisualHTML}</div><small>(${pos})</small>`;
+            let visualHTML = `<span style='color:#0d47a1'>${prefixStr}</span><b>${rootOnly}</b><span style='color:#7b1fa2'>${forge.sufs.join("")}</span>`;
             
-            m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#d35400; margin-top:6px; font-weight:bold; border-top:1px solid #ddd; padding-top:4px;">📝 Morphology: <span style="font-weight:normal; color:#555;">${grammarLesson}</span></div>`;
-            player.fragments+=15; sfx.collect(); consumeItems(); renderInventory();
+            let titleHtml = isFallback 
+                ? `<div style="color:#2ecc71; font-weight:bold; font-size:18px;">✅ Valid Construction!</div><div style="font-size:20px; margin:5px 0;">${finalWord}</div>`
+                : `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${pos})</small>`;
+            
+            m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${def}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
+            
+            let bonus = (forge.pres.length + forge.sufs.length) * 5;
+            player.fragments += (10 + bonus); 
+            sfx.collect(); consumeItems(); renderInventory();
         } catch(e) {
             sfx.error();
-            m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${w}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
+            m.innerHTML = `<span style="color:#c0392b; font-weight:bold;">❌ "${finalWord}" is not a word.</span><br><span style="font-size:12px;">Try again. (Items not used)</span>`;
         } finally {
             isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled');
         }
     }
 
-    function consumeItems() {
-        let rIdx = player.roots.findIndex(r => r.word === forge.root);
-        if(rIdx > -1) player.roots.splice(rIdx, 1);
-        if(forge.pre) { let pIdx = player.affixes.findIndex(a => a.val === forge.pre && a.type === "pre"); if(pIdx > -1) player.affixes.splice(pIdx, 1); }
-        if(forge.suf) { let sIdx = player.affixes.findIndex(a => a.val === forge.suf && a.type === "suf"); if(sIdx > -1) player.affixes.splice(sIdx, 1); }
-        forge={pre:null,root:null,suf:null}; document.getElementById('slot-pre').innerText="[Pre]"; document.getElementById('slot-root').innerText="[Root]"; document.getElementById('slot-suf').innerText="[Suf]";
-    }
-
-    function setSlot(t,v) { forge[t]=v; document.getElementById(`slot-${t}`).innerText=v; }
-    function clearSlot(t) { forge[t]=null; document.getElementById(`slot-${t}`).innerText=`[${t}]`; }
     function setActiveBlock(id,n) { player.activeBlock=id; alert("Equipped: "+n); }
     
     function craft(i) {
@@ -811,7 +880,7 @@ function draw() {
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
 
-    // === NEW SAVE MANAGER ===
+    // === SAVE MANAGER ===
     function toggleSaveMenu(forLoading) {
         document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         document.getElementById('screen-saves').classList.add('active');
@@ -857,17 +926,11 @@ function draw() {
     function doSave() {
         let name = document.getElementById('save-name-input').value.trim();
         if(!name) { alert("Please enter a name!"); return; }
-        
         let saves = getSaves();
         if(saves[name] && !confirm("Overwrite existing save '" + name + "'?")) return;
-        
-        saves[name] = { 
-            version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick, timestamp: Date.now() 
-        };
+        saves[name] = { version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick, timestamp: Date.now() };
         localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
-        alert("Saved!");
-        toggleSaveMenu(false); // Refresh list
-        document.getElementById('save-name-input').value = "";
+        alert("Saved!"); toggleSaveMenu(false); document.getElementById('save-name-input').value = "";
     }
 
     function loadSaveSlot(name) {
@@ -875,13 +938,11 @@ function draw() {
         if(saves[name]) {
             let data = saves[name];
             grid = data.grid; enemies = data.enemies; gameTick = data.gameTick;
-            player = { ...player, ...data.player }; // Merge to ensure structure
-            // Deep merge vital objects
+            player = { ...player, ...data.player }; 
             player.resources = { ...player.resources, ...data.player.resources };
             player.blocks = { ...player.blocks, ...data.player.blocks };
             player.quests = { ...player.quests, ...data.player.quests };
             player.unlocks = { ...player.unlocks, ...data.player.unlocks };
-            
             setGameState('playing');
         }
     }
