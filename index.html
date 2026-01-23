@@ -1,320 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WordCraft v3.9: The Titans Update</title>
-    <style>
-        :root { --bg-color: #2c3e50; --ui-border: #5d4037; --accent: #e67e22; }
-        body { 
-            background-color: var(--bg-color); color: #2c3e50; 
-            font-family: 'Verdana', sans-serif; 
-            font-size: 16px; 
-            display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; touch-action: none; 
-        }
-        
-        #game-frame { 
-            position: relative; border: 6px solid var(--ui-border); border-radius: 8px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.9); background: #000; 
-            cursor: crosshair; width: 100%; max-width: 800px; height: auto; aspect-ratio: 4/3;
-        }
-        canvas { display: block; image-rendering: pixelated; width: 100%; height: 100%; }
-        
-        #overlay-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 10; }
-        
-        .popup { 
-            pointer-events: auto; background: #fff; border: 4px solid var(--ui-border); 
-            border-radius: 8px; text-align: center; max-width: 95%; max-height: 95%; 
-            display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            padding: 0; overflow: hidden; 
-            line-height: 1.6 !important; font-size: 16px; 
-        }
-        .popup.active { display: flex; flex-direction: column; animation: popIn 0.2s ease-out; }
-        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        
-        /* START SCREEN */
-        .start-box { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
-        h1 { margin: 0; color: #c0392b; font-size: 42px; text-shadow: 2px 2px 0 #eee; line-height: 1.2; }
-        h3 { margin: 0; color: #555; font-size: 20px; line-height: 1.2; }
-        
-        /* INVENTORY LAYOUT */
-        #screen-inv, #screen-saves { width: 750px; height: 580px; background-image: url('assets/bg.png'); background-color: #f3e5f5; background-size: cover; color: #3e2723; }
-        .inv-header { padding: 15px; background: rgba(255,255,255,0.95); border-bottom: 3px solid #5d4037; flex-shrink: 0; }
-        .inv-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .inv-footer { padding: 15px; background: rgba(255,255,255,0.95); border-top: 3px solid #5d4037; flex-shrink: 0; display: flex; justify-content: center; gap: 20px; }
-
-        .forge-tabs { display: flex; background: rgba(0,0,0,0.1); border-radius: 6px; overflow: hidden; }
-        .tab { flex: 1; padding: 15px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.5); border-right: 1px solid rgba(0,0,0,0.1); transition: 0.2s; font-size: 16px; }
-        .tab.active { background: #fff; color: #d35400; box-shadow: inset 0 -3px 0 #d35400; }
-        
-        /* FORGE UI */
-        .forge-assembly {
-            display: flex; align-items: center; justify-content: center; gap: 5px;
-            background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px;
-            border: 2px solid #bcaaa4; min-height: 90px;
-        }
-        .forge-zone {
-            display: flex; gap: 4px; align-items: center; min-width: 40px; justify-content: center;
-            transition: 0.2s;
-        }
-        #zone-pre { justify-content: flex-end; }
-        #zone-suf { justify-content: flex-start; }
-
-        #zone-root { 
-            transform: scale(1.1); margin: 0 10px; z-index: 2; 
-            border: 3px dashed #5d4037; border-radius: 8px; width: 80px; height: 60px;
-            display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.8);
-            cursor: pointer; font-weight: bold; color: #8d6e63;
-        }
-        #zone-root.occupied { border-style: solid; background: #fff; color: #2e7d32; border-color: #2e7d32; }
-
-        .mini-chip {
-            padding: 4px 10px; border-radius: 15px; font-size: 14px; font-weight: bold; cursor: pointer;
-            border: 1px solid rgba(0,0,0,0.2); box-shadow: 0 2px 0 rgba(0,0,0,0.1);
-        }
-        .mini-chip:hover { transform: scale(1.1); color: red; border-color: red; } 
-        
-        .inv-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; background: rgba(255,255,255,0.4); border-radius: 6px; padding: 15px; min-height: 120px; border: 1px solid rgba(0,0,0,0.1); }
-        .inv-body::-webkit-scrollbar { width: 12px; }
-        .inv-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        .inv-body::-webkit-scrollbar-thumb { background: #8d6e63; border-radius: 6px; }
-
-        .word-chip { 
-            background: #fff; border: 2px solid #5d4037; padding: 8px 16px; border-radius: 25px; cursor: pointer; 
-            font-size: 16px; font-weight: bold; box-shadow: 0 3px 0 rgba(0,0,0,0.2); 
-        }
-        .word-chip:active { transform: translateY(2px); box-shadow: none; }
-        .chip-pre { background-color: #bbdefb; border-color: #1565c0; color: #0d47a1; } 
-        .chip-root { background-color: #c8e6c9; border-color: #2e7d32; color: #1b5e20; }
-        .chip-suf { background-color: #e1bee7; border-color: #7b1fa2; color: #4a148c; } 
-        
-        .craft-row { display: flex; width: 98%; align-items: center; gap: 15px; margin-bottom: 8px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #aaa; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .craft-icon { font-size: 28px; width: 50px; text-align: center; }
-        .craft-desc { flex: 1; text-align: left; font-size: 15px; }
-        .craft-title { font-weight: bold; color: #2c3e50; display: block; font-size: 17px; margin-bottom: 4px; }
-        .craft-cost { font-size: 13px; font-weight: bold; color: #e67e22; background: #fff3e0; padding: 4px 8px; border-radius: 4px; border: 1px solid #ffe0b2; }
-        .craft-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 5px; min-width: 80px; box-shadow: 0 3px 0 #1e8449; }
-        .craft-btn:active { transform: translateY(2px); box-shadow: none; }
-        
-        .artifact-item { width: 95%; background: #5d4037; color: #ffecb3; border: 2px solid #3e2723; padding: 15px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-        .salvage-btn { background: #d35400; border:none; padding:10px 20px; color:white; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 #a04000; font-size: 14px; }
-        .salvage-btn:active { transform: translateY(2px); box-shadow: none; }
-        
-        #resource-bar { display: flex; justify-content: center; gap: 20px; background: #3e2723; color: white; padding: 10px; border-radius: 6px; font-size: 16px; font-weight: bold; border: 2px solid #5d4037; }
-        #forge-msg { 
-            min-height: 80px; background: #fff8e1; border: 2px solid #d35400; margin: 15px 0; padding: 15px; 
-            font-size: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            border-radius: 6px; color: #d35400; font-weight: normal; 
-        }
-
-        .morph-highlight { color: #e74c3c; font-weight: bold; text-decoration: underline; text-decoration-thickness: 2px; }
-        .btn-disabled { background-color: #95a5a6 !important; cursor: not-allowed !important; box-shadow: none !important; }
-        
-        .save-slot-row { background: white; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ccc; box-shadow: 0 2px 2px rgba(0,0,0,0.1); }
-        .save-info { text-align: left; }
-        .save-title { font-weight: bold; font-size: 18px; color: #2c3e50; }
-        .save-meta { font-size: 12px; color: #7f8c8d; }
-        .save-actions { display: flex; gap: 10px; }
-        .btn-load { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .btn-del { background: #c0392b; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-
-        /* DIALOGUE & HUD */
-        #dialogue-box { position: absolute; bottom: 20px; left: 5%; width: 90%; background: #fff; border: 4px solid #3e2723; padding: 25px; border-radius: 12px; display: none; font-family: 'Courier New', monospace; font-size: 20px; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.5); pointer-events: auto; z-index: 20; box-sizing: border-box; }
-        .npc-name { color: #d35400; font-weight: bold; display: block; margin-bottom: 10px; text-transform: uppercase; font-size: 22px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-        .next-btn { float: right; background: #3e2723; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 15px; font-size: 18px; border-radius: 4px; }
-
-        #mobile-controls { position: absolute; bottom: 10px; left: 0; width: 100%; height: 160px; pointer-events: none; z-index: 5; display: none; }
-        .control-group { pointer-events: auto; position: absolute; bottom: 10px; }
-        .dpad { left: 20px; width: 120px; height: 120px; position: relative; }
-        .actions { right: 20px; display: flex; gap: 15px; align-items: flex-end; }
-        .touch-btn { background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; backdrop-filter: blur(4px); color: white; font-size: 24px; display: flex; justify-content: center; align-items: center; user-select: none; touch-action: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .touch-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
-        .d-btn { position: absolute; width: 40px; height: 40px; }
-        .d-up { top: 0; left: 40px; } .d-down { bottom: 0; left: 40px; } .d-left { top: 40px; left: 0; } .d-right { top: 40px; right: 0; }
-        .act-btn { width: 60px; height: 60px; font-size: 28px; } .act-sm { width: 45px; height: 45px; font-size: 20px; margin-bottom: 20px; }
-
-        .toggle-btn { background: #ccc; border-radius: 20px; width: 50px; height: 26px; position: relative; cursor: pointer; transition: 0.3s; display:inline-block; vertical-align:middle; margin-left:10px; border: 1px solid #999; }
-        .toggle-btn.on { background: #27ae60; border-color: #1e8449; }
-        .toggle-btn.on::after { left: 26px; }
-        .toggle-btn::after { content:''; position: absolute; left: 2px; top: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-        
-        .save-btn { background: #8e44ad; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #6c3483; font-size: 16px; }
-        .save-btn:active { transform: translateY(3px); box-shadow: none; }
-        .close-btn { background: #c0392b; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #922b21; font-size: 16px; }
-        .close-btn:active { transform: translateY(3px); box-shadow: none; }
-    </style>
-</head>
-<body>
-    <div id="game-frame">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace;">Forging World...</div>
-
-        <div id="dialogue-box">
-            <span class="npc-name">NPC</span>
-            <div id="dialogue-text">...</div>
-            <button class="next-btn" onclick="advanceDialogue()">Next ▶</button>
-        </div>
-
-        <div id="mobile-controls">
-            <div class="control-group dpad">
-                <div class="touch-btn d-btn d-up" ontouchstart="simKey('ArrowUp', true)" ontouchend="simKey('ArrowUp', false)">⬆️</div>
-                <div class="touch-btn d-btn d-down" ontouchstart="simKey('ArrowDown', true)" ontouchend="simKey('ArrowDown', false)">⬇️</div>
-                <div class="touch-btn d-btn d-left" ontouchstart="simKey('ArrowLeft', true)" ontouchend="simKey('ArrowLeft', false)">⬅️</div>
-                <div class="touch-btn d-btn d-right" ontouchstart="simKey('ArrowRight', true)" ontouchend="simKey('ArrowRight', false)">➡️</div>
-            </div>
-            <div class="control-group actions">
-                <div class="touch-btn act-btn act-sm" ontouchstart="setGameState('inventory')" style="background:rgba(200,100,0,0.4)">🎒</div>
-                <div class="touch-btn act-btn act-sm" ontouchstart="interact()" style="background:rgba(100,200,255,0.4)">💬</div>
-                <div class="touch-btn act-btn" ontouchstart="shootArrow()" style="background:rgba(0,100,200,0.4)">🏹</div>
-                <div class="touch-btn act-btn" ontouchstart="action()" style="background:rgba(200,50,50,0.4)">⛏️</div>
-            </div>
-        </div>
-
-        <div id="overlay-layer">
-            <div id="screen-start" class="popup active">
-                <div class="start-box">
-                    <div>
-                        <h1>WordCraft</h1>
-                        <h3>The Morphology Engine</h3>
-                    </div>
-                    <div style="text-align: left; background: #fff3e0; padding: 20px; border-radius: 8px; font-size: 16px; border:2px solid #ffe0b2;">
-                        <p><b>✨ Update v3.9: The Titans Update</b></p>
-                        <ul style="padding-left:20px; margin:10px 0;">
-                            <li><b>Giant NPCs:</b> Meet the towering guardians of language!</li>
-                            <li><b>Grammar Guard:</b> Rejects nonsense like "Playless".</li>
-                            <li><b>Fix:</b> "Dry" + "s" now correctly becomes "Dries".</li>
-                        </ul>
-                        <div style="margin-top:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center;" onclick="toggleMobileControls()">
-                            📱 Enable Mobile Controls: <div class="toggle-btn" id="mob-toggle"></div>
-                        </div>
-                    </div>
-
-                    <div style="background: #e8f5e9; padding: 10px; border-radius: 6px; border: 1px solid #c8e6c9; text-align:left; display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" id="chk-teacher" checked onchange="teacherMode = this.checked" style="width:20px; height:20px;">
-                        <label for="chk-teacher" style="font-size:15px; font-weight:bold; color:#2e7d32; cursor:pointer;">
-                            👩‍🏫 Teacher Mode (Show Spelling Rules)
-                        </label>
-                    </div>
-
-                    <div style="display:flex; gap:15px; justify-content:center; margin-top:10px;">
-                        <button onclick="toggleSaveMenu(true)" style="background:#2980b9; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #1f618d;">Load Game</button>
-                        <button onclick="initAudio(); setGameState('playing')" style="background:#d35400; color:white; border:none; padding:15px 30px; font-size:18px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 0 #a04000;">New Game</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="screen-saves" class="popup">
-                <div class="inv-header">
-                    <h2 style="margin:0; color:#3e2723;">💾 Save Manager</h2>
-                </div>
-                <div class="inv-body" id="save-list-container">
-                    </div>
-                <div class="inv-footer" style="flex-direction:column; gap:10px;">
-                    <div id="save-input-area" style="display:none; width:100%; gap:10px; justify-content:center;">
-                        <input type="text" id="save-name-input" placeholder="World Name (e.g. Class 2A)" style="padding:10px; font-size:16px; border-radius:4px; border:1px solid #aaa; flex:1;">
-                        <button onclick="doSave()" style="background:#27ae60; color:white; border:none; padding:10px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">Save</button>
-                    </div>
-                    <button class="close-btn" onclick="closeSaveMenu()">Cancel / Close</button>
-                </div>
-            </div>
-            
-            <div id="screen-death" class="popup" style="justify-content:center; padding: 30px;">
-                <h1 style="color:red; margin-bottom:20px;">Scrambled!</h1>
-                <p style="margin-bottom:20px;">The Letter Bugs got you.</p>
-                <button onclick="location.reload()" style="background:#c0392b; color:white; padding:12px 25px; border:none; border-radius:6px; cursor:pointer; font-size:16px;">Respawn</button>
-            </div>
-
-            <div id="screen-inv" class="popup">
-                <div class="inv-header">
-                    <div class="forge-tabs">
-                        <div class="tab active" onclick="switchTab('word')">Word Forge</div>
-                        <div class="tab" onclick="switchTab('salvage')">Salvage</div>
-                        <div class="tab" onclick="switchTab('craft')">Craft</div>
-                    </div>
-                    <div id="resource-bar" style="margin-top:10px;">
-                        <span>💎: <span id="res-frag">0</span></span>
-                        <span>🟫: <span id="res-dirt">0</span></span>
-                        <span>🌑: <span id="res-stone">0</span></span>
-                        <span>🪵: <span id="res-wood">0</span></span>
-                    </div>
-                </div>
-
-                <div class="inv-body">
-                    <div id="tab-word" style="display:flex; flex-direction:column;">
-                        <div class="forge-assembly">
-                            <div id="zone-pre" class="forge-zone"></div>
-                            <div id="zone-root" onclick="clearForgeRoot()">[ROOT]</div>
-                            <div id="zone-suf" class="forge-zone"></div>
-                            <button id="btn-forge" onclick="forgeWord()" style="height:60px; background:#27ae60; border:none; color:white; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:15px; font-size:24px; width:60px; box-shadow: 0 4px 0 #1e8449;">🔨</button>
-                        </div>
-
-                        <div id="forge-msg">Drag items here to forge!<br>I will check the dictionary.</div>
-                        <div style="display:flex; gap:10px; margin-top:10px;">
-                            <div style="flex:1;">
-                                <small style="background:#a1887f; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">ROOTS</small>
-                                <div id="list-roots" class="inv-grid"></div>
-                            </div>
-                            <div style="flex:1;">
-                                <small style="background:#90caf9; color:#0d47a1; padding:4px 8px; border-radius:4px; font-weight:bold;">AFFIXES</small>
-                                <div id="list-affixes" class="inv-grid"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-salvage" style="display:none; flex-direction:column; align-items:center;">
-                        <div style="text-align:center; margin-bottom:10px;">
-                            <h3 style="margin:0; color:#5d4037;">🪚 Salvage Station</h3>
-                            <p style="font-size:14px; margin:5px 0;">Break artifacts to find rare word parts!</p>
-                        </div>
-                        <div id="list-artifacts" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
-                    </div>
-
-                    <div id="tab-craft" style="display:none; flex-direction:column;">
-                        <div class="craft-row" style="background:#e8f5e9; border:1px solid #a5d6a7;">
-                            <div class="craft-icon">💊</div><div class="craft-desc"><span class="craft-title">Mud Poultice</span><span class="craft-cost">3 Dirt</span></div>
-                            <button class="craft-btn" onclick="craft('heal_mud')">Craft</button>
-                        </div>
-                         <div class="craft-row" style="background:#fff3e0; border:1px solid #ffcc80;">
-                            <div class="craft-icon">🔥</div><div class="craft-desc"><span class="craft-title">Campfire</span><span class="craft-cost">3 Wood</span></div>
-                            <button class="craft-btn" onclick="craft('time_wood')">Craft</button>
-                        </div>
-                        
-                        <div class="craft-row" style="background:#f3e5f5; border:1px solid #ce93d8;">
-                            <div class="craft-icon">🚪</div>
-                            <div class="craft-desc" onclick="setActiveBlock(6, 'Magic Door')" style="cursor:pointer;">
-                                <span class="craft-title">Magic Door x3</span>
-                                <span class="craft-cost">2 Wood + 1 Stone</span>
-                            </div>
-                            <button class="craft-btn" onclick="craft('door')">Make</button>
-                        </div>
-
-                        <hr style="width:100%; border:1px solid #ddd; margin: 15px 0;">
-                        <div style="font-size:12px; color:#999; text-transform:uppercase; font-weight:bold; margin-bottom:8px;">Building Blocks (Click Name to Equip)</div>
-                        <div class="craft-row"><div class="craft-icon">🧱</div><div class="craft-desc" onclick="setActiveBlock(9, 'Dirt Wall')" style="cursor:pointer;"><span class="craft-title">Dirt Wall x5</span><span class="craft-cost">1 Dirt</span></div><button class="craft-btn" onclick="craft('wall')">Make</button></div>
-                        <div class="craft-row"><div class="craft-icon">🪵</div><div class="craft-desc" onclick="setActiveBlock(4, 'Plank')" style="cursor:pointer;"><span class="craft-title">Planks x5</span><span class="craft-cost">2 Wood</span></div><button class="craft-btn" onclick="craft('wood')">Make</button></div>
-                        <div class="craft-row"><div class="craft-icon">🪜</div><div class="craft-desc" onclick="setActiveBlock(13, 'Ladder')" style="cursor:pointer;"><span class="craft-title">Ladders x10</span><span class="craft-cost">3 Wood</span></div><button class="craft-btn" onclick="craft('ladder')">Make</button></div>
-                        
-                        <div class="craft-row"><div class="craft-icon">🏛️</div><div class="craft-desc" onclick="setActiveBlock(5, 'Stone Brick')" style="cursor:pointer;"><span class="craft-title">Stone Brick x5</span><span class="craft-cost">2 Stone</span></div><button class="craft-btn" onclick="craft('stone_brick')">Make</button></div>
-                        <div class="craft-row"><div class="craft-icon">💡</div><div class="craft-desc" onclick="setActiveBlock(11, 'Sun Lantern')" style="cursor:pointer;"><span class="craft-title">Sun Lantern x3</span><span class="craft-cost">1 Wood + 1 Gem</span></div><button class="craft-btn" onclick="craft('lantern')">Make</button></div>
-                        
-                        <div class="craft-row"><div class="craft-icon">🏹</div><div class="craft-desc"><span class="craft-title">Arrows x10</span><span class="craft-cost">2 Gem + 1 Wood</span></div><button class="craft-btn" onclick="craft('arrows')">Make</button></div>
-                         <div class="craft-row"><div class="craft-icon">✒️</div><div class="craft-desc"><span class="craft-title">Golden Quill</span><span class="craft-cost">10 Gem</span></div><button class="craft-btn" onclick="craft('quill')">Buy</button></div>
-                    </div>
-                </div>
-
-                <div class="inv-footer">
-                     <button class="save-btn" onclick="toggleSaveMenu(false)">💾 Save Game</button>
-                     <button class="close-btn" onclick="setGameState('playing')">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
-
 <script>
-    const VERSION = 3.9;
+    const VERSION = 3.91;
     let teacherMode = true; 
-    let isForging = false; // Spam protection
+    let isForging = false; 
     
     const AFFIX_BRAIN = {
         "un": "not / opposite of", "re": "again / back", "sub": "under / below", "dis": "not / apart",
@@ -324,15 +11,13 @@
         "ness": "the state of being", "less": "without", "ful": "full of", "er": "a person who does this", "est": "the most"
     };
     
-    // === STRICT GRAMMAR RULES ===
-    // This list defines the ONLY suffixes allowed to use the "Fallback" check.
     const SUFFIX_RULES = {
-        "s":    ["noun", "verb"],      // cats (N), runs (V)
-        "ed":   ["verb"],              // played (V)
-        "ing":  ["verb"],              // playing (V)
-        "er":   ["verb", "adjective"], // teacher (V), faster (Adj)
-        "est":  ["adjective"],         // fastest (Adj)
-        "ly":   ["adjective"]          // quickly (Adj)
+        "s":    ["noun", "verb"],      
+        "ed":   ["verb"],              
+        "ing":  ["verb"],              
+        "er":   ["verb", "adjective"], 
+        "est":  ["adjective"],         
+        "ly":   ["adjective"]          
     };
     
     const CHAR_SCALE = 1.8; 
@@ -341,34 +26,82 @@
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
     const sfx = { playTone: (f,t,d,v=0.1) => { if(!audioCtx) return; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=t; o.frequency.setValueAtTime(f, audioCtx.currentTime); g.gain.setValueAtTime(v, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+d); }, jump:()=>sfx.playTone(300,'sine',0.2), mine:()=>sfx.playTone(100,'square',0.1), shoot:()=>sfx.playTone(600,'sawtooth',0.1), build:()=>sfx.playTone(200,'triangle',0.1), collect:()=>sfx.playTone(800,'sine',0.3), hit:()=>sfx.playTone(150,'sawtooth',0.3), craft:()=>sfx.playTone(500,'square',0.5), quest:()=>sfx.playTone(600,'triangle',0.6), error:()=>sfx.playTone(100,'sawtooth',0.4) };
 
+    // === ROBUST ASSET LOADER ===
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
-    let loadedCount=0, useFallbackAssets=false;
-    function onAssetLoad() { loadedCount++; if(loadedCount===3) processAssets(); }
-    function onAssetError() { console.warn("Using fallback assets."); useFallbackAssets=true; loadedCount++; if(loadedCount===3) processAssets(); }
-    function removeWhite(img) { const c=document.createElement('canvas'); const x=c.getContext('2d'); c.width=img.width; c.height=img.height; x.drawImage(img,0,0); const d=x.getImageData(0,0,c.width,c.height); for(let i=0;i<d.data.length;i+=4) { if(d.data[i]>240&&d.data[i+1]>240&&d.data[i+2]>240) d.data[i+3]=0; } x.putImageData(d,0,0); return c; }
+    let loadedCount = 0; 
+    let useFallbackAssets = false;
+    let gameStarted = false;
+
+    function checkStart() {
+        if(gameStarted) return;
+        if(loadedCount === 3) {
+            gameStarted = true;
+            processAssets();
+        }
+    }
+
+    function onAssetLoad() { loadedCount++; checkStart(); }
+    
+    function onAssetError() { 
+        console.warn("Asset failed to load. Switching to fallback mode."); 
+        useFallbackAssets = true; 
+        loadedCount++; 
+        checkStart(); 
+    }
+
+    // 1. Assign Listeners FIRST (Prevents race conditions)
+    assets.tiles.onload = onAssetLoad; assets.tiles.onerror = onAssetError;
+    assets.chars.onload = onAssetLoad; assets.chars.onerror = onAssetError;
+    assets.ui.onload = onAssetLoad;    assets.ui.onerror = onAssetError;
+
+    // 2. Set Sources
+    assets.tiles.src = 'assets/tiles.png';
+    assets.chars.src = 'assets/chars.png';
+    assets.ui.src = 'assets/ui.png';
+
+    // 3. SAFETY TIMER: Force start if loading hangs for 1 second
+    setTimeout(() => {
+        if(!gameStarted) {
+            console.log("Loading timed out. Forcing start with fallback.");
+            useFallbackAssets = true;
+            gameStarted = true;
+            document.getElementById('loading').style.display='none'; 
+            initGame();
+        }
+    }, 1000);
+
+    function removeWhite(img) { 
+        try {
+            const c=document.createElement('canvas'); const x=c.getContext('2d'); c.width=img.width; c.height=img.height; x.drawImage(img,0,0); const d=x.getImageData(0,0,c.width,c.height); for(let i=0;i<d.data.length;i+=4) { if(d.data[i]>240&&d.data[i+1]>240&&d.data[i+2]>240) d.data[i+3]=0; } x.putImageData(d,0,0); return c; 
+        } catch(e) { return null; }
+    }
+
     function processAssets() { 
-        if(!useFallbackAssets) { processedAssets.tiles=removeWhite(assets.tiles); processedAssets.chars=removeWhite(assets.chars); processedAssets.ui=removeWhite(assets.ui); } 
+        if(!useFallbackAssets) { 
+            try {
+                processedAssets.tiles=removeWhite(assets.tiles); 
+                processedAssets.chars=removeWhite(assets.chars); 
+                processedAssets.ui=removeWhite(assets.ui); 
+            } catch(e) { useFallbackAssets = true; }
+        } 
         document.getElementById('loading').style.display='none'; 
         initGame(); 
         
-        // MIGRATION: Check for old save and move it
         if(localStorage.getItem('wordcraft_save') && !localStorage.getItem('wordcraft_v3_saves')) {
-            const oldData = JSON.parse(localStorage.getItem('wordcraft_save'));
-            const newStruct = { "Legacy_Backup": oldData };
-            localStorage.setItem('wordcraft_v3_saves', JSON.stringify(newStruct));
-            console.log("Migrated legacy save.");
+            try {
+                const oldData = JSON.parse(localStorage.getItem('wordcraft_save'));
+                const newStruct = { "Legacy_Backup": oldData };
+                localStorage.setItem('wordcraft_v3_saves', JSON.stringify(newStruct));
+                console.log("Migrated legacy save.");
+            } catch(e) { console.error("Migration failed", e); }
         }
     }
-    assets.tiles.src='assets/tiles.png'; assets.tiles.onload=onAssetLoad; assets.tiles.onerror=onAssetError;
-    assets.chars.src='assets/chars.png'; assets.chars.onload=onAssetLoad; assets.chars.onerror=onAssetError;
-    assets.ui.src='assets/ui.png'; assets.ui.onload=onAssetLoad; assets.ui.onerror=onAssetError;
 
     const TILE_SIZE=40, COLS=600, ROWS=150, CANVAS_W=800, CANVAS_H=600;
     const canvas=document.getElementById('gameCanvas'); const ctx=canvas.getContext('2d');
     canvas.width=CANVAS_W; canvas.height=CANVAS_H;
     
-    // TIME SETTINGS
     const DAY_LENGTH=3600;
     let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
     let stars = [];
@@ -376,7 +109,6 @@
     const LAYER_ROOTS={1:["play","help","walk","look"], 2:["happy","cycle","form","port"], 3:["struct","ject","rupt","phon"], 12:["sand","dry","sun","hot"]};
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
-    // === NEW NPCS V3.8 ===
     const NPCS = [
         { id: "bark", name: "Elder Bark", x: 25, y: 10, questWord: "replanting", intro: ["Greetings.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."] },
         { id: "rusty", name: "Rusty", x: 40, y: 55, questWord: "reconstruction", intro: ["Bzzz...", "I need a GEAR.", "Dig deep in stone to find it."] },
@@ -393,11 +125,10 @@
     ];
     
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
-    // Added quest tracking for new NPCs
     let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0,13:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0, cloudia:0, mike:0}, unlocks:{map:false, drill:false, magnet:false, doubleFrag:false} };
     let currentDialogue = null;
 
-function initGame() {
+    function initGame() {
         grid=[];
         for(let r=0; r<ROWS; r++){
             let row=[];
@@ -435,9 +166,9 @@ function initGame() {
         NPCS.forEach(n => {
             if(n.id === 'bark') { let s = 10 + Math.floor(Math.sin(n.x*0.05)*5); n.y = s - 1; }
             if(n.id === 'rusty') { grid[n.y][n.x] = 0; grid[n.y-1][n.x] = 0; if(grid[n.y+1][n.x] === 0) grid[n.y+1][n.x] = 5; }
-            if(n.id === 'mike') { // Clear space for Mike deep down
+            if(n.id === 'mike') { 
                 for(let mx=-1; mx<=1; mx++) for(let my=-1; my<=1; my++) grid[n.y+my][n.x+mx] = 0;
-                grid[n.y+2][n.x] = 3; // Platform
+                grid[n.y+2][n.x] = 3; 
             }
         });
         requestAnimationFrame(loop);
@@ -484,7 +215,7 @@ function initGame() {
                 if(animTick%en.speed===0) {
                     let nx=en.x, ny=en.y;
                     if(en.x<player.x) nx++; else if(en.x>player.x) nx--; else if(en.y<player.y) ny++; else if(en.y>player.y) ny--;
-                    if(grid[ny][nx]===0 || grid[ny][nx]===13) { en.x=nx; en.y=ny; } // Enemies can use ladders (air)
+                    if(grid[ny][nx]===0 || grid[ny][nx]===13) { en.x=nx; en.y=ny; } 
                 }
                 if(en.x===player.x && en.y===player.y) hurtPlayer();
             }
@@ -520,11 +251,9 @@ function initGame() {
         if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
         if(dx!==0||dy!==0) { 
             let nx=player.x+dx, ny=player.y+dy; 
-            // Allow climbing ladder (ID 13) or moving into air/passable blocks
             if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS) {
                 let t = grid[ny][nx];
                 let currentT = grid[player.y][player.x];
-                // Climbing logic: If on ladder, can move up/down. If target is ladder, can move into.
                 if (currentT === 13 || t === 13 || t === 0 || t === 6 || t === 11) {
                     player.x=nx; player.y=ny; 
                 }
@@ -605,12 +334,11 @@ function initGame() {
                 else if(t===6) { player.blocks[6]++; alert("Door recovered"); }
                 else if(t===5) { player.blocks[5]++; } 
                 else if(t===11) { player.blocks[11]++; } 
-                else if(t===13) { player.blocks[13]++; } // Ladder
+                else if(t===13) { player.blocks[13]++; } 
                 else if(t===7) { player.resources.wood+=gain; } 
                 else if(t===8) { if(Math.random() < 0.2) { player.hp = Math.min(player.hp+1, player.maxHp); alert("Found an Apple! HP +1"); sfx.collect(); } }
                 
                 let foundSpecial = false;
-                // QUEST DROPS
                 if(player.quests.bark === 1 && t === 1 && Math.random() < 0.15) { 
                         player.quests.bark = 2; addPart(player.x, player.y-1, "🌰", "lightgreen"); alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
                 }
@@ -648,7 +376,7 @@ function initGame() {
     function addPart(x,y,c,cl="white") { particles.push({x:x,y:y,char:c,color:cl,life:30}); }
     function hurtPlayer() { if(player.invinc>0) return; player.hp--; player.invinc=30; sfx.hit(); if(player.hp<=0) setGameState('death'); }
 
-function draw() {
+    function draw() {
         let tod=gameTick%DAY_LENGTH; let cp = Math.sin((tod / DAY_LENGTH) * Math.PI); 
         let r = Math.floor(135 * cp + 20 * (1-cp)); let g = Math.floor(206 * cp + 20 * (1-cp)); let b = Math.floor(235 * cp + 60 * (1-cp));
         ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
@@ -675,7 +403,7 @@ function draw() {
                                 if(t===6) ctx.fillStyle="purple"; 
                                 else if(t===5) ctx.fillStyle="#7f8c8d"; 
                                 else if(t===11) ctx.fillStyle="#f1c40f"; 
-                                else if(t===13) ctx.fillStyle="#d35400"; // Ladder color
+                                else if(t===13) ctx.fillStyle="#d35400"; 
                                 else if(t===7) ctx.fillStyle="#5d4037"; 
                                 else if(t===8) ctx.fillStyle="#2ecc71"; 
                                 else ctx.fillStyle="brown"; 
@@ -698,34 +426,27 @@ function draw() {
         }
         
         NPCS.forEach(n => {
-            // === NEW TITAN RENDER LOGIC v3.9 ===
             ctx.save();
-            ctx.shadowBlur = 30; // Strong glow
-            
-            // Set Glow Colors
+            ctx.shadowBlur = 30; 
             if (n.id === 'bark') ctx.shadowColor = "lime";
             else if (n.id === 'rusty') ctx.shadowColor = "cyan";
             else if (n.id === 'cloudia') ctx.shadowColor = "white";
             else if (n.id === 'mike') ctx.shadowColor = "orange";
             else ctx.shadowColor = "white";
 
-            // Determine Character
             let char = "🤖";
             if (n.id === 'bark') char = "🌳";
             if (n.id === 'cloudia') char = "🧚";
             if (n.id === 'mike') char = "🌋";
 
-            // Draw Giant Emoji (Approx 3x Tile Size)
             ctx.font = "100px Arial"; 
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
-            ctx.fillStyle = "white"; // Fallback color if emoji fails
+            ctx.fillStyle = "white"; 
             
-            // Position: Center horizontally, Bottom aligned to tile + slight offset
             ctx.fillText(char, (n.x * TILE_SIZE) + (TILE_SIZE/2), (n.y * TILE_SIZE) + TILE_SIZE + 10);
             ctx.restore();
 
-            // Interaction Prompt (Floating above head)
             if(Math.abs(player.x - n.x) <= 3 && Math.abs(player.y - n.y) <= 3) {
                 ctx.font = "bold 16px Verdana";
                 ctx.fillStyle = "white";
@@ -808,49 +529,37 @@ function draw() {
         },400);
     }
     
-    // === UPDATED SPELLING LOGIC v3.7 ===
     function fixSpelling(root, suf) {
         if(!suf) return { word: root, rule: null, displayHTML: root };
         const vowels = ['a','e','i','o','u','y'];
         const isVowel = (c) => vowels.includes(c);
-        
-        // Helper: CVC check for doubling (hop -> hopped)
         const endsInCVC = (str) => {
             if(str.length < 3) return false;
             const last3 = str.slice(-3);
             if(['w','x','y'].includes(str.slice(-1))) return false; 
             return !isVowel(last3[0]) && isVowel(last3[1]) && !isVowel(last3[2]);
         };
-
         let lastChar = root.slice(-1);
         let secondLast = root.slice(-2, -1);
 
-        // RULE 1: Y to IES (Dry + s = Dries) - CHECKED FIRST!
         if(lastChar === 'y' && !isVowel(secondLast) && suf === 's') {
              let cutRoot = root.slice(0, -1);
              return { word: cutRoot + "ies", rule: "Changed 'y' to 'i' and added 'es'!", displayHTML: `${cutRoot}<span class='morph-highlight'>ies</span>` };
         }
-
-        // RULE 2: Silent 'e' (Make + ing = Making)
         if(lastChar === 'e' && isVowel(suf[0])) { 
             let cutRoot = root.slice(0, -1);
             return { word: cutRoot + suf, rule: "Dropped the silent 'e'!", displayHTML: `${cutRoot}<span class='morph-highlight'>${suf.charAt(0)}</span>${suf.slice(1)}` }; 
         }
-
-        // RULE 3: Y to I (Happy + est = Happiest)
         if(lastChar === 'y' && !isVowel(secondLast)) {
             if(suf[0] === 'i') return { word: root + suf, rule: "Kept 'y' (suffix starts with 'i').", displayHTML: root + suf };
             return { word: root.slice(0, -1) + 'i' + suf, rule: "Changed 'y' to 'i'!", displayHTML: `${root.slice(0,-1)}<span class='morph-highlight'>i</span>${suf}` }; 
         }
-
-        // RULE 4: Doubling (Hop + ed = Hopped)
         if(endsInCVC(root) && isVowel(suf[0])) { 
             return { word: root + lastChar + suf, rule: "Doubled the final consonant!", displayHTML: `${root}<span class='morph-highlight'>${lastChar}</span>${suf}` }; 
         }
         return { word: root + suf, rule: null, displayHTML: root + suf };
     }
 
-    // === FORGE LOGIC ===
     let forge = { pres: [], root: null, sufs: [] };
 
     function setSlot(type, val) {
@@ -893,7 +602,6 @@ function draw() {
         renderForgeUI();
     }
     
-    // === STRICT FORGE PROCESSOR v3.7 ===
     async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
@@ -961,7 +669,6 @@ function draw() {
                 definition = data[0]?.meanings[0]?.definitions[0]?.definition;
                 partOfSpeech = data[0]?.meanings[0]?.partOfSpeech;
             } else {
-                // GRAMMAR GUARD LOGIC
                 if(forge.pres.length === 0 && forge.sufs.length === 1) {
                     let suffix = forge.sufs[0];
                     let allowedPOS = SUFFIX_RULES[suffix]; 
@@ -997,7 +704,7 @@ function draw() {
             m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${definition}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
             
             let bonus = (forge.pres.length + forge.sufs.length) * 5;
-            if (player.unlocks.doubleFrag) bonus *= 2; // Golden Quill Effect
+            if (player.unlocks.doubleFrag) bonus *= 2; 
             player.fragments += (10 + bonus); 
             sfx.collect(); consumeItems(); renderInventory();
 
@@ -1027,12 +734,11 @@ function draw() {
         else if(i==='time_wood'&&player.resources.wood>=3) { player.resources.wood-=3; gameTick+=1800; alert("Campfire burning... Time passed."); }
         else if(i==='arrows'&&player.resources.wood>=1&&player.fragments>=2) { player.resources.wood--; player.fragments-=2; player.arrows+=10; }
         else if(i==='quill'&&player.fragments>=10) { player.fragments-=10; player.hasQuill=true; alert("Golden Quill purchased! (Future Content)"); }
-        else if(i==='ladder'&&player.resources.wood>=3) { player.resources.wood-=3; player.blocks[13]+=10; alert("Ladders crafted!"); } // Ladder Crafting
+        else if(i==='ladder'&&player.resources.wood>=3) { player.resources.wood-=3; player.blocks[13]+=10; alert("Ladders crafted!"); } 
         updateInvCounts(); renderInventory();
     }
     function updateInvCounts() { document.getElementById('res-frag').innerText=player.fragments; }
 
-    // === SAVE MANAGER ===
     function toggleSaveMenu(forLoading) {
         document.querySelectorAll('.popup').forEach(e=>e.classList.remove('active'));
         document.getElementById('screen-saves').classList.add('active');
@@ -1111,5 +817,3 @@ function draw() {
     function toggleMap() { if(player.unlocks.map) alert("Map Active!"); else alert("Help Elder Bark first."); }
     function simKey(k,s) { keys[k]=s; if(s) initAudio(); }
 </script>
-</body>
-</html>
