@@ -123,15 +123,49 @@
         .npc-name { color: #d35400; font-weight: bold; display: block; margin-bottom: 10px; text-transform: uppercase; font-size: 22px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         .next-btn { float: right; background: #3e2723; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 15px; font-size: 18px; border-radius: 4px; }
 
-        #mobile-controls { position: absolute; bottom: 10px; left: 0; width: 100%; height: 160px; pointer-events: none; z-index: 5; display: none; }
+        /* --- FIXED MOBILE CONTROLS --- */
+        #mobile-controls { position: absolute; bottom: 10px; left: 0; width: 100%; height: 220px; pointer-events: none; z-index: 5; display: none; }
         .control-group { pointer-events: auto; position: absolute; bottom: 10px; }
-        .dpad { left: 20px; width: 120px; height: 120px; position: relative; }
-        .actions { right: 20px; display: flex; gap: 15px; align-items: flex-end; }
-        .touch-btn { background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; backdrop-filter: blur(4px); color: white; font-size: 24px; display: flex; justify-content: center; align-items: center; user-select: none; touch-action: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .dpad { left: 20px; width: 140px; height: 140px; position: relative; }
+        /* Adjusted width to fit 5 buttons comfortably */
+        .actions { right: 10px; width: 220px; height: 160px; position: absolute; bottom: 10px; pointer-events: auto; }
+        
+        .touch-btn { 
+            background: rgba(255, 255, 255, 0.2); 
+            border: 2px solid rgba(255, 255, 255, 0.5); 
+            border-radius: 50%; 
+            backdrop-filter: blur(4px); 
+            color: white; font-size: 24px; 
+            display: flex; justify-content: center; align-items: center; 
+            user-select: none; -webkit-user-select: none; touch-action: none; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            position: absolute; /* Positioning them specifically */
+        }
         .touch-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
-        .d-btn { position: absolute; width: 40px; height: 40px; }
-        .d-up { top: 0; left: 40px; } .d-down { bottom: 0; left: 40px; } .d-left { top: 40px; left: 0; } .d-right { top: 40px; right: 0; }
-        .act-btn { width: 60px; height: 60px; font-size: 28px; } .act-sm { width: 45px; height: 45px; font-size: 20px; margin-bottom: 20px; }
+        
+        /* D-PAD Positioning */
+        .d-btn { width: 50px; height: 50px; }
+        .d-up { top: 0; left: 45px; } 
+        .d-down { bottom: 0; left: 45px; } 
+        .d-left { top: 45px; left: 0; } 
+        .d-right { top: 45px; right: 0; }
+        
+        /* ACTION BUTTONS (Right Side) */
+        /* Large Primary Actions */
+        .act-big { width: 65px; height: 65px; font-size: 30px; }
+        /* Smaller Utility Actions */
+        .act-sm { width: 50px; height: 50px; font-size: 22px; }
+
+        /* Position Grid for Right Side */
+        /* Row 1 (Bottom) */
+        #btn-shoot { bottom: 0; left: 0; background:rgba(0,100,200,0.4); }
+        #btn-mine { bottom: 10px; left: 75px; background:rgba(200,50,50,0.4); } /* CENTER PIECE */
+        #btn-talk { bottom: 20px; left: 150px; background:rgba(100,200,255,0.4); }
+
+        /* Row 2 (Top) */
+        #btn-inv { bottom: 80px; left: 20px; background:rgba(200,100,0,0.4); }
+        #btn-build { bottom: 90px; left: 100px; background:rgba(46, 204, 113, 0.5); border-color: rgba(46, 204, 113, 0.8); }
 
         .toggle-btn { background: #ccc; border-radius: 20px; width: 50px; height: 26px; position: relative; cursor: pointer; transition: 0.3s; display:inline-block; vertical-align:middle; margin-left:10px; border: 1px solid #999; }
         .toggle-btn.on { background: #27ae60; border-color: #1e8449; }
@@ -157,16 +191,19 @@
 
         <div id="mobile-controls">
             <div class="control-group dpad">
-                <div class="touch-btn d-btn d-up" ontouchstart="simKey('ArrowUp', true)" ontouchend="simKey('ArrowUp', false)">⬆️</div>
-                <div class="touch-btn d-btn d-down" ontouchstart="simKey('ArrowDown', true)" ontouchend="simKey('ArrowDown', false)">⬇️</div>
-                <div class="touch-btn d-btn d-left" ontouchstart="simKey('ArrowLeft', true)" ontouchend="simKey('ArrowLeft', false)">⬅️</div>
-                <div class="touch-btn d-btn d-right" ontouchstart="simKey('ArrowRight', true)" ontouchend="simKey('ArrowRight', false)">➡️</div>
+                <div id="btn-up" class="touch-btn d-btn d-up" data-key="ArrowUp">⬆️</div>
+                <div id="btn-down" class="touch-btn d-btn d-down" data-key="ArrowDown">⬇️</div>
+                <div id="btn-left" class="touch-btn d-btn d-left" data-key="ArrowLeft">⬅️</div>
+                <div id="btn-right" class="touch-btn d-btn d-right" data-key="ArrowRight">➡️</div>
             </div>
-            <div class="control-group actions">
-                <div class="touch-btn act-btn act-sm" ontouchstart="setGameState('inventory')" style="background:rgba(200,100,0,0.4)">🎒</div>
-                <div class="touch-btn act-btn act-sm" ontouchstart="interact()" style="background:rgba(100,200,255,0.4)">💬</div>
-                <div class="touch-btn act-btn" ontouchstart="shootArrow()" style="background:rgba(0,100,200,0.4)">🏹</div>
-                <div class="touch-btn act-btn" ontouchstart="action()" style="background:rgba(200,50,50,0.4)">⛏️</div>
+            
+            <div class="actions">
+                <div id="btn-shoot" class="touch-btn act-sm" data-key="f">🏹</div>
+                <div id="btn-mine" class="touch-btn act-big" data-key="action">⛏️</div>
+                <div id="btn-talk" class="touch-btn act-sm" data-key=" ">💬</div>
+                
+                <div id="btn-inv" class="touch-btn act-sm" data-key="i">🎒</div>
+                <div id="btn-build" class="touch-btn act-big" data-key="b">🔨</div>
             </div>
         </div>
 
@@ -400,6 +437,7 @@
         } 
         document.getElementById('loading').style.display='none'; 
         initGame(); 
+        setupMobileControls();
         
         if(localStorage.getItem('wordcraft_save') && !localStorage.getItem('wordcraft_v3_saves')) {
             try {
@@ -575,6 +613,42 @@
         if(e.key==='t'||e.key==='T') interact(); if(e.key==='m'||e.key==='M') toggleMap();
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
+
+    // === FIXED MOBILE CONTROLS LOGIC ===
+    function setupMobileControls() {
+        const touchBtns = document.querySelectorAll('.touch-btn');
+        touchBtns.forEach(btn => {
+            const key = btn.getAttribute('data-key');
+            
+            // Prevent default touch actions (scrolling/zoom)
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault(); 
+                if(key === 'i' || key === 'I') {
+                    setGameState('inventory');
+                } else if(key === 'b') {
+                    placeBlock();
+                } else if(key === ' ') {
+                    interact();
+                } else if(key === 'f') {
+                    shootArrow();
+                } else if(key === 'action') {
+                    action();
+                } else {
+                    keys[key] = true;
+                    initAudio(); // Initialize audio context on user interaction
+                }
+                btn.style.transform = "scale(0.9)";
+            }, { passive: false });
+
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if(key && key.startsWith('Arrow')) {
+                    keys[key] = false;
+                }
+                btn.style.transform = "scale(1)";
+            }, { passive: false });
+        });
+    }
 
     function toggleMobileControls() {
         let el = document.getElementById('mobile-controls'); let btn = document.getElementById('mob-toggle');
