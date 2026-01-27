@@ -478,6 +478,7 @@
     let state='start', grid=[], enemies=[], particles=[], projectiles=[], animTick=0;
     let player={ x:20, y:10, hp:3, maxHp:3, fragments:0, resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0}, roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0,13:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0, cloudia:0, mike:0}, unlocks:{map:false, drill:false, magnet:false, doubleFrag:false} };
     let currentDialogue = null;
+    let moveCooldown = 0; // Added for movement timing
 
     function initGame() {
         grid=[];
@@ -552,6 +553,11 @@
 
     function update() {
         animTick++; gameTick++; if(player.invinc>0) player.invinc--;
+        
+        // Handle Frame-Based Player Movement (standard for held keys)
+        if(moveCooldown > 0) moveCooldown--;
+        else movePlayer();
+
         let tX=(player.x*TILE_SIZE)-(CANVAS_W/2), tY=(player.y*TILE_SIZE)-(CANVAS_H/2);
         camera.x=Math.max(0,Math.min(tX,(COLS*TILE_SIZE)-CANVAS_W)); camera.y=Math.max(0,Math.min(tY,(ROWS*TILE_SIZE)-CANVAS_H));
 
@@ -591,38 +597,50 @@
         for(let i=particles.length-1; i>=0; i--) { particles[i].life--; particles[i].y-=0.05; if(particles[i].life<=0) particles.splice(i,1); }
     }
 
+    // NEW: Centralized movement logic to support simultaneous held keys/buttons
+    function movePlayer() {
+        let dx = 0, dy = 0;
+        if(keys['ArrowLeft']) { dx = -1; player.facingLeft = true; }
+        if(keys['ArrowRight']) { dx = 1; player.facingLeft = false; }
+        if(keys['ArrowUp']) dy = -1;
+        if(keys['ArrowDown']) dy = 1;
+
+        if(dx !== 0 || dy !== 0) {
+            let nx = player.x + dx, ny = player.y + dy;
+            if(nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                let t = grid[ny][nx];
+                let currentT = grid[player.y][player.x];
+                // Allow movement if entering air, ladder, door, or if current tile is ladder
+                if (currentT === 13 || t === 13 || t === 0 || t === 6 || t === 11) {
+                    player.x = nx; player.y = ny;
+                    moveCooldown = 8; // Adjust this value to control walk speed
+                }
+            }
+        }
+    }
+
     document.addEventListener('keydown', e=>{
         if(e.key===' ') e.preventDefault();
         keys[e.key]=true;
         if(state!=='playing') return;
-        let dx=0, dy=0;
-        if(e.key==='ArrowLeft') { dx=-1; player.facingLeft=true; } if(e.key==='ArrowRight') { dx=1; player.facingLeft=false; }
-        if(e.key==='ArrowUp') dy=-1; if(e.key==='ArrowDown') dy=1;
-        if(dx!==0||dy!==0) { 
-            let nx=player.x+dx, ny=player.y+dy; 
-            if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS) {
-                let t = grid[ny][nx];
-                let currentT = grid[player.y][player.x];
-                if (currentT === 13 || t === 13 || t === 0 || t === 6 || t === 11) {
-                    player.x=nx; player.y=ny; 
-                }
-            }
-        }
+        
+        // Actions that aren't movement (Discrete presses)
         if(e.key===' ') interact(); if(e.key==='f'||e.key==='F') shootArrow();
         if(e.key==='i'||e.key==='I') setGameState('inventory'); if(e.key==='b'||e.key==='B') placeBlock();
         if(e.key==='t'||e.key==='T') interact(); if(e.key==='m'||e.key==='M') toggleMap();
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
 
-    // === FIXED MOBILE CONTROLS LOGIC ===
+    // === FIXED MOBILE CONTROLS LOGIC (Optimized for Multi-Touch) ===
     function setupMobileControls() {
         const touchBtns = document.querySelectorAll('.touch-btn');
         touchBtns.forEach(btn => {
             const key = btn.getAttribute('data-key');
             
-            // Prevent default touch actions (scrolling/zoom)
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault(); 
+                initAudio(); // Initialize audio context on first interaction
+                
                 if(key === 'i' || key === 'I') {
                     setGameState('inventory');
                 } else if(key === 'b') {
@@ -634,19 +652,26 @@
                 } else if(key === 'action') {
                     action();
                 } else {
+                    // This sets the movement key to true in the 'keys' object
                     keys[key] = true;
-                    initAudio(); // Initialize audio context on user interaction
                 }
                 btn.style.transform = "scale(0.9)";
             }, { passive: false });
 
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
+                // When finger is lifted, set movement key to false
                 if(key && key.startsWith('Arrow')) {
                     keys[key] = false;
                 }
                 btn.style.transform = "scale(1)";
             }, { passive: false });
+            
+            // Safety: Clear keys if touch is cancelled (e.g., finger slides off screen)
+            btn.addEventListener('touchcancel', (e) => {
+                if(key && key.startsWith('Arrow')) keys[key] = false;
+                btn.style.transform = "scale(1)";
+            });
         });
     }
 
