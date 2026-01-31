@@ -858,7 +858,26 @@ function showToast(msg, type='neutral') {
                 } else if (player.quests.mike === 1 && t === 3 && Math.random() < 0.15) {
                     player.quests.mike = 2; addPart(player.x, player.y - 1, "⚡", "red"); alert("You found the VIBRATING CRYSTAL!"); sfx.quest(); foundSpecial = true;
                 }
+				// === MISSING ARTIFACT DROP LOGIC ===
+                // 5% Chance to find a Salvageable Artifact
+                if (!foundSpecial && Math.random() < 0.05) {
+                    // Pick a random artifact from the master list
+                    let artifact = ARTIFACTS[Math.floor(Math.random() * ARTIFACTS.length)];
+                    
+                    // Add to player inventory
+                    player.artifacts.push(artifact);
+                    
+                    // Alert the player
+                    showToast(`Unearthed: ${artifact.name}`, "good");
+                    sfx.quest(); // Play the quest sound for excitement
+                    
+                    // Prevent finding a normal word part at the same time
+                    foundSpecial = true;
+                }
 
+                // === WORD PART DROPS === (This line is already in your code)
+                if (!foundSpecial && Math.random() < 0.4) {
+                    //
                 // === WORD PART DROPS ===
                 if (!foundSpecial && Math.random() < 0.4) {
                     let type = "root";
