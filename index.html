@@ -1175,6 +1175,7 @@ function showToast(msg, type='neutral') {
     }
     
     // === STRICT FORGE PROCESSOR ===
+    // === STRICT FORGE PROCESSOR ===
     async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
@@ -1272,19 +1273,22 @@ function showToast(msg, type='neutral') {
 
             if(!isValid) throw new Error("Word not found");
             
+            // === 1. CONSUME ITEMS (This was missing!) ===
+            consumeItems(); 
+            
             let visualHTML = `<span style='color:#0d47a1'>${prefixStr}</span><b>${rootOnly}</b><span style='color:#7b1fa2'>${forge.sufs.join("")}</span>`;
             let titleHtml = `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${partOfSpeech})</small>`;
             m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${definition}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
             
-            // NERFED REWARDS
-            let bonus = (forge.pres.length + forge.sufs.length) * 2; // Was 5
+            let bonus = (forge.pres.length + forge.sufs.length) * 2; 
             if (player.unlocks.doubleFrag) bonus *= 2; 
-            let reward = 4 + bonus; // Base reward reduced from 10 to 2
+            let reward = 4 + bonus; 
             
             player.fragments += reward; 
-            
-            // Focus reward also slightly reduced to make food/sleep mechanics relevant later
             player.focus = Math.min(player.maxFocus, player.focus + 30);
+            
+            // === 2. UPDATE UI (This makes the fragment number change!) ===
+            renderInventory(); 
 
         } catch(e) {
             sfx.error();
