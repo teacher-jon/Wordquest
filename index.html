@@ -786,7 +786,7 @@ function showToast(msg, type='neutral') {
     }
 
     function action() {
-        // Coordinate Logic (Same as before)
+        // Coordinate Logic
         let tx = player.x + (player.facingLeft ? -1 : 1);
         let ty = player.y;
         if (keys['ArrowUp']) { tx = player.x; ty = player.y - 1; }
@@ -798,10 +798,6 @@ function showToast(msg, type='neutral') {
                 if ((t === 6 || t === 11 || t === 13) && !keys['b']) return;
 
                 // === 1. TOOL TIER CHECK ===
-                // Dirt(1)/Sand(12)/Leaves(8) = Tier 0 (Hand ok)
-                // Stone(2) = Tier 1 (Needs Wood Pick)
-                // Obsidian(3) = Tier 2 (Needs Stone Pick)
-                
                 let requiredTier = 0;
                 if (t === 2) requiredTier = 1;
                 if (t === 3) requiredTier = 2;
@@ -811,11 +807,10 @@ function showToast(msg, type='neutral') {
                 if (currentTier < requiredTier) {
                     let needed = (requiredTier === 1) ? "Wood Pickaxe" : "Stone Pickaxe";
                     showToast(`Too hard! You need a ${needed}.`, "warn");
-                    // Play a "clunk" sound here if you want
                     return;
                 }
 
-                // === 2. FOCUS CHECK (Same as before) ===
+                // === 2. FOCUS CHECK ===
                 let cost = (t === 1 || t === 12 || t === 8) ? 0 : 2;
                 if (player.focus < cost) { showToast("Too tired! Mine Dirt/Leaves.", "warn"); return; }
                 player.focus -= cost;
@@ -827,7 +822,7 @@ function showToast(msg, type='neutral') {
                         player.tool = "hand";
                         player.toolHp = 0;
                         alert("CRACK! Your tool broke!");
-                        sfx.error(); // Break sound
+                        sfx.error(); 
                     }
                 }
 
@@ -843,7 +838,7 @@ function showToast(msg, type='neutral') {
                 else if (t === 3) player.resources.obsidian++;
                 else if (t === 7) player.resources.wood++;
                 
- // === QUEST ITEMS ===
+                // === QUEST ITEMS ===
                 let foundSpecial = false;
                 if (player.quests.bark === 1 && t === 1 && Math.random() < 0.15) {
                     player.quests.bark = 2; addPart(player.x, player.y - 1, "🌰", "lightgreen"); alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
@@ -860,13 +855,13 @@ function showToast(msg, type='neutral') {
                     let type = "root";
                     let val = "";
 
-                    // DIRT LAYER (t=1): Drops prefixes and basic suffixes
+                    // DIRT LAYER (t=1)
                     if (t === 1) {
                         let pool = ["s", "ed", "ing", "un", "re", "dis", "mis", "pre"];
-                        if (Math.random() < 0.4) { // 40% Root
+                        if (Math.random() < 0.4) { 
                             let roots = ["play", "help", "jump", "cook", "read", "mix"];
                             val = roots[Math.floor(Math.random() * roots.length)];
-                        } else { // 60% Affix
+                        } else { 
                             val = pool[Math.floor(Math.random() * pool.length)];
                             type = (["un","re","dis","mis","pre"].includes(val)) ? "pre" : "suf";
                         }
@@ -890,17 +885,9 @@ function showToast(msg, type='neutral') {
                     
                     showToast(`Found "${val}"`, "good");
                 }
-
-                    // Add to inventory
-                    if (type === "root") player.roots.push({word: val, type: t});
-                    else player.affixes.push({val: val, type: type});
-                    
-                    showToast(`Found "${val}"`, "good");
-                }
             }
         }
     }
-
     function placeBlock() { 
         let id=player.activeBlock; 
         if(player.blocks[id]>0 && grid[player.y][player.x]===0) { 
