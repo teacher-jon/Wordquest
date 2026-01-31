@@ -1176,7 +1176,7 @@ function showToast(msg, type='neutral') {
     
     // === STRICT FORGE PROCESSOR ===
     // === STRICT FORGE PROCESSOR ===
-   async function forgeWord() {
+async function forgeWord() {
         if(isForging) return; 
         if(!forge.root) { alert("You need a Root word!"); return; }
 
@@ -1191,6 +1191,7 @@ function showToast(msg, type='neutral') {
         let currentWord = forge.root.toLowerCase();
         let ruleLog = []; 
 
+        // 1. Apply Suffix Rules locally
         forge.sufs.forEach(suf => {
             let res = fixSpelling(currentWord, suf.toLowerCase());
             currentWord = res.word;
@@ -1201,7 +1202,7 @@ function showToast(msg, type='neutral') {
         let finalWord = prefixStr + currentWord;
         let rootOnly = forge.root.toLowerCase();
 
-        // === QUEST CHECK ===
+        // 2. Check Quests
         let questTriggered = false;
         NPCS.forEach(n => {
             if(player.quests[n.id] === 2 && finalWord === n.questWord) {
@@ -1218,6 +1219,7 @@ function showToast(msg, type='neutral') {
         
         if(questTriggered) { isForging = false; btn.innerText = originalBtnText; btn.classList.remove('btn-disabled'); return; }
 
+        // 3. Prepare Grammar Text
         let grammarLesson = `Built from <b>${rootOnly}</b>`;
         if(forge.pres.length > 0) grammarLesson += ` with prefix(es) ${forge.pres.join(", ")}`;
         if(forge.sufs.length > 0) grammarLesson += ` and suffix(es) ${forge.sufs.join(", ")}`;
@@ -1232,18 +1234,20 @@ function showToast(msg, type='neutral') {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
+            // 4. API Call
             let response = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + finalWord, { signal: controller.signal });
             
             let isValid = false;
             let definition = "";
             let partOfSpeech = "";
 
-            if(response.ok) {player.focus = Math.min(player.maxFocus, player.focus + 50);
+            if(response.ok) {
                 isValid = true;
                 const data = await response.json();
-                definition = data[0]?.meanings[0]?.definitions[0]?.definition;
-                partOfSpeech = data[0]?.meanings[0]?.partOfSpeech;
+                definition = data[0]?.meanings[0]?.definitions[0]?.definition || "Meaning found in lexicon.";
+                partOfSpeech = data[0]?.meanings[0]?.partOfSpeech || "word";
             } else {
+                // Fallback Logic for simple suffixes (plural s, etc)
                 if(forge.pres.length === 0 && forge.sufs.length === 1) {
                     let suffix = forge.sufs[0];
                     let allowedPOS = SUFFIX_RULES[suffix]; 
@@ -1274,7 +1278,9 @@ function showToast(msg, type='neutral') {
 
             if(!isValid) throw new Error("Word not found");
             
-            // === 1. CALCULATE REWARDS FIRST (While data still exists!) ===
+            // === SUCCESS! ===
+            
+            // 5. Calculate Rewards FIRST (Before consuming items)
             let visualHTML = `<span style='color:#0d47a1'>${prefixStr}</span><b>${rootOnly}</b><span style='color:#7b1fa2'>${forge.sufs.join("")}</span>`;
             let titleHtml = `<div style="color:#27ae60; font-weight:bold; font-size:18px;">✨ ${finalWord.toUpperCase()}</div><div style="font-size:14px; color:#7f8c8d;">(${visualHTML})</div><small>(${partOfSpeech})</small>`;
             m.innerHTML = `${titleHtml}<div style="font-size:13px; color:#333; margin-top:5px; padding:8px; background:rgba(0,0,0,0.05); border-radius:4px; text-align:left;"><b>Definition:</b> ${definition}</div><div style="font-size:12px; color:#555; margin-top:6px; border-top:1px solid #ddd; padding-top:4px;">${grammarLesson}</div>`;
@@ -1283,12 +1289,17 @@ function showToast(msg, type='neutral') {
             if (player.unlocks.doubleFrag) bonus *= 2; 
             let reward = 4 + bonus; 
             
-            // === 2. NOW CONSUME ITEMS & UPDATE PLAYER ===
-            consumeItems(); // <--- Moved here! Safe to clear now.
+            // 6. Give Rewards & Restore Focus
             player.fragments += reward; 
             player.focus = Math.min(player.maxFocus, player.focus + 30);
             
+            // 7. FINALLY Consume the items (Clear the UI)
+            consumeItems(); 
+            
+            // 8. Update the Inventory Screen
             renderInventory(); 
+            
+            showToast(`+${reward} Fragments!`, "good");
 
         } catch(e) {
             sfx.error();
