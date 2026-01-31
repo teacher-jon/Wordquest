@@ -1287,7 +1287,7 @@ async function forgeWord() {
             
             let bonus = (forge.pres.length + forge.sufs.length) * 2; 
             if (player.unlocks.doubleFrag) bonus *= 2; 
-            let reward = 4 + bonus; 
+            let reward = 0 + bonus; 
             
             // 6. Give Rewards & Restore Focus
             player.fragments += reward; 
