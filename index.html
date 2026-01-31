@@ -866,28 +866,47 @@ function showToast(msg, type='neutral') {
 
                     // DIRT LAYER (t=1)
                     if (t === 1) {
-                        let pool = ["s", "ed", "ing", "un", "re", "dis", "mis", "pre"];
+                        // 1. EXPANDED POOL: Added er, est, ly, tri, bi
+                        let pool = ["s", "ed", "ing", "er", "est", "ly", "un", "re", "dis", "mis", "pre", "tri", "bi"];
+                        
                         if (Math.random() < 0.4) { 
-                            let roots = ["play", "help", "jump", "cook", "read", "mix"];
+                            let roots = ["play", "help", "jump", "cook", "read", "mix", "walk", "look", "paint"];
                             val = roots[Math.floor(Math.random() * roots.length)];
                         } else { 
                             val = pool[Math.floor(Math.random() * pool.length)];
-                            type = (["un","re","dis","mis","pre"].includes(val)) ? "pre" : "suf";
+                            // Check if it's a prefix
+                            type = (["un","re","dis","mis","pre","tri","bi"].includes(val)) ? "pre" : "suf";
                         }
                     } 
                     // STONE LAYER (t=2)
                     else if (t === 2) {
-                        let pool = ["tion", "ment", "ness", "ful", "less", "sub", "auto"];
+                        let pool = ["tion", "ment", "ness", "ful", "less", "sub", "auto", "inter", "super"];
                         if (Math.random() < 0.5) {
-                            let roots = ["struct", "ject", "rupt", "spec", "dict", "port"];
+                            let roots = ["struct", "ject", "rupt", "spec", "dict", "port", "form", "grath"];
                             val = roots[Math.floor(Math.random() * roots.length)];
                         } else {
                             val = pool[Math.floor(Math.random() * pool.length)];
-                            type = (["sub","auto"].includes(val)) ? "pre" : "suf";
+                            type = (["sub","auto","inter","super"].includes(val)) ? "pre" : "suf";
                         }
                     }
-                    // DEFAULT
-                    else { val = "ing"; type = "suf"; }
+                    // SAND LAYER (t=12) - This was missing before!
+                    else if (t === 12) {
+                        let pool = ["less", "ness", "ful", "y", "er"];
+                         if (Math.random() < 0.4) {
+                             let roots = ["sand", "dry", "sun", "hot", "quick"];
+                             val = roots[Math.floor(Math.random() * roots.length)];
+                         } else {
+                             val = pool[Math.floor(Math.random() * pool.length)];
+                             type = "suf";
+                         }
+                    }
+                    // DEFAULT (Leaves, Wood, etc.)
+                    else { 
+                         // 2. FIXED FALLBACK: No longer just "ing"
+                         let pool = ["s", "ing", "er", "ed"];
+                         val = pool[Math.floor(Math.random() * pool.length)];
+                         type = "suf"; 
+                    }
 
                     if (type === "root") player.roots.push({word: val, type: t});
                     else player.affixes.push({val: val, type: type});
