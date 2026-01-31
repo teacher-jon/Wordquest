@@ -1211,7 +1211,7 @@ function showToast(msg, type='neutral') {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
-            let response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${finalWord}`, { signal: controller.signal });
+            let response = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + finalWord, { signal: controller.signal });
             
             let isValid = false;
             let definition = "";
