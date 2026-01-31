@@ -416,7 +416,16 @@
     let audioCtx;
     function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
     const sfx = { playTone: (f,t,d,v=0.1) => { if(!audioCtx) return; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=t; o.frequency.setValueAtTime(f, audioCtx.currentTime); g.gain.setValueAtTime(v, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+d); }, jump:()=>sfx.playTone(300,'sine',0.2), mine:()=>sfx.playTone(100,'square',0.1), shoot:()=>sfx.playTone(600,'sawtooth',0.1), build:()=>sfx.playTone(200,'triangle',0.1), collect:()=>sfx.playTone(800,'sine',0.3), hit:()=>sfx.playTone(150,'sawtooth',0.3), craft:()=>sfx.playTone(500,'square',0.5), quest:()=>sfx.playTone(600,'triangle',0.6), error:()=>sfx.playTone(100,'sawtooth',0.4) };
-
+	function startGame() {
+        // 1. Try to start audio (ignore errors if it fails)
+        try { initAudio(); } catch(e) { console.log("Audio waiting for interaction"); }
+        
+        // 2. Force the game state change
+        setGameState('playing');
+        
+        // 3. Ensure the start screen is hidden (Safety net)
+        document.getElementById('screen-start').classList.remove('active');
+    }
     // === ROBUST ASSET LOADER ===
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
