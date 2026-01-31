@@ -843,7 +843,7 @@ function showToast(msg, type='neutral') {
                 else if (t === 3) player.resources.obsidian++;
                 else if (t === 7) player.resources.wood++;
                 
-               // === QUEST ITEMS ===
+ // === QUEST ITEMS ===
                 let foundSpecial = false;
                 if (player.quests.bark === 1 && t === 1 && Math.random() < 0.15) {
                     player.quests.bark = 2; addPart(player.x, player.y - 1, "🌰", "lightgreen"); alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
@@ -882,10 +882,14 @@ function showToast(msg, type='neutral') {
                             type = (["sub","auto"].includes(val)) ? "pre" : "suf";
                         }
                     }
-                    // DEFAULT/OTHER
-                    else {
-                        val = "ing"; type = "suf";
-                    }
+                    // DEFAULT
+                    else { val = "ing"; type = "suf"; }
+
+                    if (type === "root") player.roots.push({word: val, type: t});
+                    else player.affixes.push({val: val, type: type});
+                    
+                    showToast(`Found "${val}"`, "good");
+                }
 
                     // Add to inventory
                     if (type === "root") player.roots.push({word: val, type: t});
