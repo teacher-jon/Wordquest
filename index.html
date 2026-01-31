@@ -843,10 +843,56 @@ function showToast(msg, type='neutral') {
                 else if (t === 3) player.resources.obsidian++;
                 else if (t === 7) player.resources.wood++;
                 
-                // Add your Quest/Affix drop logic here (Copied from previous version)
-                // ... [Paste your existing 'if (!foundSpecial)' block here] ...
-                // Note: For brevity I haven't pasted the whole drop table again, 
-                // but you should keep the one from the previous fix.
+               // === QUEST ITEMS ===
+                let foundSpecial = false;
+                if (player.quests.bark === 1 && t === 1 && Math.random() < 0.15) {
+                    player.quests.bark = 2; addPart(player.x, player.y - 1, "🌰", "lightgreen"); alert("You found the ANCIENT SEED!"); sfx.quest(); foundSpecial = true;
+                } else if (player.quests.rusty === 1 && t === 2 && Math.random() < 0.15) {
+                    player.quests.rusty = 2; addPart(player.x, player.y - 1, "⚙️", "gray"); alert("You found the RUSTY GEAR!"); sfx.quest(); foundSpecial = true;
+                } else if (player.quests.cloudia === 1 && t === 8 && Math.random() < 0.25) {
+                    player.quests.cloudia = 2; addPart(player.x, player.y - 1, "☁️", "white"); alert("You found CLOUD ESSENCE!"); sfx.quest(); foundSpecial = true;
+                } else if (player.quests.mike === 1 && t === 3 && Math.random() < 0.15) {
+                    player.quests.mike = 2; addPart(player.x, player.y - 1, "⚡", "red"); alert("You found the VIBRATING CRYSTAL!"); sfx.quest(); foundSpecial = true;
+                }
+
+                // === WORD PART DROPS ===
+                if (!foundSpecial && Math.random() < 0.4) {
+                    let type = "root";
+                    let val = "";
+
+                    // DIRT LAYER (t=1): Drops prefixes and basic suffixes
+                    if (t === 1) {
+                        let pool = ["s", "ed", "ing", "un", "re", "dis", "mis", "pre"];
+                        if (Math.random() < 0.4) { // 40% Root
+                            let roots = ["play", "help", "jump", "cook", "read", "mix"];
+                            val = roots[Math.floor(Math.random() * roots.length)];
+                        } else { // 60% Affix
+                            val = pool[Math.floor(Math.random() * pool.length)];
+                            type = (["un","re","dis","mis","pre"].includes(val)) ? "pre" : "suf";
+                        }
+                    } 
+                    // STONE LAYER (t=2)
+                    else if (t === 2) {
+                        let pool = ["tion", "ment", "ness", "ful", "less", "sub", "auto"];
+                        if (Math.random() < 0.5) {
+                            let roots = ["struct", "ject", "rupt", "spec", "dict", "port"];
+                            val = roots[Math.floor(Math.random() * roots.length)];
+                        } else {
+                            val = pool[Math.floor(Math.random() * pool.length)];
+                            type = (["sub","auto"].includes(val)) ? "pre" : "suf";
+                        }
+                    }
+                    // DEFAULT/OTHER
+                    else {
+                        val = "ing"; type = "suf";
+                    }
+
+                    // Add to inventory
+                    if (type === "root") player.roots.push({word: val, type: t});
+                    else player.affixes.push({val: val, type: type});
+                    
+                    showToast(`Found "${val}"`, "good");
+                }
             }
         }
     }
