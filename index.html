@@ -860,7 +860,7 @@ function showToast(msg, type='neutral') {
                 }
 				// === MISSING ARTIFACT DROP LOGIC ===
                 // 5% Chance to find a Salvageable Artifact
-                if (!foundSpecial && Math.random() < 0.05) {
+                if (!foundSpecial && Math.random() < 0.20) {
                     // Pick a random artifact from the master list
                     let artifact = ARTIFACTS[Math.floor(Math.random() * ARTIFACTS.length)];
                     
