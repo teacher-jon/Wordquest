@@ -109,6 +109,64 @@
         .lex-adv { background: #e1bee7; border-color: #7b1fa2; color: #4a148c; }
         .lex-empty { text-align: center; padding: 40px; color: #999; font-style: italic; }
         
+        /* SYNTAX SORCERY: Syntax Grimoire Styles */
+        #screen-syntax { width: 700px; height: 550px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .grimoire-header { padding: 20px; background: rgba(255,255,255,0.95); border-bottom: 3px solid #5d4037; text-align: center; }
+        .grimoire-body { flex: 1; padding: 30px; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; }
+        .grimoire-footer { padding: 15px; background: rgba(255,255,255,0.95); border-top: 3px solid #5d4037; display: flex; justify-content: center; gap: 15px; }
+        
+        .sentence-assembly {
+            background: rgba(255,255,255,0.95); padding: 25px; border-radius: 12px;
+            border: 3px solid #7b1fa2; box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .sentence-slots { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
+        
+        .syntax-slot {
+            width: 140px; height: 80px; border: 3px dashed #999; border-radius: 12px;
+            background: rgba(255,255,255,0.5); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.3s; position: relative;
+        }
+        .syntax-slot.drag-over { border-color: #27ae60; background: rgba(46, 204, 113, 0.2); transform: scale(1.05); }
+        .syntax-slot.filled { border-style: solid; border-color: #7b1fa2; background: rgba(225, 190, 231, 0.3); }
+        .syntax-slot-label { font-size: 11px; color: #666; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .syntax-slot-word { font-size: 18px; font-weight: bold; color: #4a148c; }
+        .syntax-slot-clear {
+            position: absolute; top: -8px; right: -8px; width: 20px; height: 20px;
+            background: #c0392b; color: white; border-radius: 50%; font-size: 14px;
+            display: none; cursor: pointer; align-items: center; justify-content: center;
+            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .syntax-slot.filled .syntax-slot-clear { display: flex; }
+        
+        .lexicon-picker {
+            background: rgba(255,255,255,0.9); padding: 20px; border-radius: 12px;
+            border: 2px solid #9c27b0; max-height: 250px; overflow-y: auto;
+        }
+        .lexicon-picker-title { font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #4a148c; text-align: center; }
+        .lexicon-picker-words { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        
+        .draggable-word {
+            padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;
+            cursor: grab; border: 2px solid; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s; user-select: none;
+        }
+        .draggable-word:active { cursor: grabbing; transform: scale(0.95); }
+        .draggable-word.dragging { opacity: 0.5; }
+        
+        .invoke-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; padding: 15px 40px; border-radius: 8px;
+            font-weight: bold; font-size: 18px; cursor: pointer;
+            box-shadow: 0 4px 0 #5d4037; transition: all 0.2s;
+        }
+        .invoke-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #5d4037; }
+        .invoke-btn:active { transform: translateY(4px); box-shadow: none; }
+        .invoke-btn:disabled {
+            background: #95a5a6; cursor: not-allowed; box-shadow: none;
+            transform: none;
+        }
+        
         .craft-row { display: flex; width: 98%; align-items: center; gap: 15px; margin-bottom: 8px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #aaa; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .craft-icon { font-size: 28px; width: 50px; text-align: center; }
         .craft-desc { flex: 1; text-align: left; font-size: 15px; }
@@ -187,6 +245,7 @@
         /* Row 2 (Top) */
         #btn-inv { bottom: 80px; left: 20px; background:rgba(200,100,0,0.4); }
         #btn-build { bottom: 90px; left: 100px; background:rgba(46, 204, 113, 0.5); border-color: rgba(46, 204, 113, 0.8); }
+        #btn-grimoire { bottom: 70px; left: 170px; background:rgba(102, 126, 234, 0.5); border-color: rgba(102, 126, 234, 0.8); }
 
         .toggle-btn { background: #ccc; border-radius: 20px; width: 50px; height: 26px; position: relative; cursor: pointer; transition: 0.3s; display:inline-block; vertical-align:middle; margin-left:10px; border: 1px solid #999; }
         .toggle-btn.on { background: #27ae60; border-color: #1e8449; }
@@ -244,6 +303,7 @@
                 
                 <div id="btn-inv" class="touch-btn act-sm" data-key="i">🎒</div>
                 <div id="btn-build" class="touch-btn act-big" data-key="b">🔨</div>
+                <div id="btn-grimoire" class="touch-btn act-sm" data-key="g">✨</div>
             </div>
         </div>
 
@@ -415,9 +475,58 @@
                      <button class="close-btn" onclick="setGameState('playing')">Close</button>
                 </div>
             </div>
+            
+            <!-- SYNTAX SORCERY: Syntax Grimoire Popup -->
+            <div id="screen-syntax" class="popup">
+                <div class="grimoire-header">
+                    <h2 style="margin:0; color:#4a148c;">✨ Syntax Grimoire</h2>
+                    <p style="font-size:14px; margin:5px 0; color:#666;">Assemble words into powerful spells</p>
+                </div>
+                
+                <div class="grimoire-body">
+                    <!-- Sentence Assembly Area -->
+                    <div class="sentence-assembly">
+                        <div style="text-align:center; margin-bottom:10px;">
+                            <strong style="color:#7b1fa2; font-size:16px;">Construct Your Spell</strong>
+                        </div>
+                        <div class="sentence-slots">
+                            <div class="syntax-slot" id="slot-adj" data-pos="adjective">
+                                <div class="syntax-slot-label">Adjective</div>
+                                <div class="syntax-slot-word" id="word-adj"></div>
+                                <div class="syntax-slot-clear" onclick="clearSlot('adj')">×</div>
+                            </div>
+                            <div class="syntax-slot" id="slot-noun" data-pos="noun">
+                                <div class="syntax-slot-label">Noun</div>
+                                <div class="syntax-slot-word" id="word-noun"></div>
+                                <div class="syntax-slot-clear" onclick="clearSlot('noun')">×</div>
+                            </div>
+                            <div class="syntax-slot" id="slot-verb" data-pos="verb">
+                                <div class="syntax-slot-label">Verb</div>
+                                <div class="syntax-slot-word" id="word-verb"></div>
+                                <div class="syntax-slot-clear" onclick="clearSlot('verb')">×</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Word Picker -->
+                    <div class="lexicon-picker">
+                        <div class="lexicon-picker-title">📖 Drag words from your Lexicon</div>
+                        <div class="lexicon-picker-words" id="grimoire-word-list">
+                            <!-- Populated by SyntaxSorcery.syntax.renderWordPicker() -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grimoire-footer">
+                    <button class="invoke-btn" id="btn-invoke" onclick="invokeSpell()" disabled>
+                        ⚡ Invoke Spell
+                    </button>
+                    <button class="close-btn" onclick="closeGrimoire()">Close</button>
+                </div>
+            </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory</div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory | G for Grimoire</div>
 
 <script>
     const VERSION = 3.92;
@@ -727,6 +836,7 @@ const TOOLS = {
         if(e.key===' ') interact(); if(e.key==='f'||e.key==='F') shootArrow();
         if(e.key==='i'||e.key==='I') setGameState('inventory'); if(e.key==='b'||e.key==='B') placeBlock();
         if(e.key==='t'||e.key==='T') interact(); if(e.key==='m'||e.key==='M') toggleMap();
+        if(e.key==='g'||e.key==='G') openGrimoire(); // SYNTAX SORCERY: Open Grimoire
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
 
@@ -744,6 +854,8 @@ const TOOLS = {
                     setGameState('inventory');
                 } else if(key === 'b') {
                     placeBlock();
+                } else if(key === 'g' || key === 'G') {
+                    openGrimoire(); // SYNTAX SORCERY
                 } else if(key === ' ') {
                     interact();
                 } else if(key === 'f') {
@@ -1311,12 +1423,24 @@ async function forgeWord() {
             let isValid = false;
             let definition = "";
             let partOfSpeech = "";
+            let allPOS = []; // Track all parts of speech
 
             if(response.ok) {
                 isValid = true;
                 const data = await response.json();
                 definition = data[0]?.meanings[0]?.definitions[0]?.definition || "Meaning found in lexicon.";
-                partOfSpeech = data[0]?.meanings[0]?.partOfSpeech || "word";
+                
+                // Collect all parts of speech from the API
+                if (data[0]?.meanings) {
+                    allPOS = data[0].meanings.map(m => m.partOfSpeech);
+                }
+                
+                // Prioritize: adjective > noun > verb > adverb (for better spell building)
+                if (allPOS.includes('adjective')) partOfSpeech = 'adjective';
+                else if (allPOS.includes('noun')) partOfSpeech = 'noun';
+                else if (allPOS.includes('verb')) partOfSpeech = 'verb';
+                else if (allPOS.includes('adverb')) partOfSpeech = 'adverb';
+                else partOfSpeech = data[0]?.meanings[0]?.partOfSpeech || "word";
             } else {
                 // Fallback Logic for simple suffixes (plural s, etc)
                 if(forge.pres.length === 0 && forge.sufs.length === 1) {
@@ -1366,12 +1490,28 @@ async function forgeWord() {
             
             // SYNTAX SORCERY: Add word to lexicon
             if (window.SyntaxSorcery) {
-                console.log('[Forge] Attempting to add word:', finalWord, partOfSpeech);
-                console.log('[Forge] Player lexicon before:', player.lexicon ? player.lexicon.length : 'undefined');
-                SyntaxSorcery.lexicon.addWord(finalWord, partOfSpeech);
-                console.log('[Forge] Player lexicon after:', player.lexicon ? player.lexicon.length : 'undefined');
-            } else {
-                console.warn('[Forge] SyntaxSorcery not available');
+                // Normalize POS to standard categories
+                let normalizedPOS = partOfSpeech.toLowerCase();
+                
+                // Map API variations to our categories
+                if (normalizedPOS.includes('noun')) normalizedPOS = 'noun';
+                else if (normalizedPOS.includes('verb')) normalizedPOS = 'verb';
+                else if (normalizedPOS.includes('adjective') || normalizedPOS === 'adj') normalizedPOS = 'adjective';
+                else if (normalizedPOS.includes('adverb') || normalizedPOS === 'adv') normalizedPOS = 'adverb';
+                else if (normalizedPOS === 'derivative') {
+                    // For derivatives, infer from suffix
+                    if (forge.sufs.includes('ly')) normalizedPOS = 'adverb';
+                    else if (forge.sufs.includes('s') || forge.sufs.includes('es')) normalizedPOS = 'noun';
+                    else if (forge.sufs.includes('ed') || forge.sufs.includes('ing')) normalizedPOS = 'verb';
+                    else normalizedPOS = 'noun'; // Default fallback
+                }
+                else {
+                    // Unknown POS - try to infer from word structure
+                    normalizedPOS = 'noun'; // Safe default
+                }
+                
+                console.log('[Forge] Adding to lexicon:', finalWord, '→', normalizedPOS, '(from:', partOfSpeech + ')');
+                SyntaxSorcery.lexicon.addWord(finalWord, normalizedPOS);
             }
             
             // 7. FINALLY Consume the items (Clear the UI)
@@ -1549,6 +1689,33 @@ function respawnPlayer() {
         showToast("Respawned! Inventory Saved.", "good");
     }
     function simKey(k,s) { keys[k]=s; if(s) initAudio(); }
+    
+    // === SYNTAX SORCERY GLOBAL HELPERS ===
+    function openGrimoire() {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.syntax) {
+            window.SyntaxSorcery.syntax.openGrimoire();
+        }
+    }
+    
+    function closeGrimoire() {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.syntax) {
+            window.SyntaxSorcery.syntax.closeGrimoire();
+        }
+    }
+    
+    function clearSlot(slotType) {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.syntax) {
+            window.SyntaxSorcery.syntax.clearSlot(slotType);
+        }
+    }
+    
+    function invokeSpell() {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.spells) {
+            // Phase 4 implementation
+            console.log('[Game] Invoke spell called (Phase 4 pending)');
+            showToast('⚡ Spell system coming in Phase 4!', 'good');
+        }
+    }
 </script>
 
 <!-- SYNTAX SORCERY EXPANSION MODULE -->
