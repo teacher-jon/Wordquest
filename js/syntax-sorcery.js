@@ -300,6 +300,25 @@ const SyntaxSorcery = (function() {
   // PHASE 3: SYNTAX ENGINE
   // ============================================
   
+  // Device detection
+  function isTouchDevice() {
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  }
+  
+  // Haptic feedback
+  function triggerHaptic(style = 'light') {
+    if (!navigator.vibrate) return;
+    
+    const patterns = {
+      light: [10],
+      medium: [20],
+      heavy: [30],
+      error: [50, 50, 50]
+    };
+    
+    navigator.vibrate(patterns[style] || patterns.light);
+  }
+
   const SyntaxEngine = {
     init() {
       console.log('[Syntax Sorcery] Syntax Engine initialized');
@@ -307,6 +326,10 @@ const SyntaxSorcery = (function() {
       if (!state.selectedPattern) {
         state.selectedPattern = 1;
       }
+      
+      // Initialize selected word state
+      state.selectedWord = null;
+      
       this.setupDragAndDrop();
     },
     
@@ -322,6 +345,21 @@ const SyntaxSorcery = (function() {
       
       popup.classList.add('active');
       
+      // Show mobile hint on first open for touch devices
+      if (isTouchDevice() && !localStorage.getItem('grimoire_hint_shown')) {
+        const hint = document.getElementById('mobile-hint');
+        if (hint) {
+          hint.style.display = 'block';
+          setTimeout(() => {
+            hint.classList.add('fade-out');
+            setTimeout(() => {
+              hint.style.display = 'none';
+            }, 500);
+          }, 3000);
+          localStorage.setItem('grimoire_hint_shown', 'true');
+        }
+      }
+      
       // Render pattern selector
       this.renderPatternSelector();
       
@@ -336,6 +374,13 @@ const SyntaxSorcery = (function() {
       
       // Update invoke button state
       this.updateInvokeButton();
+      
+      // Show tutorial on first open
+      if (window.player && !window.player.tutorials.grimoireOpened) {
+        setTimeout(() => {
+          Tutorial.show();
+        }, 300); // Small delay to let Grimoire render first
+      }
     },
     
     changePattern(patternId) {
@@ -454,6 +499,12 @@ const SyntaxSorcery = (function() {
         return;
       }
       
+      // Update title based on device
+      const titleElement = document.querySelector('.lexicon-picker-title');
+      if (titleElement && isTouchDevice()) {
+        titleElement.textContent = '📖 Tap words from your Lexicon';
+      }
+      
       if (!window.player || !window.player.lexicon || window.player.lexicon.length === 0) {
         container.innerHTML = '<div style="color:#999; font-style:italic; padding:20px;">Your lexicon is empty. Forge words first!</div>';
         return;
@@ -481,6 +532,142 @@ const SyntaxSorcery = (function() {
     
     setupDragAndDrop() {
       console.log('[Syntax Engine] Setting up drag & drop');
+      
+      const isTouch = isTouchDevice();
+      console.log('[Syntax Engine] Touch device:', isTouch);
+      
+      if (isTouch) {
+        // Mobile: Use click-based selection
+        this.setupClickSelection();
+        this.setupMobileTooltips();
+      } else {
+        // Desktop: Use drag-and-drop
+        this.setupDesktopDragDrop();
+      }
+    },
+    
+    setupMobileTooltips() {
+      console.log('[Syntax Engine] Setting up mobile tooltips');
+      
+      // Track tooltip state for each button
+      const tooltipState = {};
+      
+      document.querySelectorAll('.spell-type-btn').forEach(btn => {
+        const type = btn.dataset.type;
+        tooltipState[type] = false;
+        
+        btn.addEventListener('click', (e) => {
+          // If tooltip is not shown, show it and prevent spell selection
+          if (!tooltipState[type]) {
+            e.stopPropagation();
+            
+            // Hide all other tooltips
+            document.querySelectorAll('.spell-type-btn').forEach(b => {
+              b.classList.remove('show-tooltip');
+              tooltipState[b.dataset.type] = false;
+            });
+            
+            // Show this tooltip
+            btn.classList.add('show-tooltip');
+            tooltipState[type] = true;
+            
+            // Prevent the onclick from firing
+            return false;
+          }
+          // If tooltip is already shown, let the click proceed to select spell type
+          // The tooltip will be hidden by selectSpellType()
+        });
+      });
+      
+      // Hide tooltips when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.spell-type-btn')) {
+          document.querySelectorAll('.spell-type-btn').forEach(btn => {
+            btn.classList.remove('show-tooltip');
+            tooltipState[btn.dataset.type] = false;
+          });
+        }
+      });
+    },
+    
+    setupClickSelection() {
+      console.log('[Syntax Engine] Setting up click-based selection for mobile');
+      
+      // Click on word to select it
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('draggable-word')) {
+          this.selectWord(e.target);
+        } else if (e.target.classList.contains('syntax-slot') || e.target.closest('.syntax-slot')) {
+          const slot = e.target.classList.contains('syntax-slot') ? e.target : e.target.closest('.syntax-slot');
+          this.handleSlotClick(slot);
+        }
+      });
+    },
+    
+    selectWord(wordElement) {
+      const word = wordElement.dataset.word;
+      const pos = wordElement.dataset.pos;
+      
+      // Haptic feedback
+      triggerHaptic('light');
+      
+      // Remove previous selection
+      document.querySelectorAll('.draggable-word').forEach(w => {
+        w.classList.remove('word-selected');
+      });
+      
+      // Select this word
+      wordElement.classList.add('word-selected');
+      state.selectedWord = { word, pos };
+      
+      // Add pulse animation to available slots
+      document.querySelectorAll('.syntax-slot').forEach(slot => {
+        if (slot.dataset.pos === pos && !slot.classList.contains('filled')) {
+          slot.classList.add('slot-available');
+        } else {
+          slot.classList.remove('slot-available');
+        }
+      });
+      
+      console.log('[Syntax Engine] Selected word:', word, pos);
+    },
+    
+    handleSlotClick(slot) {
+      const slotPos = slot.dataset.pos;
+      const slotId = slot.id.replace('slot-', '');
+      
+      // If slot is filled, clear it
+      if (slot.classList.contains('filled')) {
+        triggerHaptic('light');
+        this.clearSlot(slotId);
+        return;
+      }
+      
+      // If word is selected, fill the slot
+      if (state.selectedWord) {
+        if (state.selectedWord.pos === slotPos) {
+          triggerHaptic('medium');
+          this.fillSlot(slotId, state.selectedWord.word, state.selectedWord.pos);
+          
+          // Clear selection
+          document.querySelectorAll('.draggable-word').forEach(w => {
+            w.classList.remove('word-selected');
+          });
+          document.querySelectorAll('.syntax-slot').forEach(s => {
+            s.classList.remove('slot-available');
+          });
+          state.selectedWord = null;
+        } else {
+          triggerHaptic('error');
+          if (typeof window.showToast === 'function') {
+            window.showToast(`❌ Wrong type! Need ${slotPos}, got ${state.selectedWord.pos}`, 'warn');
+          }
+        }
+      }
+    },
+    
+    setupDesktopDragDrop() {
+      console.log('[Syntax Engine] Setting up desktop drag & drop');
       
       // Use event delegation for draggable words (they're dynamically created)
       document.addEventListener('dragstart', (e) => {
@@ -747,6 +934,7 @@ const SyntaxSorcery = (function() {
       // Update button states
       document.querySelectorAll('.spell-type-btn').forEach(btn => {
         btn.classList.remove('active');
+        btn.classList.remove('show-tooltip'); // Hide all tooltips
       });
       
       const selectedBtn = document.querySelector(`[data-type="${type}"]`);
@@ -1251,6 +1439,69 @@ const SyntaxSorcery = (function() {
   };
   
   // ============================================
+  // TUTORIAL SYSTEM
+  // ============================================
+  
+  const Tutorial = {
+    currentStep: 1,
+    totalSteps: 6,
+    
+    show() {
+      if (!window.player || window.player.tutorials.grimoireOpened) {
+        return; // Don't show if already completed
+      }
+      
+      const overlay = document.getElementById('grimoire-tutorial');
+      if (overlay) {
+        overlay.style.display = 'block';
+        this.showStep(1);
+      }
+    },
+    
+    showStep(stepNumber) {
+      this.currentStep = stepNumber;
+      
+      // Hide all steps
+      const allSteps = document.querySelectorAll('.tutorial-step');
+      allSteps.forEach(step => {
+        step.style.display = 'none';
+      });
+      
+      // Show current step
+      const currentStepEl = document.querySelector(`.tutorial-step[data-step="${stepNumber}"]`);
+      if (currentStepEl) {
+        currentStepEl.style.display = 'flex';
+      }
+    },
+    
+    next() {
+      if (this.currentStep < this.totalSteps) {
+        this.showStep(this.currentStep + 1);
+      } else {
+        this.finish();
+      }
+    },
+    
+    skip() {
+      this.finish();
+    },
+    
+    finish() {
+      const overlay = document.getElementById('grimoire-tutorial');
+      if (overlay) {
+        overlay.style.display = 'none';
+      }
+      
+      // Mark tutorial as completed
+      if (window.player) {
+        window.player.tutorials.grimoireOpened = true;
+      }
+      
+      console.log('[Tutorial] Grimoire tutorial completed');
+    }
+  };
+  
+  // ============================================
   // PUBLIC API
   // ============================================
   
@@ -1274,6 +1525,7 @@ const SyntaxSorcery = (function() {
     syntax: SyntaxEngine,
     spells: SpellSystem,
     gates: GrammarGates,
+    tutorial: Tutorial,
     
     // Expose magic point system for HTML access
     getState() {

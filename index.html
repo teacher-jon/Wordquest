@@ -219,6 +219,7 @@
             cursor: pointer;
             transition: all 0.2s;
             color: #4a148c;
+            position: relative;
         }
         
         .spell-type-btn:hover {
@@ -232,6 +233,71 @@
             color: white;
             border-color: #6a1b9a;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Spell Type Tooltips */
+        .spell-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 10px;
+            background: white;
+            border: 2px solid #9c27b0;
+            padding: 12px;
+            border-radius: 8px;
+            z-index: 1000;
+            min-width: 250px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        
+        .spell-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: #9c27b0;
+        }
+        
+        .spell-tooltip strong {
+            display: block;
+            color: #4a148c;
+            font-size: 14px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e1bee7;
+            padding-bottom: 4px;
+        }
+        
+        .spell-tooltip p {
+            color: #666;
+            font-size: 12px;
+            margin: 6px 0;
+            line-height: 1.4;
+        }
+        
+        .spell-tooltip ul {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0 0;
+        }
+        
+        .spell-tooltip li {
+            color: #555;
+            font-size: 11px;
+            padding: 3px 0;
+            line-height: 1.3;
+        }
+        
+        .spell-type-btn:hover .spell-tooltip {
+            display: block;
+        }
+        
+        .spell-type-btn.show-tooltip .spell-tooltip {
+            display: block;
         }
         
         /* Spell Preview */
@@ -254,8 +320,37 @@
             cursor: grab; border: 2px solid; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             transition: all 0.2s; user-select: none;
         }
-        .draggable-word:active { cursor: grabbing; transform: scale(0.95); }
+        .draggable-word:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
         .draggable-word.dragging { opacity: 0.5; }
+        
+        /* Mobile: Selected word highlight */
+        .draggable-word.word-selected {
+            border-color: #2196f3;
+            border-width: 3px;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.5);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 12px rgba(33, 150, 243, 0.5); }
+            50% { box-shadow: 0 4px 20px rgba(33, 150, 243, 0.8); }
+        }
+        
+        /* Mobile: Available slot highlight */
+        .syntax-slot.slot-available {
+            border-color: #4caf50;
+            background: rgba(76, 175, 80, 0.15);
+            animation: slotPulse 1.5s infinite;
+        }
+        
+        @keyframes slotPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
         
         .invoke-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -291,6 +386,241 @@
         }
         .pattern-dropdown:hover { border-color: #7b1fa2; background: #f3e5f5; }
         .pattern-dropdown:focus { outline: none; border-color: #6a1b9a; box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2); }
+        
+        /* Mobile hint message */
+        .mobile-hint {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .mobile-hint.fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* Clear all button */
+        .clear-all-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+        
+        .clear-all-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+        
+        .clear-all-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* MOBILE RESPONSIVE STYLES */
+        @media (max-width: 600px) {
+            /* Grimoire popup - full screen on mobile */
+            #screen-syntax {
+                width: 95vw !important;
+                height: 90vh !important;
+                max-width: 95vw;
+                max-height: 90vh;
+            }
+            
+            .grimoire-header {
+                padding: 12px;
+            }
+            
+            .grimoire-header h2 {
+                font-size: 20px;
+                margin: 0;
+            }
+            
+            .grimoire-header p {
+                font-size: 12px;
+            }
+            
+            .grimoire-body {
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            .grimoire-footer {
+                padding: 10px;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            
+            /* Sentence assembly */
+            .sentence-assembly {
+                padding: 15px;
+            }
+            
+            .sentence-slots {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            /* Slots - larger touch targets */
+            .syntax-slot {
+                min-width: 100px;
+                min-height: 70px;
+                width: 100px;
+                height: 70px;
+                font-size: 12px;
+            }
+            
+            .syntax-slot-label {
+                font-size: 10px;
+            }
+            
+            .syntax-slot-word {
+                font-size: 14px;
+            }
+            
+            .syntax-slot-clear {
+                width: 24px;
+                height: 24px;
+                font-size: 16px;
+                top: -10px;
+                right: -10px;
+            }
+            
+            /* Spell type buttons - stack vertically */
+            .spell-type-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .spell-type-btn {
+                width: 100%;
+                min-height: 44px;
+                padding: 12px 16px;
+                font-size: 16px;
+            }
+            
+            /* Pattern dropdown */
+            .pattern-dropdown {
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            
+            /* Word picker */
+            .lexicon-picker {
+                padding: 12px;
+                max-height: 180px;
+            }
+            
+            .lexicon-picker-title {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            
+            .lexicon-picker-words {
+                gap: 6px;
+            }
+            
+            .draggable-word {
+                padding: 10px 14px;
+                font-size: 13px;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            /* Buttons */
+            .invoke-btn, .equip-btn {
+                padding: 12px 20px;
+                font-size: 16px;
+                flex: 1;
+                min-width: 120px;
+            }
+            
+            .close-btn {
+                padding: 12px 20px;
+                font-size: 16px;
+                min-width: 100px;
+            }
+            
+            /* Magic meter */
+            .magic-meter-container {
+                padding: 12px;
+            }
+            
+            .magic-meter-label {
+                font-size: 13px;
+            }
+            
+            .magic-meter-text {
+                font-size: 12px;
+            }
+            
+            /* Spell type selector */
+            .spell-type-selector {
+                padding: 12px;
+            }
+            
+            .spell-type-label {
+                font-size: 13px;
+            }
+            
+            /* Spell preview */
+            .spell-preview {
+                padding: 12px;
+                min-height: 60px;
+                font-size: 13px;
+            }
+            
+            /* Sentence preview */
+            #sentence-preview {
+                font-size: 13px;
+            }
+        }
+        
+        /* Extra small screens */
+        @media (max-width: 400px) {
+            .syntax-slot {
+                min-width: 85px;
+                min-height: 65px;
+                width: 85px;
+                height: 65px;
+            }
+            
+            .syntax-slot-word {
+                font-size: 12px;
+            }
+            
+            .draggable-word {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            .spell-type-btn {
+                font-size: 14px;
+                padding: 10px 14px;
+            }
+        }
         
         .craft-row { display: flex; width: 98%; align-items: center; gap: 15px; margin-bottom: 8px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #aaa; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .craft-icon { font-size: 28px; width: 50px; text-align: center; }
@@ -399,6 +729,419 @@
         #equipped-spell-display .spell-title { font-weight: bold; margin-bottom: 4px; color: #9b59b6; font-size: 12px; text-transform: uppercase; }
         #equipped-spell-display .spell-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
         #equipped-spell-display .spell-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+        
+        /* GRIMOIRE TUTORIAL OVERLAY */
+        .tutorial-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            pointer-events: auto;
+        }
+        
+        .tutorial-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(2px);
+        }
+        
+        .tutorial-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1001;
+        }
+        
+        .tutorial-step {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tutorial-box {
+            background: white;
+            border: 4px solid #667eea;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: tutorialPulse 0.3s ease-out;
+        }
+        
+        @keyframes tutorialPulse {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .tutorial-box h3 {
+            color: #667eea;
+            margin: 0 0 15px 0;
+            font-size: 24px;
+        }
+        
+        .tutorial-box p {
+            color: #333;
+            margin: 10px 0;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .tutorial-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+        
+        .tutorial-box ul li {
+            padding: 8px 0;
+            font-size: 15px;
+        }
+        
+        .tutorial-highlight {
+            background: #fff59d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .tutorial-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .tutorial-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.2);
+        }
+        
+        .tutorial-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        
+        .tutorial-next {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tutorial-next:hover {
+            background: #5568d3;
+        }
+        
+        .tutorial-skip {
+            background: #e0e0e0;
+            color: #666;
+        }
+        
+        .tutorial-skip:hover {
+            background: #d0d0d0;
+        }
+        
+        .tutorial-finish {
+            background: #4caf50;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .tutorial-finish:hover {
+            background: #45a049;
+        }
+        
+        /* Tutorial pointer arrows */
+        .tutorial-pointer::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        
+        .tutorial-top::before {
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 20px 15px 0 15px;
+            border-color: #667eea transparent transparent transparent;
+        }
+        
+        .tutorial-bottom::before {
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 15px 20px 15px;
+            border-color: transparent transparent #667eea transparent;
+        }
+        
+        .tutorial-left::before {
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 15px 0 15px 20px;
+            border-color: transparent transparent transparent #667eea;
+        }
+        
+        /* Mobile responsive tutorial */
+        @media (max-width: 600px) {
+            .tutorial-box {
+                max-width: 90%;
+                padding: 20px;
+            }
+            
+            .tutorial-box h3 {
+                font-size: 20px;
+            }
+            
+            .tutorial-box p {
+                font-size: 14px;
+            }
+            
+            .tutorial-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+        
+        /* === HELP OVERLAY STYLES === */
+        #screen-help {
+            width: 800px;
+            max-width: 95vw;
+            height: 600px;
+            max-height: 90vh;
+            background: white;
+        }
+        
+        .help-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            border-bottom: 3px solid #5d4037;
+        }
+        
+        .help-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 160px);
+            background: #f5f5f5;
+        }
+        
+        .help-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .help-section-title {
+            color: #4a148c;
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        
+        .help-content {
+            color: #333;
+        }
+        
+        .help-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .help-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .help-item-icon {
+            font-size: 32px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .help-item-text {
+            flex: 1;
+        }
+        
+        .help-item-text strong {
+            color: #4a148c;
+            font-size: 18px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .help-tiers {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .help-tiers span {
+            padding: 5px 10px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #9c27b0;
+        }
+        
+        .help-pattern {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .help-pattern:last-child {
+            margin-bottom: 0;
+        }
+        
+        .help-pattern strong {
+            color: #2e7d32;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .help-pattern-example {
+            font-style: italic;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .help-pattern-power {
+            font-size: 13px;
+            color: #9c27b0;
+            font-weight: bold;
+        }
+        
+        .help-tier {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .help-tier:last-of-type {
+            margin-bottom: 15px;
+        }
+        
+        .help-tier strong {
+            color: #e65100;
+        }
+        
+        .help-tip {
+            padding: 12px;
+            background: #fff3e0;
+            border-radius: 8px;
+            border: 2px solid #ff9800;
+            color: #e65100;
+        }
+        
+        .help-shortcuts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+        
+        .help-shortcut {
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .help-shortcut kbd {
+            background: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+        
+        .help-footer {
+            padding: 15px 20px;
+            background: #f5f5f5;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        
+        /* Mobile responsive help */
+        @media (max-width: 600px) {
+            #screen-help {
+                width: 95vw;
+                height: 90vh;
+            }
+            
+            .help-body {
+                padding: 15px;
+                max-height: calc(90vh - 140px);
+            }
+            
+            .help-section {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .help-section-title {
+                font-size: 18px;
+            }
+            
+            .help-item {
+                flex-direction: column;
+                padding: 12px;
+            }
+            
+            .help-item-icon {
+                font-size: 28px;
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .help-item-text strong {
+                font-size: 16px;
+            }
+            
+            .help-shortcuts {
+                grid-template-columns: 1fr;
+            }
+            
+            .help-shortcut {
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -623,6 +1366,11 @@
                 </div>
                 
                 <div class="grimoire-body">
+                    <!-- Mobile Hint (shown on first open for touch devices) -->
+                    <div id="mobile-hint" class="mobile-hint" style="display:none;">
+                        📱 Tap a word, then tap a slot to fill it!
+                    </div>
+                    
                     <!-- Sentence Assembly Area -->
                     <div class="sentence-assembly">
                         <div style="text-align:center; margin-bottom:15px;">
@@ -636,6 +1384,9 @@
                         </div>
                         <div id="sentence-preview" style="text-align:center; margin-top:15px; font-size:14px; color:#999; font-style:italic; min-height:24px;">
                             <em>Fill all slots to see preview...</em>
+                        </div>
+                        <div style="text-align:center;">
+                            <button class="clear-all-btn" onclick="window.SyntaxSorcery.syntax.clearAllSlots()">🗑️ Clear All</button>
                         </div>
                     </div>
                     
@@ -657,18 +1408,68 @@
                         <div class="spell-type-buttons">
                             <button class="spell-type-btn" data-type="projectile" onclick="window.SyntaxSorcery.syntax.selectSpellType('projectile')">
                                 🔥 Projectile
+                                <div class="spell-tooltip">
+                                    <strong>Projectile Spells</strong>
+                                    <p>Fire magical projectiles at enemies</p>
+                                    <ul>
+                                        <li>Tier 1 (0-9 MP): Magic Bolt - 10 Focus</li>
+                                        <li>Tier 2 (10-19 MP): Enhanced Bolt - 15 Focus</li>
+                                        <li>Tier 3 (20-29 MP): Power Blast - 20 Focus</li>
+                                        <li>Tier 4 (30+ MP): Meteor Strike - 25 Focus</li>
+                                    </ul>
+                                </div>
                             </button>
                             <button class="spell-type-btn" data-type="heal" onclick="window.SyntaxSorcery.syntax.selectSpellType('heal')">
                                 💚 Heal
+                                <div class="spell-tooltip">
+                                    <strong>Heal Spells</strong>
+                                    <p>Restore health and vitality</p>
+                                    <ul>
+                                        <li>Tier 1 (0-9 MP): Minor Heal - 8 Focus, +20 HP</li>
+                                        <li>Tier 2 (10-19 MP): Heal - 12 Focus, +40 HP</li>
+                                        <li>Tier 3 (20-29 MP): Greater Heal - 16 Focus, +60 HP</li>
+                                        <li>Tier 4 (30+ MP): Full Restore - 20 Focus, +100 HP</li>
+                                    </ul>
+                                </div>
                             </button>
                             <button class="spell-type-btn" data-type="break" onclick="window.SyntaxSorcery.syntax.selectSpellType('break')">
                                 ⛏️ Break
+                                <div class="spell-tooltip">
+                                    <strong>Break Spells</strong>
+                                    <p>Destroy obstacles and terrain</p>
+                                    <ul>
+                                        <li>Tier 1 (0-9 MP): Crack - 6 Focus, 1 tile</li>
+                                        <li>Tier 2 (10-19 MP): Shatter - 10 Focus, 3x3 area</li>
+                                        <li>Tier 3 (20-29 MP): Demolish - 14 Focus, 5x5 area</li>
+                                        <li>Tier 4 (30+ MP): Cataclysm - 18 Focus, 7x7 area</li>
+                                    </ul>
+                                </div>
                             </button>
                             <button class="spell-type-btn" data-type="dash" onclick="window.SyntaxSorcery.syntax.selectSpellType('dash')">
                                 ⚡ Dash
+                                <div class="spell-tooltip">
+                                    <strong>Dash Spells</strong>
+                                    <p>Teleport to distant locations</p>
+                                    <ul>
+                                        <li>Tier 1 (0-9 MP): Blink - 8 Focus, 3 tiles</li>
+                                        <li>Tier 2 (10-19 MP): Leap - 12 Focus, 5 tiles</li>
+                                        <li>Tier 3 (20-29 MP): Warp - 16 Focus, 8 tiles</li>
+                                        <li>Tier 4 (30+ MP): Teleport - 20 Focus, 12 tiles</li>
+                                    </ul>
+                                </div>
                             </button>
                             <button class="spell-type-btn" data-type="control" onclick="window.SyntaxSorcery.syntax.selectSpellType('control')">
                                 🧊 Control
+                                <div class="spell-tooltip">
+                                    <strong>Control Spells</strong>
+                                    <p>Freeze and manipulate enemies</p>
+                                    <ul>
+                                        <li>Tier 1 (0-9 MP): Slow - 10 Focus, 2s freeze</li>
+                                        <li>Tier 2 (10-19 MP): Freeze - 15 Focus, 4s freeze</li>
+                                        <li>Tier 3 (20-29 MP): Stasis - 20 Focus, 6s freeze</li>
+                                        <li>Tier 4 (30+ MP): Time Stop - 25 Focus, 8s freeze</li>
+                                    </ul>
+                                </div>
                             </button>
                         </div>
                     </div>
@@ -697,9 +1498,256 @@
                     <button class="close-btn" onclick="closeGrimoire()">Close</button>
                 </div>
             </div>
+            
+            <!-- GRIMOIRE TUTORIAL OVERLAY -->
+            <div id="grimoire-tutorial" class="tutorial-overlay" style="display:none;">
+                <div class="tutorial-backdrop"></div>
+                <div class="tutorial-content">
+                    <!-- Step 1: Welcome -->
+                    <div class="tutorial-step" data-step="1">
+                        <div class="tutorial-box">
+                            <h3>✨ Welcome to the Syntax Grimoire!</h3>
+                            <p>This is where you combine words from your Lexicon to create powerful spells.</p>
+                            <p>Let me show you how it works!</p>
+                            <div class="tutorial-buttons">
+                                <button class="tutorial-btn tutorial-next" onclick="nextTutorialStep()">Next →</button>
+                                <button class="tutorial-btn tutorial-skip" onclick="skipTutorial()">Skip Tutorial</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Word Picker -->
+                    <div class="tutorial-step" data-step="2" style="display:none;">
+                        <div class="tutorial-box tutorial-pointer tutorial-bottom" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%);">
+                            <h3>📖 Your Lexicon</h3>
+                            <p>These are all the words you've forged. <span class="tutorial-highlight">Tap or drag</span> a word to select it.</p>
+                            <div class="tutorial-buttons">
+                                <button class="tutorial-btn tutorial-next" onclick="nextTutorialStep()">Next →</button>
+                                <button class="tutorial-btn tutorial-skip" onclick="skipTutorial()">Skip</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: Sentence Slots -->
+                    <div class="tutorial-step" data-step="3" style="display:none;">
+                        <div class="tutorial-box tutorial-pointer tutorial-top" style="position:absolute; top:120px; left:50%; transform:translateX(-50%);">
+                            <h3>📝 Sentence Slots</h3>
+                            <p>Arrange words here to form a sentence. Each slot accepts specific parts of speech (Noun, Verb, etc.).</p>
+                            <p><strong>Tip:</strong> Different sentence patterns create different spell strengths!</p>
+                            <div class="tutorial-buttons">
+                                <button class="tutorial-btn tutorial-next" onclick="nextTutorialStep()">Next →</button>
+                                <button class="tutorial-btn tutorial-skip" onclick="skipTutorial()">Skip</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 4: Spell Types -->
+                    <div class="tutorial-step" data-step="4" style="display:none;">
+                        <div class="tutorial-box tutorial-pointer tutorial-left" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);">
+                            <h3>🔥 Spell Types</h3>
+                            <p>Choose what your spell does:</p>
+                            <ul style="text-align:left; margin:10px 0;">
+                                <li><strong>🔥 Projectile:</strong> Attack enemies</li>
+                                <li><strong>💚 Heal:</strong> Restore health</li>
+                                <li><strong>⛏️ Break:</strong> Destroy blocks</li>
+                                <li><strong>⚡ Dash:</strong> Teleport forward</li>
+                                <li><strong>🧊 Control:</strong> Freeze enemies</li>
+                            </ul>
+                            <div class="tutorial-buttons">
+                                <button class="tutorial-btn tutorial-next" onclick="nextTutorialStep()">Next →</button>
+                                <button class="tutorial-btn tutorial-skip" onclick="skipTutorial()">Skip</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 5: Invoke Button -->
+                    <div class="tutorial-step" data-step="5" style="display:none;">
+                        <div class="tutorial-box tutorial-pointer tutorial-top" style="position:absolute; bottom:80px; left:50%; transform:translateX(-50%);">
+                            <h3>⚡ Cast Your Spell</h3>
+                            <p><strong>Invoke Spell:</strong> Cast immediately (costs Focus)</p>
+                            <p><strong>Equip Spell:</strong> Save it to cast later with the Q key</p>
+                            <div class="tutorial-buttons">
+                                <button class="tutorial-btn tutorial-next" onclick="nextTutorialStep()">Next →</button>
+                                <button class="tutorial-btn tutorial-skip" onclick="skipTutorial()">Skip</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 6: Try It -->
+                    <div class="tutorial-step" data-step="6" style="display:none;">
+                        <div class="tutorial-box">
+                            <h3>🎉 You're Ready!</h3>
+                            <p>Now try creating your first spell!</p>
+                            <p><strong>Remember:</strong> Stronger sentences = More powerful spells</p>
+                            <div class="tutorial-buttons">
+                                <button class="tutorial-btn tutorial-finish" onclick="finishTutorial()">Start Crafting! ✨</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- HELP OVERLAY (H Key) -->
+            <div id="screen-help" class="popup" style="display:none;">
+                <div class="help-header">
+                    <h2 style="margin:0; color:#4a148c;">📚 Syntax Sorcery Guide</h2>
+                    <p style="font-size:14px; margin:5px 0; color:#666;">Complete reference for spells and patterns</p>
+                </div>
+                
+                <div class="help-body">
+                    <!-- Spell Types Section -->
+                    <div class="help-section">
+                        <h3 class="help-section-title">🔮 Spell Types</h3>
+                        <div class="help-content">
+                            <div class="help-item">
+                                <div class="help-item-icon">🔥</div>
+                                <div class="help-item-text">
+                                    <strong>Projectile</strong> - Fire magical projectiles at enemies
+                                    <div class="help-tiers">
+                                        <span>Tier 1: Magic Bolt (10 Focus)</span>
+                                        <span>Tier 2: Enhanced Bolt (15 Focus)</span>
+                                        <span>Tier 3: Power Blast (20 Focus)</span>
+                                        <span>Tier 4: Meteor Strike (25 Focus)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-item-icon">💚</div>
+                                <div class="help-item-text">
+                                    <strong>Heal</strong> - Restore your health points
+                                    <div class="help-tiers">
+                                        <span>Tier 1: Minor Heal (10 Focus, +20 HP)</span>
+                                        <span>Tier 2: Heal (15 Focus, +40 HP)</span>
+                                        <span>Tier 3: Greater Heal (20 Focus, +60 HP)</span>
+                                        <span>Tier 4: Full Restore (25 Focus, +100 HP)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-item-icon">⛏️</div>
+                                <div class="help-item-text">
+                                    <strong>Break</strong> - Destroy tiles and obstacles
+                                    <div class="help-tiers">
+                                        <span>Tier 1: Crack (10 Focus, 1 tile)</span>
+                                        <span>Tier 2: Shatter (15 Focus, 3x3 area)</span>
+                                        <span>Tier 3: Demolish (20 Focus, 5x5 area)</span>
+                                        <span>Tier 4: Earthquake (25 Focus, 7x7 area)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-item-icon">⚡</div>
+                                <div class="help-item-text">
+                                    <strong>Dash</strong> - Teleport in the direction you're facing
+                                    <div class="help-tiers">
+                                        <span>Tier 1: Blink (10 Focus, 3 tiles)</span>
+                                        <span>Tier 2: Dash (15 Focus, 5 tiles)</span>
+                                        <span>Tier 3: Warp (20 Focus, 7 tiles)</span>
+                                        <span>Tier 4: Teleport (25 Focus, 10 tiles)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-item-icon">🧊</div>
+                                <div class="help-item-text">
+                                    <strong>Control</strong> - Freeze or slow enemies
+                                    <div class="help-tiers">
+                                        <span>Tier 1: Slow (10 Focus, 3s)</span>
+                                        <span>Tier 2: Freeze (15 Focus, 5s)</span>
+                                        <span>Tier 3: Stun (20 Focus, 7s)</span>
+                                        <span>Tier 4: Petrify (25 Focus, 10s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sentence Patterns Section -->
+                    <div class="help-section">
+                        <h3 class="help-section-title">📝 Sentence Patterns</h3>
+                        <div class="help-content">
+                            <div class="help-pattern">
+                                <strong>Pattern 1: Subject-Verb</strong>
+                                <div class="help-pattern-example">Example: "Dragon flies" (Noun + Verb)</div>
+                                <div class="help-pattern-power">Base Power: 2 words</div>
+                            </div>
+                            
+                            <div class="help-pattern">
+                                <strong>Pattern 2: Subject-Verb-Object</strong>
+                                <div class="help-pattern-example">Example: "Wizard casts spell" (Noun + Verb + Noun)</div>
+                                <div class="help-pattern-power">Base Power: 3 words</div>
+                            </div>
+                            
+                            <div class="help-pattern">
+                                <strong>Pattern 3: Adjective-Subject-Verb</strong>
+                                <div class="help-pattern-example">Example: "Ancient dragon soars" (Adj + Noun + Verb)</div>
+                                <div class="help-pattern-power">Base Power: 3 words</div>
+                            </div>
+                            
+                            <div class="help-pattern">
+                                <strong>Pattern 4: Subject-Verb-Adverb</strong>
+                                <div class="help-pattern-example">Example: "Hero fights bravely" (Noun + Verb + Adv)</div>
+                                <div class="help-pattern-power">Base Power: 3 words</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Magic Points Section -->
+                    <div class="help-section">
+                        <h3 class="help-section-title">✨ Magic Power Tiers</h3>
+                        <div class="help-content">
+                            <div class="help-tier">
+                                <strong>Tier 0 (0-9 points):</strong> Too Weak - Cannot cast spells
+                            </div>
+                            <div class="help-tier">
+                                <strong>Tier 1 (10-19 points):</strong> Basic - Unlocks basic spell effects
+                            </div>
+                            <div class="help-tier">
+                                <strong>Tier 2 (20-29 points):</strong> Enhanced - Stronger spell effects
+                            </div>
+                            <div class="help-tier">
+                                <strong>Tier 3 (30-39 points):</strong> Powerful - Very strong effects
+                            </div>
+                            <div class="help-tier">
+                                <strong>Tier 4 (40+ points):</strong> Legendary - Maximum power!
+                            </div>
+                            <div class="help-tip">
+                                💡 <strong>Tip:</strong> Use stronger words and longer sentences to increase magic power!
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Keyboard Shortcuts Section -->
+                    <div class="help-section">
+                        <h3 class="help-section-title">⌨️ Keyboard Shortcuts</h3>
+                        <div class="help-content">
+                            <div class="help-shortcuts">
+                                <div class="help-shortcut"><kbd>Arrow Keys</kbd> Move character</div>
+                                <div class="help-shortcut"><kbd>Space</kbd> or <kbd>T</kbd> Interact with NPCs/objects</div>
+                                <div class="help-shortcut"><kbd>F</kbd> Shoot arrow</div>
+                                <div class="help-shortcut"><kbd>B</kbd> Place block</div>
+                                <div class="help-shortcut"><kbd>I</kbd> Open inventory</div>
+                                <div class="help-shortcut"><kbd>G</kbd> Open Syntax Grimoire</div>
+                                <div class="help-shortcut"><kbd>Q</kbd> Quick-cast equipped spell</div>
+                                <div class="help-shortcut"><kbd>M</kbd> Toggle map</div>
+                                <div class="help-shortcut"><kbd>H</kbd> Open this help guide</div>
+                                <div class="help-shortcut"><kbd>Esc</kbd> Close popups</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="help-footer">
+                    <button class="close-btn" onclick="closeHelp()">Close (Esc)</button>
+                </div>
+            </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory | G for Grimoire | Q to Cast Spell</div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory | G for Grimoire | Q to Cast Spell | H for Help</div>
 
 <script>
     const VERSION = 3.92;
@@ -826,6 +1874,7 @@
     const LAYER_AFFIXES={1:[{val:"s",type:"suf"},{val:"ed",type:"suf"},{val:"ing",type:"suf"}], 2:[{val:"un",type:"pre"},{val:"re",type:"pre"},{val:"ly",type:"suf"}], 3:[{val:"sub",type:"pre"},{val:"tion",type:"suf"},{val:"ment",type:"suf"}], 12:[{val:"ness",type:"suf"},{val:"less",type:"suf"}]};
     
     const NPCS = [
+        { id: "sage", name: "Grammar Sage", x: 15, y: 10, questWord: null, intro: ["Welcome, Word Crafter!", "I am the Grammar Sage.", "You've learned to forge words.", "Now learn to wield them!", "Press G to open your Syntax Grimoire.", "Combine words to create powerful spells!"] },
         { id: "bark", name: "Elder Bark", x: 25, y: 10, questWord: "replanting", intro: ["Greetings.", "My roots are weak.", "First, find the ANCIENT SEED.", "Dig in the dirt to find it."] },
         { id: "rusty", name: "Rusty", x: 40, y: 55, questWord: "reconstruction", intro: ["Bzzz...", "I need a GEAR.", "Dig deep in stone to find it."] },
         { id: "cloudia", name: "Cloudia", x: 30, y: 5, questWord: "formless", intro: ["Hello down there!", "I lost my shape.", "Find the CLOUD ESSENCE in the leaves.", "Forge me 'FORMLESS' to help."] },
@@ -848,7 +1897,11 @@ let player={
     resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0},roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0,13:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0, cloudia:0, mike:0}, unlocks:{map:false, drill:false, magnet:false, doubleFrag:false},
     lexicon:[], // SYNTAX SORCERY: Word storage with POS
     equippedSpell: null, // SYNTAX SORCERY: Quick-cast spell
-    grammarGates: [] // SYNTAX SORCERY: Grammar gate progress
+    grammarGates: [], // SYNTAX SORCERY: Grammar gate progress
+    tutorials: { // SYNTAX SORCERY: Tutorial tracking
+        grimoireOpened: false,
+        firstSpellCast: false
+    }
 };
 // Make player globally accessible for modules
 window.player = player;
@@ -1062,6 +2115,13 @@ const TOOLS = {
     document.addEventListener('keydown', e=>{
         if(e.key===' ') e.preventDefault();
         keys[e.key]=true;
+        
+        // SYNTAX SORCERY: Handle Escape key to close help overlay
+        if(e.key==='Escape' && state==='help') {
+            closeHelp();
+            return;
+        }
+        
         if(state!=='playing') return;
         
         // Actions that aren't movement (Discrete presses)
@@ -1069,6 +2129,7 @@ const TOOLS = {
         if(e.key==='i'||e.key==='I') setGameState('inventory'); if(e.key==='b'||e.key==='B') placeBlock();
         if(e.key==='t'||e.key==='T') interact(); if(e.key==='m'||e.key==='M') toggleMap();
         if(e.key==='g'||e.key==='G') openGrimoire(); // SYNTAX SORCERY: Open Grimoire
+        if(e.key==='h'||e.key==='H') openHelp(); // SYNTAX SORCERY: Open Help Guide
         
         // SYNTAX SORCERY: Quick-cast equipped spell with Q key
         if(e.key==='q'||e.key==='Q') {
@@ -1227,6 +2288,10 @@ function showToast(msg, type='neutral') {
             else if(qState === 2) lines = ["You found the Crystal!", "Forge DISRUPTION to counter it."];
             else if(qState === 1) lines = ["Dig deep into obsidian...", "Find the Vibrating Crystal."];
             else { lines = npc.intro; player.quests[npc.id] = 1; alert("Quest Started: Stop the Quake!"); }
+        }
+        else if(npc.id === 'sage') {
+            // Grammar Sage: Tutorial NPC with no quest tracking
+            lines = npc.intro;
         }
         
         currentDialogue = { lines: lines, index: 0 }; text.innerText = lines[0];
@@ -2114,6 +3179,42 @@ function respawnPlayer() {
             if (invokeBtn) {
                 invokeBtn.textContent = '⚡ Invoke Spell';
             }
+        }
+    }
+    
+    // SYNTAX SORCERY: Help overlay functions
+    function openHelp() {
+        const helpScreen = document.getElementById('screen-help');
+        if (helpScreen) {
+            helpScreen.style.display = 'block';
+            state = 'help'; // Pause game while viewing help
+        }
+    }
+    
+    function closeHelp() {
+        const helpScreen = document.getElementById('screen-help');
+        if (helpScreen) {
+            helpScreen.style.display = 'none';
+            state = 'playing'; // Resume game
+        }
+    }
+    
+    // TUTORIAL NAVIGATION FUNCTIONS
+    function nextTutorialStep() {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.tutorial) {
+            window.SyntaxSorcery.tutorial.next();
+        }
+    }
+    
+    function skipTutorial() {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.tutorial) {
+            window.SyntaxSorcery.tutorial.skip();
+        }
+    }
+    
+    function finishTutorial() {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.tutorial) {
+            window.SyntaxSorcery.tutorial.finish();
         }
     }
     
