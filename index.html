@@ -38,7 +38,7 @@
         h3 { margin: 0; color: #555; font-size: 20px; line-height: 1.2; }
         
         /* INVENTORY LAYOUT */
-        #screen-inv, #screen-saves { width: 750px; height: 580px; background-image: url('assets/bg.png'); background-color: #f3e5f5; background-size: cover; color: #3e2723; }
+        #screen-inv, #screen-saves { width: 750px; height: 580px; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); color: #3e2723; }
         .inv-header { padding: 15px; background: rgba(255,255,255,0.95); border-bottom: 3px solid #5d4037; flex-shrink: 0; }
         .inv-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .inv-footer { padding: 15px; background: rgba(255,255,255,0.95); border-top: 3px solid #5d4037; flex-shrink: 0; display: flex; justify-content: center; gap: 20px; }
@@ -1147,7 +1147,11 @@
 <body>
     <div id="game-frame">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace;">Forging World...</div>
+        <div id="loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:monospace; text-align:center;">
+            <div style="font-size:24px; margin-bottom:15px;">⚒️ Forging World...</div>
+            <div id="loading-progress" style="font-size:16px; color:#aaa;">Loading essential assets: <span id="loading-count">0</span>/2</div>
+            <div style="font-size:12px; color:#888; margin-top:10px;">Optimized for faster loading!</div>
+        </div>
 <div id="hud-layer">
             <div class="stat-bar-box">
                 <div class="bar-label">FOCUS</div>
@@ -1788,48 +1792,80 @@
         // 3. Ensure the start screen is hidden (Safety net)
         document.getElementById('screen-start').classList.remove('active');
     }
-    // === ROBUST ASSET LOADER ===
+    // === OPTIMIZED ASSET LOADER (Lazy Loading) ===
+    // Only load essential assets (tiles, chars) for game start
+    // UI assets loaded in background after game starts
     const assets = { tiles: new Image(), chars: new Image(), ui: new Image() };
     const processedAssets = { tiles: null, chars: null, ui: null };
-    let loadedCount = 0; 
+    let loadedCount = 0;
+    let essentialLoaded = 0; // Track only tiles and chars
     let useFallbackAssets = false;
     let gameStarted = false;
 
     function checkStart() {
         if(gameStarted) return;
-        if(loadedCount === 3) {
+        // Start game when essential assets (tiles + chars) are loaded
+        if(essentialLoaded === 2) {
             gameStarted = true;
             processAssets();
+            // Load UI asset in background (non-blocking)
+            loadUIAsset();
         }
     }
 
-    function onAssetLoad() { loadedCount++; checkStart(); }
+    function onEssentialAssetLoad() {
+        essentialLoaded++;
+        loadedCount++;
+        // Update loading counter
+        const counter = document.getElementById('loading-count');
+        if (counter) counter.innerText = loadedCount;
+        checkStart();
+    }
     
-    function onAssetError() { 
-        console.warn("Asset failed to load. Switching to fallback mode."); 
-        useFallbackAssets = true; 
-        loadedCount++; 
-        checkStart(); 
+    function onEssentialAssetError() {
+        console.warn("Essential asset failed to load. Switching to fallback mode.");
+        useFallbackAssets = true;
+        essentialLoaded++;
+        loadedCount++;
+        const counter = document.getElementById('loading-count');
+        if (counter) counter.innerText = loadedCount;
+        checkStart();
     }
 
-    assets.tiles.onload = onAssetLoad; assets.tiles.onerror = onAssetError;
-    assets.chars.onload = onAssetLoad; assets.chars.onerror = onAssetError;
-    assets.ui.onload = onAssetLoad;    assets.ui.onerror = onAssetError;
+    // Load only essential assets first
+    assets.tiles.onload = onEssentialAssetLoad;
+    assets.tiles.onerror = onEssentialAssetError;
+    assets.chars.onload = onEssentialAssetLoad;
+    assets.chars.onerror = onEssentialAssetError;
 
     assets.tiles.src = 'assets/tiles.png';
     assets.chars.src = 'assets/chars.png';
-    assets.ui.src = 'assets/ui.png';
 
-    // 3. SAFETY TIMER
+    // Load UI asset in background after game starts
+    function loadUIAsset() {
+        assets.ui.onload = () => {
+            loadedCount++;
+            const counter = document.getElementById('loading-count');
+            if (counter) counter.innerText = loadedCount;
+            console.log('UI asset loaded in background');
+        };
+        assets.ui.onerror = () => {
+            console.warn('UI asset failed to load (non-critical)');
+            loadedCount++;
+        };
+        assets.ui.src = 'assets/ui.png';
+    }
+
+    // 3. SAFETY TIMER - 8 seconds (optimized images load much faster)
     setTimeout(() => {
         if(!gameStarted) {
-            console.log("Loading timed out. Forcing start with fallback.");
+            console.log("Loading timed out after 8s. Forcing start with fallback.");
             useFallbackAssets = true;
             gameStarted = true;
-            document.getElementById('loading').style.display='none'; 
+            document.getElementById('loading').style.display='none';
             initGame();
         }
-    }, 5000);
+    }, 8000); // Optimized images (2.4MB total) should load in 2-3 seconds
 
     function removeWhite(img) { 
         try {
