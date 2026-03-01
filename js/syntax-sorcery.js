@@ -922,337 +922,10 @@ const SyntaxSorcery = (function() {
     }
   };
   
-  // Legacy spell definitions (kept for backward compatibility)
-  const SPELLS = {
-    basic_projectile: {
-      id: 'basic_projectile',
-      name: 'Magic Bolt',
-      focusCost: 15,
-      execute() {
-        const player = window.player;
-        const projectiles = window.projectiles;
-        
-        if (!player || !projectiles) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        projectiles.push({
-          x: player.x,
-          y: player.y,
-          vx: player.facingLeft ? -0.3 : 0.3,
-          vy: 0,
-          damage: 2,
-          color: '#9b59b6'
-        });
-        
-        SpellSystem.createSpellParticles(player.x, player.y, '#9b59b6', 10);
-        
-        if (typeof window.sfx?.shoot === 'function') {
-          window.sfx.shoot();
-        }
-        
-        return { success: true, message: '⚡ Magic Bolt fired!' };
-      }
-    },
-    
-    fireball: {
-      id: 'fireball',
-      name: 'Fireball',
-      focusCost: 15,
-      execute() {
-        const player = window.player;
-        const projectiles = window.projectiles;
-        
-        if (!player || !projectiles) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        projectiles.push({
-          x: player.x,
-          y: player.y,
-          vx: player.facingLeft ? -0.4 : 0.4,
-          vy: 0,
-          damage: 3,
-          color: '#e74c3c'
-        });
-        
-        SpellSystem.createSpellParticles(player.x, player.y, '#e74c3c', 15);
-        
-        if (typeof window.sfx?.shoot === 'function') {
-          window.sfx.shoot();
-        }
-        
-        return { success: true, message: '🔥 Fireball launched!' };
-      }
-    },
-    
-    piercing_shot: {
-      id: 'piercing_shot',
-      name: 'Piercing Shot',
-      focusCost: 15,
-      execute() {
-        const player = window.player;
-        const projectiles = window.projectiles;
-        
-        if (!player || !projectiles) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        projectiles.push({
-          x: player.x,
-          y: player.y,
-          vx: player.facingLeft ? -0.5 : 0.5,
-          vy: 0,
-          damage: 3,
-          color: '#3498db'
-        });
-        
-        SpellSystem.createSpellParticles(player.x, player.y, '#3498db', 12);
-        
-        if (typeof window.sfx?.shoot === 'function') {
-          window.sfx.shoot();
-        }
-        
-        return { success: true, message: '🏹 Piercing Shot!' };
-      }
-    },
-    
-    healing_rain: {
-      id: 'healing_rain',
-      name: 'Healing Rain',
-      focusCost: 20,
-      execute() {
-        const player = window.player;
-        
-        if (!player) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        if (player.hp >= player.maxHp) {
-          return { success: false, message: '❌ Already at full health!' };
-        }
-        
-        player.hp = Math.min(player.maxHp, player.hp + 1);
-        
-        // Create falling particles around player
-        for (let i = 0; i < 20; i++) {
-          const offsetX = (Math.random() - 0.5) * 3;
-          const offsetY = Math.random() * -2;
-          SpellSystem.createSpellParticles(
-            player.x + offsetX,
-            player.y + offsetY,
-            '#3498db',
-            1
-          );
-        }
-        
-        if (typeof window.sfx?.collect === 'function') {
-          window.sfx.collect();
-        }
-        
-        return { success: true, message: '💧 Healed 1 HP!' };
-      }
-    },
-    
-    earth_breaker: {
-      id: 'earth_breaker',
-      name: 'Earth Breaker',
-      focusCost: 10,
-      execute() {
-        const player = window.player;
-        const grid = window.grid;
-        const COLS = window.COLS;
-        const ROWS = window.ROWS;
-        
-        if (!player || !grid) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        // Calculate target tile in front of player
-        const targetX = player.facingLeft ? player.x - 1 : player.x + 1;
-        const targetY = player.y;
-        
-        // Check bounds
-        if (targetX < 0 || targetX >= COLS || targetY < 0 || targetY >= ROWS) {
-          return { success: false, message: '❌ Nothing to break!' };
-        }
-        
-        const tileType = grid[targetY][targetX];
-        
-        // Can only break certain tiles (not air, not special tiles)
-        if (tileType === 0 || tileType === 6 || tileType === 11 || tileType === 13) {
-          return { success: false, message: '❌ Cannot break this!' };
-        }
-        
-        // Break the tile
-        grid[targetY][targetX] = 0;
-        
-        // Create explosion particles
-        SpellSystem.createSpellParticles(targetX, targetY, '#8d6e63', 20);
-        
-        if (typeof window.sfx?.mine === 'function') {
-          window.sfx.mine();
-        }
-        
-        return { success: true, message: '💥 Tile destroyed!' };
-      }
-    },
-    
-    swift_step: {
-      id: 'swift_step',
-      name: 'Swift Step',
-      focusCost: 12,
-      execute() {
-        const player = window.player;
-        const grid = window.grid;
-        const COLS = window.COLS;
-        const ROWS = window.ROWS;
-        
-        if (!player || !grid) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        // Teleport 3 tiles in facing direction
-        const distance = 3;
-        const dx = player.facingLeft ? -distance : distance;
-        const targetX = player.x + dx;
-        const targetY = player.y;
-        
-        // Check bounds
-        if (targetX < 0 || targetX >= COLS || targetY < 0 || targetY >= ROWS) {
-          return { success: false, message: '❌ Cannot teleport there!' };
-        }
-        
-        // Check if target is walkable
-        const targetTile = grid[targetY][targetX];
-        if (targetTile !== 0 && targetTile !== 13) {
-          return { success: false, message: '❌ Path blocked!' };
-        }
-        
-        // Create trail particles
-        for (let i = 0; i <= distance; i++) {
-          const x = player.x + (player.facingLeft ? -i : i);
-          SpellSystem.createSpellParticles(x, player.y, '#9b59b6', 3);
-        }
-        
-        // Teleport
-        player.x = targetX;
-        
-        if (typeof window.sfx?.jump === 'function') {
-          window.sfx.jump();
-        }
-        
-        return { success: true, message: '⚡ Teleported!' };
-      }
-    },
-    
-    enemy_stun: {
-      id: 'enemy_stun',
-      name: 'Mass Stun',
-      focusCost: 18,
-      execute() {
-        const player = window.player;
-        const enemies = window.enemies;
-        
-        if (!player || !enemies) {
-          return { success: false, message: '❌ Game not ready!' };
-        }
-        
-        if (enemies.length === 0) {
-          return { success: false, message: '❌ No enemies nearby!' };
-        }
-        
-        // Stun enemies within 5 tile radius
-        const radius = 5;
-        let stunnedCount = 0;
-        
-        enemies.forEach(enemy => {
-          const distance = Math.sqrt(
-            Math.pow(enemy.x - player.x, 2) +
-            Math.pow(enemy.y - player.y, 2)
-          );
-          
-          if (distance <= radius) {
-            enemy.stun = 90; // 3 seconds at 30fps
-            stunnedCount++;
-            SpellSystem.createSpellParticles(enemy.x, enemy.y, '#f1c40f', 5);
-          }
-        });
-        
-        if (stunnedCount === 0) {
-          return { success: false, message: '❌ No enemies in range!' };
-        }
-        
-        if (typeof window.sfx?.hit === 'function') {
-          window.sfx.hit();
-        }
-        
-        return { success: true, message: `⚡ Stunned ${stunnedCount} enemies!` };
-      }
-    }
-  };
   
   const SpellSystem = {
     init() {
       console.log('[Syntax Sorcery] Spell System initialized');
-    },
-    
-    mapSpell(sentence, words, patternId) {
-      // words = { adjective: 'hot', noun: 'ball', verb: 'fly' }
-      // patternId = 1
-      
-      console.log('[Spell System] Mapping spell:', { sentence, words, patternId });
-      
-      // 1. Check specific matches first
-      for (const spell of SPELL_DICTIONARY.specific) {
-        if (spell.pattern !== patternId) continue;
-        
-        let match = true;
-        for (const [pos, word] of Object.entries(spell.words)) {
-          if (!words[pos] || words[pos].toLowerCase() !== word.toLowerCase()) {
-            match = false;
-            break;
-          }
-        }
-        
-        if (match) {
-          console.log('[Spell System] Specific match:', spell.spellId);
-          return this.getSpellById(spell.spellId);
-        }
-      }
-      
-      // 2. Check generic patterns
-      for (const spell of SPELL_DICTIONARY.generic) {
-        if (spell.pattern !== patternId) continue;
-        
-        let match = true;
-        for (const [pos, requirement] of Object.entries(spell.requirements)) {
-          if (requirement === 'any') continue;
-          if (!words[pos] || words[pos].toLowerCase() !== requirement.toLowerCase()) {
-            match = false;
-            break;
-          }
-        }
-        
-        if (match) {
-          console.log('[Spell System] Generic match:', spell.spellId);
-          return this.getSpellById(spell.spellId);
-        }
-      }
-      
-      // 3. No match found - return default spell
-      console.log('[Spell System] No match, using default');
-      return this.getSpellById('basic_projectile');
-    },
-    
-    getSpellById(spellId) {
-      return SPELLS[spellId] || SPELLS.basic_projectile;
-    },
-    
-    executeSpell(spellId) {
-      const spell = this.getSpellById(spellId);
-      console.log('[Spell System] Executing spell:', spell.name);
-      return spell.execute();
     },
     
     executeSpellByType(spellType, tier, config) {
@@ -1485,16 +1158,95 @@ const SyntaxSorcery = (function() {
   const GrammarGates = {
     init() {
       console.log('[Syntax Sorcery] Grammar Gates initialized');
+      
+      // Initialize gates if not present
+      if (typeof window.player !== 'undefined' && !window.player.grammarGates) {
+        window.player.grammarGates = [];
+      }
     },
     
-    interact(x, y) {
-      // Implementation in Phase 5
-      console.log('[Grammar Gates] Interaction (Phase 5):', x, y);
+    // Register a gate in the world
+    registerGate(x, y, gateType, gateConfig) {
+      if (!window.player || !window.player.grammarGates) {
+        console.error('[Grammar Gates] Player not ready');
+        return null;
+      }
+      
+      const gate = {
+        id: `gate_${x}_${y}`,
+        x: x,
+        y: y,
+        type: gateType,
+        requirement: gateConfig.requirement,
+        hint: gateConfig.hint,
+        solved: false,
+        reward: gateConfig.reward || null
+      };
+      
+      window.player.grammarGates.push(gate);
+      console.log(`[Grammar Gates] Registered gate at (${x}, ${y})`);
+      return gate;
     },
     
-    checkRequirement(gate, sentence) {
-      // Implementation in Phase 5
-      return false;
+    // Find gate at specific coordinates
+    getGateAt(x, y) {
+      if (!window.player || !window.player.grammarGates) return null;
+      return window.player.grammarGates.find(g => g.x === x && g.y === y);
+    },
+    
+    // Check if gate is already solved
+    isGateSolved(x, y) {
+      const gate = this.getGateAt(x, y);
+      return gate ? gate.solved : false;
+    },
+    
+    // Validate sentence against gate requirements
+    validateSentence(gate, words, patternId) {
+      if (!gate || !gate.requirement) return { valid: false, message: 'Invalid gate' };
+      
+      // Check if pattern matches (if specified)
+      if (gate.requirement.pattern && gate.requirement.pattern !== patternId) {
+        return {
+          valid: false,
+          message: `This gate requires a different sentence pattern.`
+        };
+      }
+      
+      // Check if all required POS are present
+      const requiredPOS = gate.requirement.requiredPOS || [];
+      for (const pos of requiredPOS) {
+        if (!words[pos]) {
+          return {
+            valid: false,
+            message: `Missing required part: ${pos}`
+          };
+        }
+      }
+      
+      return { valid: true, message: 'Gate accepts your words!' };
+    },
+    
+    // Solve a gate (remove barrier)
+    solveGate(x, y) {
+      const gate = this.getGateAt(x, y);
+      if (!gate) return false;
+      
+      gate.solved = true;
+      
+      // Remove tile from grid
+      if (window.grid && window.grid[y] && window.grid[y][x] === 20) {
+        window.grid[y][x] = 0; // Convert to air
+      }
+      
+      // Award reward if present
+      if (gate.reward) {
+        if (gate.reward.fragments && window.player) {
+          window.player.fragments += gate.reward.fragments;
+        }
+      }
+      
+      console.log(`[Grammar Gates] Gate at (${x}, ${y}) solved!`);
+      return true;
     }
   };
   

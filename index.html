@@ -815,6 +815,9 @@
     const canvas=document.getElementById('gameCanvas'); const ctx=canvas.getContext('2d');
     canvas.width=CANVAS_W; canvas.height=CANVAS_H;
     
+    // SYNTAX SORCERY: Grammar Gate tile ID
+    const TILE_GRAMMAR_GATE = 20;
+    
     const DAY_LENGTH=3600;
     let gameTick=0, camera={x:0,y:0}, keys={}, mouse={x:0,y:0};
     let stars = [];
@@ -844,7 +847,8 @@ let player={
     tool: "hand", toolHp: 0, // <--- NEW STATS
     resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0},roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0,13:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0, cloudia:0, mike:0}, unlocks:{map:false, drill:false, magnet:false, doubleFrag:false},
     lexicon:[], // SYNTAX SORCERY: Word storage with POS
-    equippedSpell: null // SYNTAX SORCERY: Quick-cast spell
+    equippedSpell: null, // SYNTAX SORCERY: Quick-cast spell
+    grammarGates: [] // SYNTAX SORCERY: Grammar gate progress
 };
 // Make player globally accessible for modules
 window.player = player;
@@ -900,6 +904,50 @@ const TOOLS = {
                 grid[n.y+2][n.x] = 3; 
             }
         });
+        
+        // SYNTAX SORCERY: Place Grammar Gates in the world
+        if (window.SyntaxSorcery && window.SyntaxSorcery.gates) {
+            // Gate 1: Easy gate near surface (depth ~20-30)
+            let gate1X = 45;
+            let gate1Y = 25;
+            // Clear space and place gate
+            grid[gate1Y][gate1X] = TILE_GRAMMAR_GATE;
+            grid[gate1Y-1][gate1X] = 0; // Clear above
+            if (grid[gate1Y+1][gate1X] === 0) grid[gate1Y+1][gate1X] = 1; // Ensure ground below
+            window.SyntaxSorcery.gates.registerGate(gate1X, gate1Y, 'basic', {
+                hint: "The cat sleeps",
+                requiredPOS: ['noun', 'verb'],
+                validPatterns: [1], // Subject-Verb
+                reward: 50
+            });
+            
+            // Gate 2: Medium gate at mid-depth (depth ~40-50)
+            let gate2X = 70;
+            let gate2Y = 45;
+            grid[gate2Y][gate2X] = TILE_GRAMMAR_GATE;
+            grid[gate2Y-1][gate2X] = 0;
+            if (grid[gate2Y+1][gate2X] === 0) grid[gate2Y+1][gate2X] = 2; // Stone below
+            window.SyntaxSorcery.gates.registerGate(gate2X, gate2Y, 'intermediate', {
+                hint: "The brave knight fights the dragon",
+                requiredPOS: ['adjective', 'noun', 'verb', 'noun'],
+                validPatterns: [2], // Subject-Verb-Object
+                reward: 100
+            });
+            
+            // Gate 3: Hard gate at deep level (depth ~60-70)
+            let gate3X = 95;
+            let gate3Y = 65;
+            grid[gate3Y][gate3X] = TILE_GRAMMAR_GATE;
+            grid[gate3Y-1][gate3X] = 0;
+            if (grid[gate3Y+1][gate3X] === 0) grid[gate3Y+1][gate3X] = 3; // Deep stone below
+            window.SyntaxSorcery.gates.registerGate(gate3X, gate3Y, 'advanced', {
+                hint: "The wise wizard carefully studies ancient magic",
+                requiredPOS: ['adjective', 'noun', 'adverb', 'verb', 'adjective', 'noun'],
+                validPatterns: [4], // Subject-Verb-Object-Modifier
+                reward: 200
+            });
+        }
+        
         requestAnimationFrame(loop);
     }
     
@@ -1025,17 +1073,36 @@ const TOOLS = {
         // SYNTAX SORCERY: Quick-cast equipped spell with Q key
         if(e.key==='q'||e.key==='Q') {
             if (player.equippedSpell && window.SyntaxSorcery) {
-                const spell = window.SyntaxSorcery.spells.getSpellById(player.equippedSpell.spellId);
+                // Get spell configuration from equipped data
+                const spellType = window.SyntaxSorcery.SPELL_TYPES[player.equippedSpell.spellType];
                 
-                if (player.focus < spell.focusCost) {
-                    showToast(`❌ Not enough Focus! Need ${spell.focusCost}`, 'warn');
+                if (!spellType) {
+                    showToast('❌ Invalid equipped spell!', 'warn');
                     return;
                 }
                 
-                const result = window.SyntaxSorcery.spells.executeSpell(spell.id);
+                const spellConfig = spellType.tiers[player.equippedSpell.tier];
+                
+                if (!spellConfig) {
+                    showToast('❌ Invalid spell tier!', 'warn');
+                    return;
+                }
+                
+                // Check Focus
+                if (player.focus < spellConfig.focusCost) {
+                    showToast(`❌ Need ${spellConfig.focusCost} Focus!`, 'warn');
+                    return;
+                }
+                
+                // Execute spell using magic point system
+                const result = window.SyntaxSorcery.spells.executeSpellByType(
+                    player.equippedSpell.spellType,
+                    player.equippedSpell.tier,
+                    spellConfig
+                );
                 
                 if (result.success) {
-                    player.focus -= spell.focusCost;
+                    player.focus -= spellConfig.focusCost;
                     showToast(result.message, 'good');
                 } else {
                     showToast(result.message, 'warn');
@@ -1104,6 +1171,29 @@ function showToast(msg, type='neutral') {
     }
 
     function interact() {
+        // SYNTAX SORCERY: Check for Grammar Gates first
+        if (window.SyntaxSorcery && window.SyntaxSorcery.gates) {
+            const tx = player.x + (player.facingLeft ? -1 : 1);
+            const ty = player.y;
+            
+            if (tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS) {
+                const tile = grid[ty][tx];
+                
+                if (tile === 20) { // Grammar Gate
+                    const gate = window.SyntaxSorcery.gates.getGateAt(tx, ty);
+                    
+                    if (gate && !gate.solved) {
+                        openGrammarGateUI(gate);
+                        return;
+                    } else if (gate && gate.solved) {
+                        showToast('✅ This gate has been solved!', 'good');
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Original NPC interaction
         let talked = false;
         NPCS.forEach(n => { if(Math.abs(player.x - n.x) <= 2 && Math.abs(player.y - n.y) <= 2) { startDialogue(n); talked = true; } });
         if(talked) return; action();
@@ -1323,23 +1413,42 @@ function showToast(msg, type='neutral') {
                     let t=grid[r][c];
                     if(player.unlocks.map && t>0) ctx.globalAlpha = 0.5; 
                     if(t>0) {
-                            if(useFallbackAssets) { 
-                                if(t===6) ctx.fillStyle="purple"; 
-                                else if(t===5) ctx.fillStyle="#7f8c8d"; 
-                                else if(t===11) ctx.fillStyle="#f1c40f"; 
-                                else if(t===13) ctx.fillStyle="#d35400"; 
-                                else if(t===7) ctx.fillStyle="#5d4037"; 
-                                else if(t===8) ctx.fillStyle="#2ecc71"; 
-                                else ctx.fillStyle="brown"; 
-                                ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); 
+                            if(useFallbackAssets) {
+                                if(t===6) ctx.fillStyle="purple";
+                                else if(t===5) ctx.fillStyle="#7f8c8d";
+                                else if(t===11) ctx.fillStyle="#f1c40f";
+                                else if(t===13) ctx.fillStyle="#d35400";
+                                else if(t===7) ctx.fillStyle="#5d4037";
+                                else if(t===8) ctx.fillStyle="#2ecc71";
+                                else if(t===20) ctx.fillStyle="#9b59b6"; // SYNTAX SORCERY: Grammar Gate
+                                else ctx.fillStyle="brown";
+                                ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE);
                             }
                             else {
-                                if(t===6) { ctx.fillStyle="#9b59b6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#8e44ad"; ctx.lineWidth=3; ctx.strokeRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); } 
+                                if(t===6) { ctx.fillStyle="#9b59b6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#8e44ad"; ctx.lineWidth=3; ctx.strokeRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); }
                                 else if(t===5) { ctx.fillStyle="#95a5a6"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#7f8c8d"; ctx.lineWidth=2; ctx.strokeRect(c*TILE_SIZE+2,r*TILE_SIZE+2,TILE_SIZE-4,TILE_SIZE-4); }
                                 else if(t===11) { ctx.fillStyle="#f1c40f"; ctx.beginPath(); ctx.arc(c*TILE_SIZE+20, r*TILE_SIZE+20, 15, 0, 2*Math.PI); ctx.fill(); ctx.shadowBlur=20; ctx.shadowColor="yellow"; }
                                 else if(t===13) { ctx.fillStyle="#5d4037"; ctx.fillRect(c*TILE_SIZE+10,r*TILE_SIZE,5,TILE_SIZE); ctx.fillRect(c*TILE_SIZE+25,r*TILE_SIZE,5,TILE_SIZE); for(let li=0; li<4; li++) ctx.fillRect(c*TILE_SIZE+10, r*TILE_SIZE+(li*10), 20, 3); }
                                 else if(t===7) { ctx.fillStyle="#3e2723"; ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE); ctx.strokeStyle="#5d4037"; ctx.lineWidth=2; ctx.strokeRect(c*TILE_SIZE+5,r*TILE_SIZE,TILE_SIZE-10,TILE_SIZE); }
                                 else if(t===8) { ctx.fillStyle="rgba(46, 204, 113, 0.8)"; ctx.fillRect(c*TILE_SIZE+2,r*TILE_SIZE+2,TILE_SIZE-4,TILE_SIZE-4); }
+                                else if(t===20) {
+                                    // SYNTAX SORCERY: Grammar Gate - Glowing rune barrier
+                                    ctx.fillStyle="#9b59b6";
+                                    ctx.fillRect(c*TILE_SIZE,r*TILE_SIZE,TILE_SIZE,TILE_SIZE);
+                                    ctx.shadowBlur=15;
+                                    ctx.shadowColor="#8e44ad";
+                                    ctx.strokeStyle="#fff";
+                                    ctx.lineWidth=2;
+                                    ctx.beginPath();
+                                    ctx.arc(c*TILE_SIZE+TILE_SIZE/2, r*TILE_SIZE+TILE_SIZE/2, 12, 0, 2*Math.PI);
+                                    ctx.stroke();
+                                    ctx.font="20px Arial";
+                                    ctx.fillStyle="white";
+                                    ctx.textAlign="center";
+                                    ctx.textBaseline="middle";
+                                    ctx.fillText("📖", c*TILE_SIZE+TILE_SIZE/2, r*TILE_SIZE+TILE_SIZE/2);
+                                    ctx.shadowBlur=0;
+                                }
                                 else { let tidx = (t<=3) ? t-1 : (t===12?0:(t===9?3:0)); ctx.drawImage(processedAssets.tiles, tW*0.4, (tidx*tH)+tH*0.2, tW*0.2, tH*0.6, c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1); }
                             }
                     }
@@ -1382,6 +1491,45 @@ function showToast(msg, type='neutral') {
                 ctx.fillText("PRESS T", (n.x * TILE_SIZE) + (TILE_SIZE/2), (n.y * TILE_SIZE) - 80);
             }
         });
+        
+        // SYNTAX SORCERY: Show interaction prompt for Grammar Gates
+        if (window.SyntaxSorcery && window.SyntaxSorcery.gates) {
+            // Check if player is adjacent to a Grammar Gate
+            const directions = [
+                {dx: 1, dy: 0}, {dx: -1, dy: 0},
+                {dx: 0, dy: 1}, {dx: 0, dy: -1}
+            ];
+            
+            for (const dir of directions) {
+                const checkX = player.x + dir.dx;
+                const checkY = player.y + dir.dy;
+                
+                if (checkX >= 0 && checkX < COLS && checkY >= 0 && checkY < ROWS) {
+                    if (grid[checkY][checkX] === TILE_GRAMMAR_GATE) {
+                        const gate = window.SyntaxSorcery.gates.getGateAt(checkX, checkY);
+                        if (gate && !gate.solved) {
+                            // Draw interaction prompt
+                            ctx.font = "bold 16px Verdana";
+                            ctx.fillStyle = "#9b59b6";
+                            ctx.textAlign = "center";
+                            ctx.strokeStyle = "white";
+                            ctx.lineWidth = 3;
+                            ctx.strokeText("PRESS T", (checkX * TILE_SIZE) + (TILE_SIZE/2), (checkY * TILE_SIZE) - 10);
+                            ctx.fillText("PRESS T", (checkX * TILE_SIZE) + (TILE_SIZE/2), (checkY * TILE_SIZE) - 10);
+                            
+                            // Draw gate type indicator
+                            ctx.font = "12px Verdana";
+                            ctx.fillStyle = "white";
+                            ctx.strokeStyle = "#9b59b6";
+                            ctx.lineWidth = 2;
+                            ctx.strokeText("🔒 Grammar Gate", (checkX * TILE_SIZE) + (TILE_SIZE/2), (checkY * TILE_SIZE) + TILE_SIZE + 15);
+                            ctx.fillText("🔒 Grammar Gate", (checkX * TILE_SIZE) + (TILE_SIZE/2), (checkY * TILE_SIZE) + TILE_SIZE + 15);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
         ctx.textBaseline = "alphabetic";
 
         if(!useFallbackAssets) {
@@ -1856,7 +2004,23 @@ async function forgeWord() {
         let saves = getSaves();
         if(saves[name] && !confirm("Overwrite existing save '" + name + "'?")) return;
         console.log('[Save] Saving player with lexicon:', player.lexicon ? player.lexicon.length : 'undefined', 'words');
-        saves[name] = { version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick, timestamp: Date.now() };
+        
+        // SYNTAX SORCERY: Save Grammar Gate state
+        let grammarGateState = null;
+        if (window.SyntaxSorcery && window.SyntaxSorcery.gates) {
+            grammarGateState = window.SyntaxSorcery.gates.state.gates;
+            console.log('[Save] Saving Grammar Gates:', grammarGateState.length, 'gates');
+        }
+        
+        saves[name] = {
+            version: VERSION,
+            player: player,
+            grid: grid,
+            enemies: enemies,
+            gameTick: gameTick,
+            grammarGates: grammarGateState,
+            timestamp: Date.now()
+        };
         localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
         console.log('[Save] Saved successfully');
         alert("Saved!"); toggleSaveMenu(false); document.getElementById('save-name-input').value = "";
@@ -1879,9 +2043,27 @@ async function forgeWord() {
             } else {
                 console.log('[Load] Loaded lexicon with', player.lexicon.length, 'words');
             }
+            // SYNTAX SORCERY: Ensure grammarGates exists for old saves
+            if (!player.grammarGates) {
+                player.grammarGates = [];
+                console.log('[Load] Initialized empty grammarGates for old save');
+            }
             // Re-initialize SyntaxSorcery after loading
             if (window.SyntaxSorcery) {
                 SyntaxSorcery.lexicon.init();
+                
+                // SYNTAX SORCERY: Restore Grammar Gate state
+                if (data.grammarGates && window.SyntaxSorcery.gates) {
+                    window.SyntaxSorcery.gates.state.gates = data.grammarGates;
+                    console.log('[Load] Restored Grammar Gates:', data.grammarGates.length, 'gates');
+                    
+                    // Update grid to reflect solved gates
+                    data.grammarGates.forEach(gate => {
+                        if (gate.solved && grid[gate.y] && grid[gate.y][gate.x] === TILE_GRAMMAR_GATE) {
+                            grid[gate.y][gate.x] = 0; // Remove solved gate from grid
+                        }
+                    });
+                }
             }
             setGameState('playing');
         }
@@ -1924,6 +2106,15 @@ function respawnPlayer() {
         if (window.SyntaxSorcery && window.SyntaxSorcery.syntax) {
             window.SyntaxSorcery.syntax.closeGrimoire();
         }
+        
+        // SYNTAX SORCERY: Clear Grammar Gate state when closing
+        if (window.currentGrammarGate) {
+            window.currentGrammarGate = null;
+            const invokeBtn = document.getElementById('btn-invoke');
+            if (invokeBtn) {
+                invokeBtn.textContent = '⚡ Invoke Spell';
+            }
+        }
     }
     
     function clearSlot(slotType) {
@@ -1935,6 +2126,12 @@ function respawnPlayer() {
     function invokeSpell() {
         if (!window.SyntaxSorcery || !window.SyntaxSorcery.syntax) {
             showToast('❌ Spell system not loaded!', 'warn');
+            return;
+        }
+        
+        // SYNTAX SORCERY: Check if we're in Grammar Gate mode
+        if (window.currentGrammarGate) {
+            attemptUnlockGate();
             return;
         }
         
@@ -1988,7 +2185,7 @@ function respawnPlayer() {
     }
     
     function equipSpell() {
-        if (!window.SyntaxSorcery) {
+        if (!window.SyntaxSorcery || !window.SyntaxSorcery.syntax) {
             showToast('❌ Spell system not loaded!', 'warn');
             return;
         }
@@ -1999,28 +2196,135 @@ function respawnPlayer() {
             return;
         }
         
-        const currentSpell = window.SyntaxSorcery.syntax.getCurrentSpell();
-        const patternId = window.SyntaxSorcery.syntax.getSelectedPattern();
-        const spell = window.SyntaxSorcery.spells.mapSpell(validation.sentence, currentSpell, patternId);
+        const state = window.SyntaxSorcery.getState();
         
+        // Check if spell type is selected
+        if (!state.selectedSpellType) {
+            showToast('❌ Select a spell type first!', 'warn');
+            return;
+        }
+        
+        // Calculate magic points and tier
+        const magicPoints = state.magicPoints;
+        const tier = window.SyntaxSorcery.getTierFromMagicPoints(magicPoints);
+        
+        if (tier === 0) {
+            showToast('❌ Not enough magic power!', 'warn');
+            return;
+        }
+        
+        // Get spell configuration
+        const spellType = window.SyntaxSorcery.SPELL_TYPES[state.selectedSpellType];
+        const spellConfig = spellType.tiers[tier];
+        
+        // Store equipped spell with magic point data
         player.equippedSpell = {
-            spellId: spell.id,
+            spellType: state.selectedSpellType,
+            tier: tier,
+            name: spellConfig.name,
+            focusCost: spellConfig.focusCost,
             sentence: validation.sentence,
-            words: { ...currentSpell },
-            patternId: patternId
+            words: { ...state.currentSpell },
+            patternId: state.selectedPattern,
+            magicPoints: magicPoints
         };
         
         // Update HUD
-        document.getElementById('equipped-spell-name').textContent = spell.name;
-        document.getElementById('equipped-spell-display').style.display = 'block';
+        const nameElement = document.getElementById('equipped-spell-name');
+        if (nameElement) {
+            nameElement.textContent = spellConfig.name;
+        }
         
-        showToast(`📌 Equipped: ${spell.name}`, 'good');
+        const displayElement = document.getElementById('equipped-spell-display');
+        if (displayElement) {
+            displayElement.style.display = 'block';
+        }
+        
+        showToast(`📌 Equipped: ${spellConfig.name} (${spellType.icon})`, 'good');
         window.SyntaxSorcery.syntax.closeGrimoire();
     }
     
     function changePattern(patternId) {
         if (window.SyntaxSorcery && window.SyntaxSorcery.syntax) {
             window.SyntaxSorcery.syntax.changePattern(patternId);
+        }
+    }
+    
+    // SYNTAX SORCERY: Grammar Gate UI Functions
+    function openGrammarGateUI(gate) {
+        if (!window.SyntaxSorcery || !window.SyntaxSorcery.syntax) return;
+        
+        // Store current gate for validation
+        window.currentGrammarGate = gate;
+        
+        // Open the Grimoire UI
+        window.SyntaxSorcery.syntax.openGrimoire();
+        
+        // Display gate hint in spell preview area
+        const previewEl = document.querySelector('.spell-preview');
+        if (previewEl) {
+            previewEl.innerHTML = `
+                <div style="text-align:center; padding:15px; background:#f3e5f5; border-radius:8px; border:2px solid #9b59b6;">
+                    <div style="font-size:24px; margin-bottom:10px;">🔒 Grammar Gate</div>
+                    <div style="font-size:16px; color:#6a1b9a; font-weight:bold; margin-bottom:10px;">
+                        ${gate.hint}
+                    </div>
+                    <div style="font-size:14px; color:#7b1fa2; margin-top:10px;">
+                        Required POS: ${gate.requiredPOS.join(', ')}
+                    </div>
+                    <div style="font-size:12px; color:#8e24aa; margin-top:5px; font-style:italic;">
+                        Construct a sentence matching the pattern above
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Change invoke button text
+        const invokeBtn = document.getElementById('btn-invoke');
+        if (invokeBtn) {
+            invokeBtn.textContent = '🔓 Unlock Gate';
+        }
+    }
+    
+    function attemptUnlockGate() {
+        const gate = window.currentGrammarGate;
+        if (!gate || !window.SyntaxSorcery) return;
+        
+        const syntax = window.SyntaxSorcery.syntax;
+        const currentPattern = syntax.state.currentPattern;
+        const slots = syntax.state.slots;
+        
+        // Extract words from slots
+        const words = [];
+        const slotOrder = ['subject', 'verb', 'object', 'modifier'];
+        for (const slotType of slotOrder) {
+            if (slots[slotType]) {
+                words.push(slots[slotType]);
+            }
+        }
+        
+        // Validate sentence against gate requirements
+        const validation = window.SyntaxSorcery.gates.validateSentence(gate, words, currentPattern);
+        
+        if (validation.valid) {
+            // Success! Solve the gate
+            window.SyntaxSorcery.gates.solveGate(gate.x, gate.y);
+            
+            // Award fragments
+            player.fragments += gate.reward;
+            showToast(`✨ Gate Unlocked! +${gate.reward} fragments`, 'good');
+            playSound('spell');
+            
+            // Close UI and clear gate reference
+            window.currentGrammarGate = null;
+            syntax.closeGrimoire();
+            
+            // Redraw to show gate removed
+            draw();
+        } else {
+            // Show error message
+            showToast(`❌ ${validation.error}`, 'bad');
+            playSound('hit');
         }
     }
 </script>
