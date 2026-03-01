@@ -167,6 +167,15 @@
             transform: none;
         }
         
+        .pattern-dropdown {
+            padding: 10px 15px; font-size: 14px; border: 2px solid #9c27b0;
+            border-radius: 8px; background: white; color: #4a148c;
+            font-weight: bold; cursor: pointer; width: 100%; max-width: 500px;
+            transition: all 0.2s;
+        }
+        .pattern-dropdown:hover { border-color: #7b1fa2; background: #f3e5f5; }
+        .pattern-dropdown:focus { outline: none; border-color: #6a1b9a; box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2); }
+        
         .craft-row { display: flex; width: 98%; align-items: center; gap: 15px; margin-bottom: 8px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #aaa; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .craft-icon { font-size: 28px; width: 50px; text-align: center; }
         .craft-desc { flex: 1; text-align: left; font-size: 15px; }
@@ -486,25 +495,17 @@
                 <div class="grimoire-body">
                     <!-- Sentence Assembly Area -->
                     <div class="sentence-assembly">
-                        <div style="text-align:center; margin-bottom:10px;">
+                        <div style="text-align:center; margin-bottom:15px;">
                             <strong style="color:#7b1fa2; font-size:16px;">Construct Your Spell</strong>
+                            <div id="pattern-selector-container" style="margin-top:10px;">
+                                <!-- Populated by SyntaxEngine.renderPatternSelector() -->
+                            </div>
                         </div>
-                        <div class="sentence-slots">
-                            <div class="syntax-slot" id="slot-adj" data-pos="adjective">
-                                <div class="syntax-slot-label">Adjective</div>
-                                <div class="syntax-slot-word" id="word-adj"></div>
-                                <div class="syntax-slot-clear" onclick="clearSlot('adj')">×</div>
-                            </div>
-                            <div class="syntax-slot" id="slot-noun" data-pos="noun">
-                                <div class="syntax-slot-label">Noun</div>
-                                <div class="syntax-slot-word" id="word-noun"></div>
-                                <div class="syntax-slot-clear" onclick="clearSlot('noun')">×</div>
-                            </div>
-                            <div class="syntax-slot" id="slot-verb" data-pos="verb">
-                                <div class="syntax-slot-label">Verb</div>
-                                <div class="syntax-slot-word" id="word-verb"></div>
-                                <div class="syntax-slot-clear" onclick="clearSlot('verb')">×</div>
-                            </div>
+                        <div class="sentence-slots" id="sentence-slots-container">
+                            <!-- Populated dynamically by SyntaxEngine.renderSlots() -->
+                        </div>
+                        <div id="sentence-preview" style="text-align:center; margin-top:15px; font-size:14px; color:#999; font-style:italic; min-height:24px;">
+                            <em>Fill all slots to see preview...</em>
                         </div>
                     </div>
                     
@@ -1304,8 +1305,13 @@ function showToast(msg, type='neutral') {
             return { word: root.slice(0, -1) + 'i' + suf, rule: "Changed 'y' to 'i'!", displayHTML: `${root.slice(0,-1)}<span class='morph-highlight'>i</span>${suf}` }; 
         }
         // 4. Doubling
-        if(endsInCVC(root) && isVowel(suf[0])) { 
-            return { word: root + lastChar + suf, rule: "Doubled the final consonant!", displayHTML: `${root}<span class='morph-highlight'>${lastChar}</span>${suf}` }; 
+        if(endsInCVC(root) && isVowel(suf[0])) {
+            // Don't double if word ends in -er, -or, -ar, -ur (cover, hover, solar, occur)
+            const last2 = root.slice(-2);
+            if (last2.endsWith('er') || last2.endsWith('or') || last2.endsWith('ar') || last2.endsWith('ur')) {
+                return { word: root + suf, rule: null, displayHTML: root + suf };
+            }
+            return { word: root + lastChar + suf, rule: "Doubled the final consonant!", displayHTML: `${root}<span class='morph-highlight'>${lastChar}</span>${suf}` };
         }
         // 5. Overlapping 't'
         if(lastChar === 't' && suf === 'tion') {
@@ -1714,6 +1720,12 @@ function respawnPlayer() {
             // Phase 4 implementation
             console.log('[Game] Invoke spell called (Phase 4 pending)');
             showToast('⚡ Spell system coming in Phase 4!', 'good');
+        }
+    }
+    
+    function changePattern(patternId) {
+        if (window.SyntaxSorcery && window.SyntaxSorcery.syntax) {
+            window.SyntaxSorcery.syntax.changePattern(patternId);
         }
     }
 </script>

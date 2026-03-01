@@ -174,12 +174,136 @@ const SyntaxSorcery = (function() {
   };
   
   // ============================================
+  // GRAMMAR HELPERS (Phase 3.5)
+  // ============================================
+  
+  const GrammarHelpers = {
+    conjugateVerb(verb, person = '3rd') {
+      if (person !== '3rd') return verb;
+      
+      const verbLower = verb.toLowerCase();
+      
+      // Irregular verbs
+      const irregulars = {
+        'go': 'goes', 'do': 'does', 'have': 'has', 'be': 'is',
+        'say': 'says', 'get': 'gets', 'make': 'makes', 'know': 'knows',
+        'think': 'thinks', 'take': 'takes', 'see': 'sees', 'come': 'comes',
+        'want': 'wants', 'use': 'uses', 'find': 'finds', 'give': 'gives',
+        'tell': 'tells', 'work': 'works', 'call': 'calls', 'try': 'tries',
+        'ask': 'asks', 'need': 'needs', 'feel': 'feels', 'become': 'becomes',
+        'leave': 'leaves', 'put': 'puts'
+      };
+      
+      if (irregulars[verbLower]) {
+        return verb === verbLower ? irregulars[verbLower] : this.capitalize(irregulars[verbLower]);
+      }
+      
+      // Regular conjugation rules
+      if (verbLower.match(/(s|x|z|ch|sh)$/)) {
+        return verb + 'es'; // pass → passes, fix → fixes, catch → catches
+      }
+      if (verbLower.endsWith('y') && verbLower.length > 1 && !'aeiou'.includes(verbLower[verbLower.length-2])) {
+        return verb.slice(0, -1) + 'ies'; // fly → flies, cry → cries
+      }
+      if (verbLower.endsWith('o') && verbLower.length > 1) {
+        return verb + 'es'; // go → goes (handled above), echo → echoes
+      }
+      
+      return verb + 's'; // run → runs, jump → jumps, throw → throws
+    },
+    
+    getArticle(nextWord) {
+      if (!nextWord) return 'A';
+      
+      const word = nextWord.toLowerCase();
+      const firstLetter = word[0];
+      
+      // Special cases: words that sound like they start with vowels but don't
+      const anWords = ['hour', 'honest', 'honor', 'heir'];
+      const aWords = ['university', 'unicorn', 'european', 'one', 'uniform'];
+      
+      if (anWords.some(w => word.startsWith(w))) return 'An';
+      if (aWords.some(w => word.startsWith(w))) return 'A';
+      
+      // Standard vowel check
+      const vowels = ['a', 'e', 'i', 'o', 'u'];
+      return vowels.includes(firstLetter) ? 'An' : 'A';
+    },
+    
+    capitalize(str) {
+      if (!str) return '';
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+  };
+  
+  // ============================================
+  // SENTENCE PATTERNS (Phase 3.5)
+  // ============================================
+  
+  const PATTERNS = {
+    1: {
+      name: "Declarative",
+      slots: ['adjective', 'noun', 'verb'],
+      labels: ['Adjective', 'Noun', 'Verb'],
+      template: (words) => {
+        const adj = words.adjective;
+        const noun = words.noun;
+        const verb = GrammarHelpers.conjugateVerb(words.verb);
+        return `The ${adj} ${noun} ${verb}.`;
+      },
+      example: "The hot ball flies."
+    },
+    2: {
+      name: "Imperative",
+      slots: ['verb', 'adjective', 'noun'],
+      labels: ['Verb', 'Adjective', 'Noun'],
+      template: (words) => {
+        const verb = GrammarHelpers.capitalize(words.verb);
+        const adj = words.adjective;
+        const noun = words.noun;
+        return `${verb} the ${adj} ${noun}!`;
+      },
+      example: "Throw the hot ball!"
+    },
+    3: {
+      name: "Exclamatory",
+      slots: ['adjective', 'noun', 'verb'],
+      labels: ['Adjective', 'Noun', 'Verb'],
+      template: (words) => {
+        const adj = GrammarHelpers.capitalize(words.adjective);
+        const noun = words.noun;
+        const verb = GrammarHelpers.conjugateVerb(words.verb);
+        return `${adj} ${noun} ${verb}!`;
+      },
+      example: "Hot ball flies!"
+    },
+    4: {
+      name: "Adverbial",
+      slots: ['adjective', 'noun', 'verb', 'adverb'],
+      labels: ['Adjective', 'Noun', 'Verb', 'Adverb'],
+      template: (words) => {
+        const article = GrammarHelpers.getArticle(words.adjective);
+        const adj = words.adjective;
+        const noun = words.noun;
+        const verb = GrammarHelpers.conjugateVerb(words.verb);
+        const adv = words.adverb;
+        return `${article} ${adj} ${noun} ${verb} ${adv}.`;
+      },
+      example: "A quick fox runs swiftly."
+    }
+  };
+  
+  // ============================================
   // PHASE 3: SYNTAX ENGINE
   // ============================================
   
   const SyntaxEngine = {
     init() {
       console.log('[Syntax Sorcery] Syntax Engine initialized');
+      // Set default pattern
+      if (!state.selectedPattern) {
+        state.selectedPattern = 1;
+      }
       this.setupDragAndDrop();
     },
     
@@ -195,6 +319,12 @@ const SyntaxSorcery = (function() {
       
       popup.classList.add('active');
       
+      // Render pattern selector
+      this.renderPatternSelector();
+      
+      // Render slots for current pattern
+      this.renderSlots();
+      
       // Render word picker
       this.renderWordPicker();
       
@@ -203,6 +333,107 @@ const SyntaxSorcery = (function() {
       
       // Update invoke button state
       this.updateInvokeButton();
+    },
+    
+    changePattern(patternId) {
+      state.selectedPattern = parseInt(patternId);
+      console.log('[Syntax Engine] Changed to pattern:', patternId);
+      
+      // Clear current spell
+      this.clearAllSlots();
+      
+      // Re-render slots
+      this.renderSlots();
+      
+      // Update word picker (in case pattern needs different POS)
+      this.renderWordPicker();
+      
+      // Update button
+      this.updateInvokeButton();
+    },
+    
+    renderPatternSelector() {
+      const container = document.getElementById('pattern-selector-container');
+      if (!container) return;
+      
+      let html = '<select id="pattern-choice" class="pattern-dropdown" onchange="changePattern(this.value)">';
+      Object.keys(PATTERNS).forEach(id => {
+        const pattern = PATTERNS[id];
+        const selected = state.selectedPattern == id ? 'selected' : '';
+        html += `<option value="${id}" ${selected}>${pattern.name}: ${pattern.example}</option>`;
+      });
+      html += '</select>';
+      
+      container.innerHTML = html;
+    },
+    
+    renderSlots() {
+      const container = document.getElementById('sentence-slots-container');
+      if (!container) return;
+      
+      const pattern = PATTERNS[state.selectedPattern];
+      if (!pattern) return;
+      
+      let html = '';
+      pattern.slots.forEach((pos, index) => {
+        const label = pattern.labels[index];
+        const slotId = pos; // Use POS as slot ID for simplicity
+        html += `
+          <div class="syntax-slot" id="slot-${slotId}" data-pos="${pos}">
+            <div class="syntax-slot-label">${label}</div>
+            <div class="syntax-slot-word" id="word-${slotId}"></div>
+            <div class="syntax-slot-clear" onclick="clearSlot('${slotId}')">×</div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+      
+      // Re-setup drag and drop for new slots
+      this.setupDropZones();
+    },
+    
+    setupDropZones() {
+      const slots = document.querySelectorAll('.syntax-slot');
+      slots.forEach(slot => {
+        // Remove old listeners by cloning
+        const newSlot = slot.cloneNode(true);
+        slot.parentNode.replaceChild(newSlot, slot);
+      });
+      
+      // Add new listeners
+      document.querySelectorAll('.syntax-slot').forEach(slot => {
+        slot.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          slot.classList.add('drag-over');
+        });
+        
+        slot.addEventListener('dragleave', (e) => {
+          slot.classList.remove('drag-over');
+        });
+        
+        slot.addEventListener('drop', (e) => {
+          e.preventDefault();
+          slot.classList.remove('drag-over');
+          
+          try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const slotPos = slot.dataset.pos;
+            
+            // Validate POS match
+            if (data.pos === slotPos) {
+              this.fillSlot(slot.id.replace('slot-', ''), data.word, data.pos);
+            } else {
+              if (typeof window.showToast === 'function') {
+                window.showToast(`❌ Wrong type! Need ${slotPos}, got ${data.pos}`, 'warn');
+              }
+            }
+          } catch (err) {
+            console.error('[Syntax Engine] Drop error:', err);
+          }
+        });
+      });
     },
     
     closeGrimoire() {
@@ -312,15 +543,16 @@ const SyntaxSorcery = (function() {
       slot.classList.add('filled');
       wordDisplay.textContent = word;
       
-      // Update state
+      // Update state - use POS as key
       if (!state.currentSpell) {
-        state.currentSpell = { adj: null, noun: null, verb: null };
+        state.currentSpell = {};
       }
-      state.currentSpell[slotType] = { word, pos };
+      state.currentSpell[slotType] = word; // Store just the word
       
       console.log(`[Syntax Engine] Filled ${slotType} slot with "${word}"`);
       
-      // Update invoke button
+      // Update preview and button
+      this.updateSentencePreview();
       this.updateInvokeButton();
     },
     
@@ -336,44 +568,63 @@ const SyntaxSorcery = (function() {
       
       // Update state
       if (state.currentSpell) {
-        state.currentSpell[slotType] = null;
+        delete state.currentSpell[slotType];
       }
       
       console.log(`[Syntax Engine] Cleared ${slotType} slot`);
       
-      // Update invoke button
+      // Update preview and button
+      this.updateSentencePreview();
       this.updateInvokeButton();
     },
     
     clearAllSlots() {
-      ['adj', 'noun', 'verb'].forEach(type => this.clearSlot(type));
-      state.currentSpell = { adj: null, noun: null, verb: null };
+      const pattern = PATTERNS[state.selectedPattern];
+      if (pattern) {
+        pattern.slots.forEach(pos => this.clearSlot(pos));
+      }
+      state.currentSpell = {};
     },
     
     validateSentence() {
+      const pattern = PATTERNS[state.selectedPattern];
+      if (!pattern) {
+        return { valid: false, error: 'No pattern selected' };
+      }
+      
       if (!state.currentSpell) {
         return { valid: false, error: 'No spell assembled' };
       }
       
-      const { adj, noun, verb } = state.currentSpell;
-      
-      // Check if all slots are filled
-      if (!adj || !noun || !verb) {
-        return { valid: false, error: 'All slots must be filled' };
+      // Check if all required slots are filled
+      for (const pos of pattern.slots) {
+        if (!state.currentSpell[pos]) {
+          return { valid: false, error: `${pos} slot must be filled` };
+        }
       }
       
-      // Check POS correctness (should already be enforced by drag/drop)
-      if (adj.pos !== 'adjective') {
-        return { valid: false, error: 'First slot must be an adjective' };
+      // Generate sentence using pattern template
+      try {
+        const sentence = pattern.template(state.currentSpell);
+        return { valid: true, sentence };
+      } catch (err) {
+        console.error('[Syntax Engine] Template error:', err);
+        return { valid: false, error: 'Failed to generate sentence' };
       }
-      if (noun.pos !== 'noun') {
-        return { valid: false, error: 'Second slot must be a noun' };
-      }
-      if (verb.pos !== 'verb') {
-        return { valid: false, error: 'Third slot must be a verb' };
-      }
+    },
+    
+    updateSentencePreview() {
+      const preview = document.getElementById('sentence-preview');
+      if (!preview) return;
       
-      return { valid: true, sentence: `${adj.word} ${noun.word} ${verb.word}` };
+      const validation = this.validateSentence();
+      if (validation.valid) {
+        preview.innerHTML = `<strong>Preview:</strong> "${validation.sentence}"`;
+        preview.style.color = '#27ae60';
+      } else {
+        preview.innerHTML = '<em>Fill all slots to see preview...</em>';
+        preview.style.color = '#999';
+      }
     },
     
     updateInvokeButton() {
