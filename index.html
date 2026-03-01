@@ -1366,7 +1366,12 @@ async function forgeWord() {
             
             // SYNTAX SORCERY: Add word to lexicon
             if (window.SyntaxSorcery) {
+                console.log('[Forge] Attempting to add word:', finalWord, partOfSpeech);
+                console.log('[Forge] Player lexicon before:', player.lexicon ? player.lexicon.length : 'undefined');
                 SyntaxSorcery.lexicon.addWord(finalWord, partOfSpeech);
+                console.log('[Forge] Player lexicon after:', player.lexicon ? player.lexicon.length : 'undefined');
+            } else {
+                console.warn('[Forge] SyntaxSorcery not available');
             }
             
             // 7. FINALLY Consume the items (Clear the UI)
@@ -1487,8 +1492,10 @@ async function forgeWord() {
         if(!name) { alert("Please enter a name!"); return; }
         let saves = getSaves();
         if(saves[name] && !confirm("Overwrite existing save '" + name + "'?")) return;
+        console.log('[Save] Saving player with lexicon:', player.lexicon ? player.lexicon.length : 'undefined', 'words');
         saves[name] = { version: VERSION, player: player, grid: grid, enemies: enemies, gameTick: gameTick, timestamp: Date.now() };
         localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
+        console.log('[Save] Saved successfully');
         alert("Saved!"); toggleSaveMenu(false); document.getElementById('save-name-input').value = "";
     }
 
@@ -1503,7 +1510,16 @@ async function forgeWord() {
             player.quests = { ...player.quests, ...data.player.quests };
             player.unlocks = { ...player.unlocks, ...data.player.unlocks };
             // SYNTAX SORCERY: Ensure lexicon exists for old saves
-            if (!player.lexicon) player.lexicon = [];
+            if (!player.lexicon) {
+                player.lexicon = [];
+                console.log('[Load] Initialized empty lexicon for old save');
+            } else {
+                console.log('[Load] Loaded lexicon with', player.lexicon.length, 'words');
+            }
+            // Re-initialize SyntaxSorcery after loading
+            if (window.SyntaxSorcery) {
+                SyntaxSorcery.lexicon.init();
+            }
             setGameState('playing');
         }
     }
