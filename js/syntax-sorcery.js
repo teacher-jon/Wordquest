@@ -84,7 +84,7 @@ const SyntaxSorcery = (function() {
         nouns: words.filter(w => w.pos === 'noun'),
         verbs: words.filter(w => w.pos === 'verb'),
         adjectives: words.filter(w => w.pos === 'adjective'),
-        adverbs: words.> w.pos === 'adverb'),
+        adverbs: words.filter(w => w.pos === 'adverb'),
         other: words.filter(w => !['noun','verb','adjective','adverb'].includes(w.pos))
       };
     },
