@@ -2506,7 +2506,10 @@ function showToast(msg, type='neutral') {
         let cX=Math.floor(camera.x/TILE_SIZE), cY=Math.floor(camera.y/TILE_SIZE);
         let eX=cX+(CANVAS_W/TILE_SIZE)+1, eY=cY+(CANVAS_H/TILE_SIZE)+1;
 
-        ctx.save(); ctx.translate(-camera.x, -camera.y);
+        // Apply camera shake if present
+        const shakeX = camera.shakeX || 0;
+        const shakeY = camera.shakeY || 0;
+        ctx.save(); ctx.translate(-camera.x + shakeX, -camera.y + shakeY);
 
         for(let r=cY; r<=eY; r++){
             for(let c=cX; c<=eX; c++){
@@ -3113,18 +3116,46 @@ async function forgeWord() {
             console.log('[Save] Saving Grammar Gates:', grammarGateState.length, 'gates');
         }
         
+        // PERFORMANCE: Optimize lexicon storage for large collections
+        let optimizedPlayer = { ...player };
+        if (player.lexicon && player.lexicon.length > 50) {
+            // Sort by timestamp and keep only essential data
+            optimizedPlayer.lexicon = player.lexicon.map(w => ({
+                w: w.word,           // Shortened key
+                p: w.pos,            // Shortened key
+                s: w.strength,       // Shortened key
+                t: w.timestamp       // Shortened key
+            }));
+            console.log('[Save] Optimized lexicon storage (50+ words)');
+        }
+        
         saves[name] = {
             version: VERSION,
-            player: player,
+            player: optimizedPlayer,
             grid: grid,
             enemies: enemies,
             gameTick: gameTick,
             grammarGates: grammarGateState,
             timestamp: Date.now()
         };
-        localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
-        console.log('[Save] Saved successfully');
-        alert("Saved!"); toggleSaveMenu(false); document.getElementById('save-name-input').value = "";
+        
+        try {
+            localStorage.setItem('wordcraft_v3_saves', JSON.stringify(saves));
+            console.log('[Save] Saved successfully');
+            alert("Saved!");
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                alert("Save failed: Storage quota exceeded. Try deleting old saves.");
+                console.error('[Save] Storage quota exceeded');
+            } else {
+                alert("Save failed: " + e.message);
+                console.error('[Save] Error:', e);
+            }
+            return;
+        }
+        
+        toggleSaveMenu(false);
+        document.getElementById('save-name-input').value = "";
     }
 
     function loadSaveSlot(name) {
@@ -3137,12 +3168,25 @@ async function forgeWord() {
             player.blocks = { ...player.blocks, ...data.player.blocks };
             player.quests = { ...player.quests, ...data.player.quests };
             player.unlocks = { ...player.unlocks, ...data.player.unlocks };
+            
             // SYNTAX SORCERY: Ensure lexicon exists for old saves
             if (!player.lexicon) {
                 player.lexicon = [];
                 console.log('[Load] Initialized empty lexicon for old save');
             } else {
-                console.log('[Load] Loaded lexicon with', player.lexicon.length, 'words');
+                // PERFORMANCE: Restore optimized lexicon format
+                if (player.lexicon.length > 0 && player.lexicon[0].w !== undefined) {
+                    // Convert from optimized format back to full format
+                    player.lexicon = player.lexicon.map(w => ({
+                        word: w.w,
+                        pos: w.p,
+                        strength: w.s,
+                        timestamp: w.t
+                    }));
+                    console.log('[Load] Restored optimized lexicon with', player.lexicon.length, 'words');
+                } else {
+                    console.log('[Load] Loaded lexicon with', player.lexicon.length, 'words');
+                }
             }
             // SYNTAX SORCERY: Ensure grammarGates exists for old saves
             if (!player.grammarGates) {

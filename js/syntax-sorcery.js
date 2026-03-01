@@ -88,13 +88,26 @@ const SyntaxSorcery = (function() {
     
     getWordsByCategory() {
       const words = this.getWords();
-      return {
-        nouns: words.filter(w => w.pos === 'noun'),
-        verbs: words.filter(w => w.pos === 'verb'),
-        adjectives: words.filter(w => w.pos === 'adjective'),
-        adverbs: words.filter(w => w.pos === 'adverb'),
-        other: words.filter(w => !['noun','verb','adjective','adverb'].includes(w.pos))
+      // PERFORMANCE: Single-pass categorization instead of 5 separate filters
+      const categories = {
+        nouns: [],
+        verbs: [],
+        adjectives: [],
+        adverbs: [],
+        other: []
       };
+      
+      for (const word of words) {
+        switch (word.pos) {
+          case 'noun': categories.nouns.push(word); break;
+          case 'verb': categories.verbs.push(word); break;
+          case 'adjective': categories.adjectives.push(word); break;
+          case 'adverb': categories.adverbs.push(word); break;
+          default: categories.other.push(word); break;
+        }
+      }
+      
+      return categories;
     },
     
     render() {
@@ -119,59 +132,66 @@ const SyntaxSorcery = (function() {
         return;
       }
       
-      let html = '';
+      // PERFORMANCE: Use DocumentFragment for batch DOM insertion
+      const fragment = document.createDocumentFragment();
       
-      // Nouns
-      if (categories.nouns.length > 0) {
-        html += '<div class="lex-category">';
-        html += `<div class="lex-category-title lex-noun-title">📦 Nouns (${categories.nouns.length})</div>`;
-        categories.nouns.forEach(w => {
-          html += `<div class="lex-word-chip lex-noun" title="Strength: ${w.strength}">${w.word}</div>`;
+      // Helper to create category section
+      const createCategory = (title, titleClass, words, chipClass, extraStyle = '') => {
+        if (words.length === 0) return;
+        
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'lex-category';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.className = `lex-category-title ${titleClass}`;
+        titleDiv.textContent = title;
+        categoryDiv.appendChild(titleDiv);
+        
+        // PERFORMANCE: Batch create word chips
+        words.forEach(w => {
+          const chip = document.createElement('div');
+          chip.className = `lex-word-chip ${chipClass}`;
+          chip.title = `Strength: ${w.strength}`;
+          chip.textContent = w.word;
+          if (extraStyle) chip.setAttribute('style', extraStyle);
+          categoryDiv.appendChild(chip);
         });
-        html += '</div>';
-      }
+        
+        fragment.appendChild(categoryDiv);
+      };
       
-      // Verbs
-      if (categories.verbs.length > 0) {
-        html += '<div class="lex-category">';
-        html += `<div class="lex-category-title lex-verb-title">⚡ Verbs (${categories.verbs.length})</div>`;
-        categories.verbs.forEach(w => {
-          html += `<div class="lex-word-chip lex-verb" title="Strength: ${w.strength}">${w.word}</div>`;
-        });
-        html += '</div>';
-      }
+      // Create all categories
+      createCategory(`📦 Nouns (${categories.nouns.length})`, 'lex-noun-title', categories.nouns, 'lex-noun');
+      createCategory(`⚡ Verbs (${categories.verbs.length})`, 'lex-verb-title', categories.verbs, 'lex-verb');
+      createCategory(`✨ Adjectives (${categories.adjectives.length})`, 'lex-adj-title', categories.adjectives, 'lex-adj');
+      createCategory(`🌟 Adverbs (${categories.adverbs.length})`, 'lex-adv-title', categories.adverbs, 'lex-adv');
       
-      // Adjectives
-      if (categories.adjectives.length > 0) {
-        html += '<div class="lex-category">';
-        html += `<div class="lex-category-title lex-adj-title">✨ Adjectives (${categories.adjectives.length})</div>`;
-        categories.adjectives.forEach(w => {
-          html += `<div class="lex-word-chip lex-adj" title="Strength: ${w.strength}">${w.word}</div>`;
-        });
-        html += '</div>';
-      }
-      
-      // Adverbs
-      if (categories.adverbs.length > 0) {
-        html += '<div class="lex-category">';
-        html += `<div class="lex-category-title lex-adv-title">🌟 Adverbs (${categories.adverbs.length})</div>`;
-        categories.adverbs.forEach(w => {
-          html += `<div class="lex-word-chip lex-adv" title="Strength: ${w.strength}">${w.word}</div>`;
-        });
-        html += '</div>';
-      }
-      
-      // Other
+      // Other category with custom styling
       if (categories.other.length > 0) {
-        html += '<div class="lex-category">';
-        html += `<div class="lex-category-title" style="background:#e0e0e0;">📝 Other (${categories.other.length})</div>`;
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'lex-category';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'lex-category-title';
+        titleDiv.style.background = '#e0e0e0';
+        titleDiv.textContent = `📝 Other (${categories.other.length})`;
+        categoryDiv.appendChild(titleDiv);
+        
         categories.other.forEach(w => {
-          html += `<div class="lex-word-chip" style="background:#f5f5f5; border-color:#999; color:#333;" title="Strength: ${w.strength}">${w.word} (${w.pos})</div>`;
+          const chip = document.createElement('div');
+          chip.className = 'lex-word-chip';
+          chip.style.cssText = 'background:#f5f5f5; border-color:#999; color:#333;';
+          chip.title = `Strength: ${w.strength}`;
+          chip.textContent = `${w.word} (${w.pos})`;
+          categoryDiv.appendChild(chip);
         });
-        html += '</div>';
+        
+        fragment.appendChild(categoryDiv);
       }
       
-      container.innerHTML = html;
+      // PERFORMANCE: Single DOM update instead of incremental innerHTML concatenation
+      container.innerHTML = '';
+      container.appendChild(fragment);
       console.log(`[Lexicon] Rendered ${totalWords} words`);
     }
   };
@@ -511,7 +531,9 @@ const SyntaxSorcery = (function() {
       }
       
       const categories = Lexicon.getWordsByCategory();
-      let html = '';
+      
+      // PERFORMANCE: Use DocumentFragment for batch DOM insertion
+      const fragment = document.createDocumentFragment();
       
       // Render each category
       ['adjectives', 'nouns', 'verbs', 'adverbs'].forEach(category => {
@@ -521,12 +543,22 @@ const SyntaxSorcery = (function() {
             const colorClass = w.pos === 'noun' ? 'lex-noun' :
                              w.pos === 'verb' ? 'lex-verb' :
                              w.pos === 'adjective' ? 'lex-adj' : 'lex-adv';
-            html += `<div class="draggable-word ${colorClass}" draggable="true" data-word="${w.word}" data-pos="${w.pos}">${w.word}</div>`;
+            
+            const wordDiv = document.createElement('div');
+            wordDiv.className = `draggable-word ${colorClass}`;
+            wordDiv.draggable = true;
+            wordDiv.dataset.word = w.word;
+            wordDiv.dataset.pos = w.pos;
+            wordDiv.textContent = w.word;
+            
+            fragment.appendChild(wordDiv);
           });
         }
       });
       
-      container.innerHTML = html;
+      // PERFORMANCE: Single DOM update
+      container.innerHTML = '';
+      container.appendChild(fragment);
       console.log(`[Syntax Engine] Rendered ${window.player.lexicon.length} words in picker`);
     },
     
@@ -1157,8 +1189,16 @@ const SyntaxSorcery = (function() {
         color: config.color
       });
       
-      this.createSpellParticles(player.x, player.y, config.color, 10 + (tier * 5));
+      // Enhanced visual effects based on tier
+      const particleCount = 15 + (tier * 10);
+      this.createProjectileLaunchEffect(player.x, player.y, config.color, tier, player.facingLeft);
       
+      // Screen shake for higher tiers
+      if (tier >= 3) {
+        this.screenShake(tier * 2);
+      }
+      
+      // Audio with pitch variation
       if (typeof window.sfx?.shoot === 'function') {
         window.sfx.shoot();
       }
@@ -1180,16 +1220,12 @@ const SyntaxSorcery = (function() {
       const healAmount = config.amount === 999 ? player.maxHp : config.amount;
       player.hp = Math.min(player.maxHp, player.hp + healAmount);
       
-      // Create healing particles
-      for (let i = 0; i < 15 + (tier * 5); i++) {
-        const offsetX = (Math.random() - 0.5) * 3;
-        const offsetY = Math.random() * -2;
-        this.createSpellParticles(
-          player.x + offsetX,
-          player.y + offsetY,
-          '#2ecc71',
-          1
-        );
+      // Enhanced healing visual effect
+      this.createHealingAura(player.x, player.y, tier);
+      
+      // Pulse effect for full heal
+      if (tier === 4) {
+        this.createRadialBurst(player.x, player.y, '#2ecc71', 20, 2);
       }
       
       if (typeof window.sfx?.collect === 'function') {
@@ -1225,9 +1261,11 @@ const SyntaxSorcery = (function() {
             const tileType = grid[y][x];
             
             // Can break solid tiles (not air, not special)
-            if (tileType > 0 && tileType !== 6 && tileType !== 11 && tileType !== 13) {
+            if (tileType > 0 && tileType !== 6 && tileType !== 11 && tileType !== 13 && tileType !== 20) {
               grid[y][x] = 0;
-              this.createSpellParticles(x, y, '#8d6e63', 5);
+              
+              // Enhanced destruction effect
+              this.createDebrisExplosion(x, y, tier);
               brokenCount++;
             }
           }
@@ -1236,6 +1274,11 @@ const SyntaxSorcery = (function() {
       
       if (brokenCount === 0) {
         return { success: false, message: '❌ Nothing to break!' };
+      }
+      
+      // Screen shake for area breaks
+      if (radius > 0) {
+        this.screenShake(3 + tier);
       }
       
       if (typeof window.sfx?.mine === 'function') {
@@ -1269,11 +1312,8 @@ const SyntaxSorcery = (function() {
         return { success: false, message: '❌ Path blocked!' };
       }
       
-      // Create trail particles
-      for (let i = 0; i <= distance; i++) {
-        const x = player.x + (player.facingLeft ? -i : i);
-        this.createSpellParticles(x, player.y, '#9b59b6', 3);
-      }
+      // Enhanced teleport effect
+      this.createTeleportEffect(player.x, player.y, targetX, targetY, tier);
       
       player.x = targetX;
       
@@ -1295,6 +1335,9 @@ const SyntaxSorcery = (function() {
       let affectedCount = 0;
       const radius = config.radius;
       
+      // Create expanding control wave
+      this.createControlWave(player.x, player.y, radius, tier);
+      
       enemies.forEach(enemy => {
         const distance = Math.sqrt(
           Math.pow(enemy.x - player.x, 2) +
@@ -1303,7 +1346,7 @@ const SyntaxSorcery = (function() {
         
         if (distance <= radius) {
           enemy.stun = config.duration;
-          this.createSpellParticles(enemy.x, enemy.y, '#3498db', 5);
+          this.createFreezeEffect(enemy.x, enemy.y, tier);
           affectedCount++;
         }
       });
@@ -1336,6 +1379,203 @@ const SyntaxSorcery = (function() {
           life: 30
         });
       }
+    },
+    
+    // Enhanced effect: Projectile launch with directional burst
+    createProjectileLaunchEffect(x, y, color, tier, facingLeft) {
+      if (!window.particles) return;
+      
+      const particleCount = 20 + (tier * 10);
+      const chars = ['✨', '⭐', '💫', '🌟'];
+      
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (facingLeft ? Math.PI : 0) + (Math.random() - 0.5) * Math.PI * 0.5;
+        const speed = 0.15 + Math.random() * 0.2 * tier;
+        
+        window.particles.push({
+          x: x,
+          y: y + (Math.random() - 0.5) * 0.5,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed * 0.3,
+          char: chars[Math.floor(Math.random() * chars.length)],
+          color: color,
+          life: 20 + tier * 5
+        });
+      }
+    },
+    
+    // Enhanced effect: Healing aura with upward particles
+    createHealingAura(x, y, tier) {
+      if (!window.particles) return;
+      
+      const particleCount = 25 + (tier * 10);
+      const colors = ['#2ecc71', '#27ae60', '#1abc9c', '#16a085'];
+      const chars = ['💚', '💖', '✨', '⭐', '🌟'];
+      
+      for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 1.5;
+        const speed = 0.05 + Math.random() * 0.1;
+        
+        window.particles.push({
+          x: x + Math.cos(angle) * radius,
+          y: y + Math.sin(angle) * radius,
+          vx: (Math.random() - 0.5) * 0.05,
+          vy: -speed * (1 + tier * 0.3),
+          char: chars[Math.floor(Math.random() * chars.length)],
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 40 + tier * 10
+        });
+      }
+    },
+    
+    // Enhanced effect: Radial burst for powerful spells
+    createRadialBurst(x, y, color, count, speed) {
+      if (!window.particles) return;
+      
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        
+        window.particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          char: '💫',
+          color: color,
+          life: 30
+        });
+      }
+    },
+    
+    // Enhanced effect: Debris explosion for break spells
+    createDebrisExplosion(x, y, tier) {
+      if (!window.particles) return;
+      
+      const particleCount = 8 + (tier * 4);
+      const chars = ['▪', '▫', '◾', '◽', '⬛', '⬜'];
+      const colors = ['#8d6e63', '#795548', '#6d4c41', '#5d4037'];
+      
+      for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.2 + Math.random() * 0.3;
+        
+        window.particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 0.1,
+          char: chars[Math.floor(Math.random() * chars.length)],
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 25 + Math.random() * 15
+        });
+      }
+    },
+    
+    // Enhanced effect: Teleport trail with fade
+    createTeleportEffect(startX, startY, endX, endY, tier) {
+      if (!window.particles) return;
+      
+      const distance = Math.abs(endX - startX);
+      const direction = endX > startX ? 1 : -1;
+      const particlesPerTile = 5 + tier * 2;
+      
+      // Trail particles
+      for (let i = 0; i <= distance; i++) {
+        const x = startX + (i * direction);
+        
+        for (let j = 0; j < particlesPerTile; j++) {
+          window.particles.push({
+            x: x + (Math.random() - 0.5) * 0.5,
+            y: startY + (Math.random() - 0.5) * 0.5,
+            vx: (Math.random() - 0.5) * 0.1,
+            vy: (Math.random() - 0.5) * 0.1,
+            char: ['⚡', '✨', '💫'][Math.floor(Math.random() * 3)],
+            color: ['#9b59b6', '#8e44ad', '#6c3483'][Math.floor(Math.random() * 3)],
+            life: 20 + i * 2
+          });
+        }
+      }
+      
+      // Arrival burst
+      this.createRadialBurst(endX, endY, '#9b59b6', 12, 0.3);
+    },
+    
+    // Enhanced effect: Control wave expansion
+    createControlWave(x, y, radius, tier) {
+      if (!window.particles) return;
+      
+      const waveParticles = 30 + (tier * 10);
+      const colors = ['#3498db', '#2980b9', '#5dade2', '#85c1e9'];
+      
+      for (let i = 0; i < waveParticles; i++) {
+        const angle = (Math.PI * 2 * i) / waveParticles;
+        const distance = radius * 0.8;
+        
+        window.particles.push({
+          x: x + Math.cos(angle) * distance,
+          y: y + Math.sin(angle) * distance,
+          vx: Math.cos(angle) * 0.05,
+          vy: Math.sin(angle) * 0.05,
+          char: ['❄️', '🧊', '💎', '💠'][Math.floor(Math.random() * 4)],
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 40 + tier * 5
+        });
+      }
+    },
+    
+    // Enhanced effect: Freeze effect on enemies
+    createFreezeEffect(x, y, tier) {
+      if (!window.particles) return;
+      
+      const particleCount = 10 + (tier * 3);
+      
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount;
+        
+        window.particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * 0.08,
+          vy: Math.sin(angle) * 0.08,
+          char: ['❄️', '🧊'][Math.floor(Math.random() * 2)],
+          color: '#3498db',
+          life: 30
+        });
+      }
+    },
+    
+    // Screen shake effect
+    screenShake(intensity) {
+      if (!window.camera) return;
+      
+      const originalX = window.camera.x || 0;
+      const originalY = window.camera.y || 0;
+      const duration = 200; // ms
+      const startTime = Date.now();
+      
+      const shake = () => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= duration) {
+          if (window.camera) {
+            window.camera.shakeX = 0;
+            window.camera.shakeY = 0;
+          }
+          return;
+        }
+        
+        const progress = elapsed / duration;
+        const currentIntensity = intensity * (1 - progress);
+        
+        if (window.camera) {
+          window.camera.shakeX = (Math.random() - 0.5) * currentIntensity * 0.1;
+          window.camera.shakeY = (Math.random() - 0.5) * currentIntensity * 0.1;
+        }
+        
+        requestAnimationFrame(shake);
+      };
+      
+      shake();
     }
   };
   
