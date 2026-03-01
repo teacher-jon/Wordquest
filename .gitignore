@@ -1,0 +1,24 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+# (Usually docs are kept in git, but if you have generated docs, ignore them here)
+# *.pdf
+# *.html
+
+# Local environment / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+tmp/
+node_modules/
+.gemini/
