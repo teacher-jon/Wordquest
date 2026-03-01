@@ -563,6 +563,8 @@ let player={
     resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0},roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0,13:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0, cloudia:0, mike:0}, unlocks:{map:false, drill:false, magnet:false, doubleFrag:false},
     lexicon:[] // SYNTAX SORCERY: Word storage with POS
 };
+// Make player globally accessible for modules
+window.player = player;
 // NEW TOOL DEFINITIONS
 const TOOLS = {
     "hand": { tier: 0, name: "Bare Hands" },

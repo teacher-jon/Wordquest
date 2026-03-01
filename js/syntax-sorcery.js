@@ -29,9 +29,14 @@ const SyntaxSorcery = (function() {
   const Lexicon = {
     init() {
       console.log('[Syntax Sorcery] Lexicon initialized');
-      // Ensure player has lexicon array
-      if (typeof window.player !== 'undefined' && !window.player.lexicon) {
-        window.player.lexicon = [];
+      // Ensure player has lexicon array (for backward compatibility with old saves)
+      if (typeof window.player !== 'undefined') {
+        if (!window.player.lexicon) {
+          window.player.lexicon = [];
+          console.log('[Lexicon] Initialized empty lexicon array for old save');
+        }
+      } else {
+        console.warn('[Lexicon] Player object not found during init');
       }
     },
     
@@ -93,6 +98,13 @@ const SyntaxSorcery = (function() {
       const container = document.getElementById('lexicon-container');
       if (!container) {
         console.warn('[Lexicon] Container not found');
+        return;
+      }
+      
+      // Ensure lexicon exists
+      if (!window.player || !window.player.lexicon) {
+        console.warn('[Lexicon] Player lexicon not initialized');
+        container.innerHTML = '<div class="lex-empty">Lexicon not ready. Please start a new game.</div>';
         return;
       }
       
