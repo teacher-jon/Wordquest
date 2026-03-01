@@ -19,6 +19,9 @@ const SyntaxSorcery = (function() {
   const state = {
     initialized: false,
     currentSpell: { adj: null, noun: null, verb: null },
+    selectedPattern: 1,
+    magicPoints: 0,           // NEW: Current magic points
+    selectedSpellType: null,  // NEW: 'projectile', 'heal', 'break', 'dash', 'control'
     equippedSpell: null
   };
   
@@ -554,6 +557,9 @@ const SyntaxSorcery = (function() {
       // Update preview and button
       this.updateSentencePreview();
       this.updateInvokeButton();
+      
+      // Update magic meter
+      this.updateMagicMeter();
     },
     
     clearSlot(slotType) {
@@ -576,6 +582,9 @@ const SyntaxSorcery = (function() {
       // Update preview and button
       this.updateSentencePreview();
       this.updateInvokeButton();
+      
+      // Update magic meter
+      this.updateMagicMeter();
     },
     
     clearAllSlots() {
@@ -629,34 +638,843 @@ const SyntaxSorcery = (function() {
     
     updateInvokeButton() {
       const btn = document.getElementById('btn-invoke');
-      if (!btn) return;
+      const equipBtn = document.getElementById('btn-equip');
       
       const validation = this.validateSentence();
-      btn.disabled = !validation.valid;
+      
+      if (btn) {
+        btn.disabled = !validation.valid;
+      }
+      
+      if (equipBtn) {
+        equipBtn.disabled = !validation.valid;
+      }
       
       if (validation.valid) {
         console.log(`[Syntax Engine] Valid spell: "${validation.sentence}"`);
       }
+    },
+    
+    getCurrentSpell() {
+      return state.currentSpell || {};
+    },
+    
+    getSelectedPattern() {
+      return state.selectedPattern || 1;
+    },
+    
+    updateMagicMeter() {
+      const words = state.currentSpell;
+      const patternId = state.selectedPattern;
+      
+      // Calculate magic points
+      const magicPoints = calculateMagicPoints(words, patternId);
+      state.magicPoints = magicPoints;
+      
+      // Update meter fill
+      const fillElement = document.getElementById('magic-meter-fill');
+      if (fillElement) {
+        const percentage = Math.min(100, (magicPoints / 20) * 100);
+        fillElement.style.width = percentage + '%';
+      }
+      
+      // Update points display
+      const pointsElement = document.getElementById('magic-points');
+      if (pointsElement) {
+        pointsElement.textContent = magicPoints;
+      }
+      
+      // Update tier display
+      const tier = getTierFromMagicPoints(magicPoints);
+      const tierElement = document.getElementById('magic-tier');
+      if (tierElement) {
+        const tierInfo = MAGIC_TIERS[tier];
+        tierElement.textContent = `Tier ${tier}: ${tierInfo.name}`;
+        
+        // Color coding
+        if (tier === 0) tierElement.style.color = '#95a5a6';
+        else if (tier === 1) tierElement.style.color = '#3498db';
+        else if (tier === 2) tierElement.style.color = '#9b59b6';
+        else if (tier === 3) tierElement.style.color = '#e67e22';
+        else if (tier === 4) tierElement.style.color = '#c0392b';
+      }
+      
+      // Update spell preview if type is selected
+      if (state.selectedSpellType) {
+        this.updateSpellPreview();
+      }
+    },
+    
+    updateSpellPreview() {
+      const previewElement = document.getElementById('spell-preview');
+      if (!previewElement) return;
+      
+      const tier = getTierFromMagicPoints(state.magicPoints);
+      
+      if (tier === 0) {
+        previewElement.innerHTML = '<span style="color:#95a5a6;">⚠️ Not enough magic power!</span>';
+        return;
+      }
+      
+      if (!state.selectedSpellType) {
+        previewElement.innerHTML = 'Select a spell type to see details';
+        return;
+      }
+      
+      const spellType = SPELL_TYPES[state.selectedSpellType];
+      const spellConfig = spellType.tiers[tier];
+      
+      let html = `
+        <div style="text-align:left; padding:10px; background:rgba(255,255,255,0.9); border-radius:8px;">
+          <div style="font-weight:bold; font-size:16px; color:#7b1fa2; margin-bottom:8px;">
+            ${spellType.icon} ${spellConfig.name}
+          </div>
+          <div style="font-size:13px; color:#666; margin-bottom:8px;">
+            ${spellType.description}
+          </div>
+          <div style="font-size:12px; color:#e67e22; font-weight:bold;">
+            Focus Cost: ${spellConfig.focusCost}
+          </div>
+        </div>
+      `;
+      
+      previewElement.innerHTML = html;
+    },
+    
+    selectSpellType(type) {
+      state.selectedSpellType = type;
+      
+      // Update button states
+      document.querySelectorAll('.spell-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      const selectedBtn = document.querySelector(`[data-type="${type}"]`);
+      if (selectedBtn) {
+        selectedBtn.classList.add('active');
+      }
+      
+      // Update preview
+      this.updateSpellPreview();
+      
+      // Update invoke button
+      this.updateInvokeButton();
+      
+      console.log(`[Syntax Engine] Selected spell type: ${type}`);
     }
   };
   
   // ============================================
-  // PHASE 4: SPELL SYSTEM
+  // PHASE 4: MAGIC POINT SYSTEM
   // ============================================
+  
+  // Magic values for each part of speech
+  const WORD_MAGIC_VALUES = {
+    noun: 3,        // Concrete, stable magic
+    verb: 4,        // Action, powerful magic
+    adjective: 2,   // Modifying, enhancing magic
+    adverb: 2       // Modifying, enhancing magic
+  };
+  
+  // Pattern multipliers affect final magic points
+  const PATTERN_MULTIPLIERS = {
+    1: 1.0,   // Declarative: Balanced
+    2: 1.2,   // Imperative: Command power
+    3: 0.9,   // Exclamatory: Quick but weaker
+    4: 1.3    // Adverbial: Complex, powerful
+  };
+  
+  // Magic Point Tiers determine spell power
+  const MAGIC_TIERS = {
+    0: { min: 0, max: 5, name: 'Too Weak' },
+    1: { min: 6, max: 9, name: 'Basic' },
+    2: { min: 10, max: 12, name: 'Intermediate' },
+    3: { min: 13, max: 15, name: 'Advanced' },
+    4: { min: 16, max: 999, name: 'Master' }
+  };
+  
+  /**
+   * Calculate magic points from word composition and pattern
+   * @param {Object} words - { adjective: 'hot', noun: 'ball', verb: 'fly', adverb?: 'quickly' }
+   * @param {number} patternId - Pattern ID (1-4)
+   * @returns {number} Total magic points
+   */
+  function calculateMagicPoints(words, patternId) {
+    let basePoints = 0;
+    
+    // Sum word values based on POS
+    for (const [pos, word] of Object.entries(words)) {
+      if (word && WORD_MAGIC_VALUES[pos]) {
+        basePoints += WORD_MAGIC_VALUES[pos];
+      }
+    }
+    
+    // Apply pattern multiplier
+    const multiplier = PATTERN_MULTIPLIERS[patternId] || 1.0;
+    const totalPoints = Math.floor(basePoints * multiplier);
+    
+    console.log(`[Magic Points] Base: ${basePoints}, Pattern ${patternId} (×${multiplier}), Total: ${totalPoints}`);
+    
+    return totalPoints;
+  }
+  
+  /**
+   * Determine spell tier from magic points
+   * @param {number} magicPoints - Total magic points
+   * @returns {number} Tier (0-4)
+   */
+  function getTierFromMagicPoints(magicPoints) {
+    for (const [tier, range] of Object.entries(MAGIC_TIERS)) {
+      if (magicPoints >= range.min && magicPoints <= range.max) {
+        return parseInt(tier);
+      }
+    }
+    return 0; // Too weak
+  }
+  
+  // ============================================
+  // SPELL TYPE SYSTEM
+  // ============================================
+  
+  const SPELL_TYPES = {
+    projectile: {
+      name: 'Projectile',
+      icon: '🔥',
+      description: 'Fire magical projectiles',
+      tiers: {
+        1: {
+          name: 'Magic Bolt',
+          damage: 1,
+          speed: 0.3,
+          color: '#9b59b6',
+          focusCost: 10
+        },
+        2: {
+          name: 'Enhanced Projectile',
+          damage: 2,
+          speed: 0.4,
+          color: '#e74c3c',
+          focusCost: 15
+        },
+        3: {
+          name: 'Power Blast',
+          damage: 3,
+          speed: 0.5,
+          color: '#f39c12',
+          focusCost: 20
+        },
+        4: {
+          name: 'Meteor',
+          damage: 5,
+          speed: 0.6,
+          color: '#c0392b',
+          focusCost: 25
+        }
+      }
+    },
+    
+    heal: {
+      name: 'Heal',
+      icon: '💚',
+      description: 'Restore health',
+      tiers: {
+        1: { name: 'Minor Heal', amount: 1, focusCost: 10 },
+        2: { name: 'Moderate Heal', amount: 2, focusCost: 15 },
+        3: { name: 'Greater Heal', amount: 3, focusCost: 20 },
+        4: { name: 'Full Heal', amount: 999, focusCost: 25 }
+      }
+    },
+    
+    break: {
+      name: 'Break',
+      icon: '⛏️',
+      description: 'Destroy terrain',
+      tiers: {
+        1: { name: 'Spark', radius: 0, focusCost: 10 },
+        2: { name: 'Tile Break', radius: 0, focusCost: 15 },
+        3: { name: 'Area Break', radius: 1, focusCost: 20 },
+        4: { name: 'Excavate', radius: 2, focusCost: 25 }
+      }
+    },
+    
+    dash: {
+      name: 'Dash',
+      icon: '⚡',
+      description: 'Teleport quickly',
+      tiers: {
+        1: { name: 'Hop', distance: 1, focusCost: 10 },
+        2: { name: 'Short Dash', distance: 2, focusCost: 15 },
+        3: { name: 'Long Dash', distance: 4, focusCost: 20 },
+        4: { name: 'Blink', distance: 6, focusCost: 25 }
+      }
+    },
+    
+    control: {
+      name: 'Control',
+      icon: '🧊',
+      description: 'Affect enemies',
+      tiers: {
+        1: { name: 'Distract', duration: 30, radius: 3, focusCost: 10 },
+        2: { name: 'Slow', duration: 60, radius: 4, focusCost: 15 },
+        3: { name: 'Stun', duration: 90, radius: 5, focusCost: 20 },
+        4: { name: 'Freeze', duration: 120, radius: 6, focusCost: 25 }
+      }
+    }
+  };
+  
+  // Legacy spell definitions (kept for backward compatibility)
+  const SPELLS = {
+    basic_projectile: {
+      id: 'basic_projectile',
+      name: 'Magic Bolt',
+      focusCost: 15,
+      execute() {
+        const player = window.player;
+        const projectiles = window.projectiles;
+        
+        if (!player || !projectiles) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        projectiles.push({
+          x: player.x,
+          y: player.y,
+          vx: player.facingLeft ? -0.3 : 0.3,
+          vy: 0,
+          damage: 2,
+          color: '#9b59b6'
+        });
+        
+        SpellSystem.createSpellParticles(player.x, player.y, '#9b59b6', 10);
+        
+        if (typeof window.sfx?.shoot === 'function') {
+          window.sfx.shoot();
+        }
+        
+        return { success: true, message: '⚡ Magic Bolt fired!' };
+      }
+    },
+    
+    fireball: {
+      id: 'fireball',
+      name: 'Fireball',
+      focusCost: 15,
+      execute() {
+        const player = window.player;
+        const projectiles = window.projectiles;
+        
+        if (!player || !projectiles) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        projectiles.push({
+          x: player.x,
+          y: player.y,
+          vx: player.facingLeft ? -0.4 : 0.4,
+          vy: 0,
+          damage: 3,
+          color: '#e74c3c'
+        });
+        
+        SpellSystem.createSpellParticles(player.x, player.y, '#e74c3c', 15);
+        
+        if (typeof window.sfx?.shoot === 'function') {
+          window.sfx.shoot();
+        }
+        
+        return { success: true, message: '🔥 Fireball launched!' };
+      }
+    },
+    
+    piercing_shot: {
+      id: 'piercing_shot',
+      name: 'Piercing Shot',
+      focusCost: 15,
+      execute() {
+        const player = window.player;
+        const projectiles = window.projectiles;
+        
+        if (!player || !projectiles) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        projectiles.push({
+          x: player.x,
+          y: player.y,
+          vx: player.facingLeft ? -0.5 : 0.5,
+          vy: 0,
+          damage: 3,
+          color: '#3498db'
+        });
+        
+        SpellSystem.createSpellParticles(player.x, player.y, '#3498db', 12);
+        
+        if (typeof window.sfx?.shoot === 'function') {
+          window.sfx.shoot();
+        }
+        
+        return { success: true, message: '🏹 Piercing Shot!' };
+      }
+    },
+    
+    healing_rain: {
+      id: 'healing_rain',
+      name: 'Healing Rain',
+      focusCost: 20,
+      execute() {
+        const player = window.player;
+        
+        if (!player) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        if (player.hp >= player.maxHp) {
+          return { success: false, message: '❌ Already at full health!' };
+        }
+        
+        player.hp = Math.min(player.maxHp, player.hp + 1);
+        
+        // Create falling particles around player
+        for (let i = 0; i < 20; i++) {
+          const offsetX = (Math.random() - 0.5) * 3;
+          const offsetY = Math.random() * -2;
+          SpellSystem.createSpellParticles(
+            player.x + offsetX,
+            player.y + offsetY,
+            '#3498db',
+            1
+          );
+        }
+        
+        if (typeof window.sfx?.collect === 'function') {
+          window.sfx.collect();
+        }
+        
+        return { success: true, message: '💧 Healed 1 HP!' };
+      }
+    },
+    
+    earth_breaker: {
+      id: 'earth_breaker',
+      name: 'Earth Breaker',
+      focusCost: 10,
+      execute() {
+        const player = window.player;
+        const grid = window.grid;
+        const COLS = window.COLS;
+        const ROWS = window.ROWS;
+        
+        if (!player || !grid) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        // Calculate target tile in front of player
+        const targetX = player.facingLeft ? player.x - 1 : player.x + 1;
+        const targetY = player.y;
+        
+        // Check bounds
+        if (targetX < 0 || targetX >= COLS || targetY < 0 || targetY >= ROWS) {
+          return { success: false, message: '❌ Nothing to break!' };
+        }
+        
+        const tileType = grid[targetY][targetX];
+        
+        // Can only break certain tiles (not air, not special tiles)
+        if (tileType === 0 || tileType === 6 || tileType === 11 || tileType === 13) {
+          return { success: false, message: '❌ Cannot break this!' };
+        }
+        
+        // Break the tile
+        grid[targetY][targetX] = 0;
+        
+        // Create explosion particles
+        SpellSystem.createSpellParticles(targetX, targetY, '#8d6e63', 20);
+        
+        if (typeof window.sfx?.mine === 'function') {
+          window.sfx.mine();
+        }
+        
+        return { success: true, message: '💥 Tile destroyed!' };
+      }
+    },
+    
+    swift_step: {
+      id: 'swift_step',
+      name: 'Swift Step',
+      focusCost: 12,
+      execute() {
+        const player = window.player;
+        const grid = window.grid;
+        const COLS = window.COLS;
+        const ROWS = window.ROWS;
+        
+        if (!player || !grid) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        // Teleport 3 tiles in facing direction
+        const distance = 3;
+        const dx = player.facingLeft ? -distance : distance;
+        const targetX = player.x + dx;
+        const targetY = player.y;
+        
+        // Check bounds
+        if (targetX < 0 || targetX >= COLS || targetY < 0 || targetY >= ROWS) {
+          return { success: false, message: '❌ Cannot teleport there!' };
+        }
+        
+        // Check if target is walkable
+        const targetTile = grid[targetY][targetX];
+        if (targetTile !== 0 && targetTile !== 13) {
+          return { success: false, message: '❌ Path blocked!' };
+        }
+        
+        // Create trail particles
+        for (let i = 0; i <= distance; i++) {
+          const x = player.x + (player.facingLeft ? -i : i);
+          SpellSystem.createSpellParticles(x, player.y, '#9b59b6', 3);
+        }
+        
+        // Teleport
+        player.x = targetX;
+        
+        if (typeof window.sfx?.jump === 'function') {
+          window.sfx.jump();
+        }
+        
+        return { success: true, message: '⚡ Teleported!' };
+      }
+    },
+    
+    enemy_stun: {
+      id: 'enemy_stun',
+      name: 'Mass Stun',
+      focusCost: 18,
+      execute() {
+        const player = window.player;
+        const enemies = window.enemies;
+        
+        if (!player || !enemies) {
+          return { success: false, message: '❌ Game not ready!' };
+        }
+        
+        if (enemies.length === 0) {
+          return { success: false, message: '❌ No enemies nearby!' };
+        }
+        
+        // Stun enemies within 5 tile radius
+        const radius = 5;
+        let stunnedCount = 0;
+        
+        enemies.forEach(enemy => {
+          const distance = Math.sqrt(
+            Math.pow(enemy.x - player.x, 2) +
+            Math.pow(enemy.y - player.y, 2)
+          );
+          
+          if (distance <= radius) {
+            enemy.stun = 90; // 3 seconds at 30fps
+            stunnedCount++;
+            SpellSystem.createSpellParticles(enemy.x, enemy.y, '#f1c40f', 5);
+          }
+        });
+        
+        if (stunnedCount === 0) {
+          return { success: false, message: '❌ No enemies in range!' };
+        }
+        
+        if (typeof window.sfx?.hit === 'function') {
+          window.sfx.hit();
+        }
+        
+        return { success: true, message: `⚡ Stunned ${stunnedCount} enemies!` };
+      }
+    }
+  };
   
   const SpellSystem = {
     init() {
       console.log('[Syntax Sorcery] Spell System initialized');
     },
     
-    mapSpell(sentence) {
-      // Implementation in Phase 4
-      return null;
+    mapSpell(sentence, words, patternId) {
+      // words = { adjective: 'hot', noun: 'ball', verb: 'fly' }
+      // patternId = 1
+      
+      console.log('[Spell System] Mapping spell:', { sentence, words, patternId });
+      
+      // 1. Check specific matches first
+      for (const spell of SPELL_DICTIONARY.specific) {
+        if (spell.pattern !== patternId) continue;
+        
+        let match = true;
+        for (const [pos, word] of Object.entries(spell.words)) {
+          if (!words[pos] || words[pos].toLowerCase() !== word.toLowerCase()) {
+            match = false;
+            break;
+          }
+        }
+        
+        if (match) {
+          console.log('[Spell System] Specific match:', spell.spellId);
+          return this.getSpellById(spell.spellId);
+        }
+      }
+      
+      // 2. Check generic patterns
+      for (const spell of SPELL_DICTIONARY.generic) {
+        if (spell.pattern !== patternId) continue;
+        
+        let match = true;
+        for (const [pos, requirement] of Object.entries(spell.requirements)) {
+          if (requirement === 'any') continue;
+          if (!words[pos] || words[pos].toLowerCase() !== requirement.toLowerCase()) {
+            match = false;
+            break;
+          }
+        }
+        
+        if (match) {
+          console.log('[Spell System] Generic match:', spell.spellId);
+          return this.getSpellById(spell.spellId);
+        }
+      }
+      
+      // 3. No match found - return default spell
+      console.log('[Spell System] No match, using default');
+      return this.getSpellById('basic_projectile');
+    },
+    
+    getSpellById(spellId) {
+      return SPELLS[spellId] || SPELLS.basic_projectile;
     },
     
     executeSpell(spellId) {
-      // Implementation in Phase 4
-      console.log('[Spell System] Executing spell (Phase 4):', spellId);
+      const spell = this.getSpellById(spellId);
+      console.log('[Spell System] Executing spell:', spell.name);
+      return spell.execute();
+    },
+    
+    executeSpellByType(spellType, tier, config) {
+      const player = window.player;
+      
+      switch(spellType) {
+        case 'projectile':
+          return this.executeProjectile(tier, config);
+        
+        case 'heal':
+          return this.executeHeal(tier, config);
+        
+        case 'break':
+          return this.executeBreak(tier, config);
+        
+        case 'dash':
+          return this.executeDash(tier, config);
+        
+        case 'control':
+          return this.executeControl(tier, config);
+        
+        default:
+          return { success: false, message: '❌ Unknown spell type!' };
+      }
+    },
+    
+    executeProjectile(tier, config) {
+      const player = window.player;
+      const projectiles = window.projectiles;
+      
+      if (!player || !projectiles) {
+        return { success: false, message: '❌ Game not ready!' };
+      }
+      
+      projectiles.push({
+        x: player.x,
+        y: player.y,
+        vx: player.facingLeft ? -config.speed : config.speed,
+        vy: 0,
+        damage: config.damage,
+        color: config.color
+      });
+      
+      this.createSpellParticles(player.x, player.y, config.color, 10 + (tier * 5));
+      
+      if (typeof window.sfx?.shoot === 'function') {
+        window.sfx.shoot();
+      }
+      
+      return { success: true, message: `🔥 ${config.name} fired!` };
+    },
+    
+    executeHeal(tier, config) {
+      const player = window.player;
+      
+      if (!player) {
+        return { success: false, message: '❌ Game not ready!' };
+      }
+      
+      if (player.hp >= player.maxHp) {
+        return { success: false, message: '❌ Already at full health!' };
+      }
+      
+      const healAmount = config.amount === 999 ? player.maxHp : config.amount;
+      player.hp = Math.min(player.maxHp, player.hp + healAmount);
+      
+      // Create healing particles
+      for (let i = 0; i < 15 + (tier * 5); i++) {
+        const offsetX = (Math.random() - 0.5) * 3;
+        const offsetY = Math.random() * -2;
+        this.createSpellParticles(
+          player.x + offsetX,
+          player.y + offsetY,
+          '#2ecc71',
+          1
+        );
+      }
+      
+      if (typeof window.sfx?.collect === 'function') {
+        window.sfx.collect();
+      }
+      
+      return { success: true, message: `💚 ${config.name}: +${healAmount} HP!` };
+    },
+    
+    executeBreak(tier, config) {
+      const player = window.player;
+      const grid = window.grid;
+      const COLS = window.COLS;
+      const ROWS = window.ROWS;
+      
+      if (!player || !grid) {
+        return { success: false, message: '❌ Game not ready!' };
+      }
+      
+      const targetX = player.facingLeft ? player.x - 1 : player.x + 1;
+      const targetY = player.y;
+      const radius = config.radius;
+      
+      let brokenCount = 0;
+      
+      // Break tiles in radius
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const x = targetX + dx;
+          const y = targetY + dy;
+          
+          if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+            const tileType = grid[y][x];
+            
+            // Can break solid tiles (not air, not special)
+            if (tileType > 0 && tileType !== 6 && tileType !== 11 && tileType !== 13) {
+              grid[y][x] = 0;
+              this.createSpellParticles(x, y, '#8d6e63', 5);
+              brokenCount++;
+            }
+          }
+        }
+      }
+      
+      if (brokenCount === 0) {
+        return { success: false, message: '❌ Nothing to break!' };
+      }
+      
+      if (typeof window.sfx?.mine === 'function') {
+        window.sfx.mine();
+      }
+      
+      return { success: true, message: `⛏️ ${config.name}: ${brokenCount} tiles destroyed!` };
+    },
+    
+    executeDash(tier, config) {
+      const player = window.player;
+      const grid = window.grid;
+      const COLS = window.COLS;
+      const ROWS = window.ROWS;
+      
+      if (!player || !grid) {
+        return { success: false, message: '❌ Game not ready!' };
+      }
+      
+      const distance = config.distance;
+      const dx = player.facingLeft ? -distance : distance;
+      const targetX = player.x + dx;
+      const targetY = player.y;
+      
+      if (targetX < 0 || targetX >= COLS || targetY < 0 || targetY >= ROWS) {
+        return { success: false, message: '❌ Cannot teleport there!' };
+      }
+      
+      const targetTile = grid[targetY][targetX];
+      if (targetTile !== 0 && targetTile !== 13) {
+        return { success: false, message: '❌ Path blocked!' };
+      }
+      
+      // Create trail particles
+      for (let i = 0; i <= distance; i++) {
+        const x = player.x + (player.facingLeft ? -i : i);
+        this.createSpellParticles(x, player.y, '#9b59b6', 3);
+      }
+      
+      player.x = targetX;
+      
+      if (typeof window.sfx?.jump === 'function') {
+        window.sfx.jump();
+      }
+      
+      return { success: true, message: `⚡ ${config.name}: Teleported ${distance} tiles!` };
+    },
+    
+    executeControl(tier, config) {
+      const player = window.player;
+      const enemies = window.enemies;
+      
+      if (!player || !enemies) {
+        return { success: false, message: '❌ Game not ready!' };
+      }
+      
+      let affectedCount = 0;
+      const radius = config.radius;
+      
+      enemies.forEach(enemy => {
+        const distance = Math.sqrt(
+          Math.pow(enemy.x - player.x, 2) +
+          Math.pow(enemy.y - player.y, 2)
+        );
+        
+        if (distance <= radius) {
+          enemy.stun = config.duration;
+          this.createSpellParticles(enemy.x, enemy.y, '#3498db', 5);
+          affectedCount++;
+        }
+      });
+      
+      if (affectedCount === 0) {
+        return { success: false, message: '❌ No enemies in range!' };
+      }
+      
+      if (typeof window.sfx?.hit === 'function') {
+        window.sfx.hit();
+      }
+      
+      return { success: true, message: `🧊 ${config.name}: ${affectedCount} enemies affected!` };
+    },
+    
+    createSpellParticles(x, y, color, count) {
+      if (!window.particles) return;
+      
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = 0.1 + Math.random() * 0.1;
+        
+        window.particles.push({
+          x: x + Math.cos(angle) * 0.5,
+          y: y + Math.sin(angle) * 0.5,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          char: '✨',
+          color: color,
+          life: 30
+        });
+      }
     }
   };
   
@@ -704,6 +1522,16 @@ const SyntaxSorcery = (function() {
     syntax: SyntaxEngine,
     spells: SpellSystem,
     gates: GrammarGates,
+    
+    // Expose magic point system for HTML access
+    getState() {
+      return state;
+    },
+    
+    getTierFromMagicPoints,
+    calculateMagicPoints,
+    SPELL_TYPES,
+    MAGIC_TIERS,
     
     // Utility
     isEnabled() {

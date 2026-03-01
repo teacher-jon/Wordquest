@@ -146,6 +146,109 @@
         .lexicon-picker-title { font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #4a148c; text-align: center; }
         .lexicon-picker-words { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
         
+        /* Magic Meter */
+        .magic-meter-container {
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #9c27b0;
+        }
+        
+        .magic-meter-label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #7b1fa2;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .magic-meter-bar {
+            width: 100%;
+            height: 24px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #9c27b0;
+        }
+        
+        .magic-meter-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .magic-meter-text {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #4a148c;
+        }
+        
+        /* Spell Type Selector */
+        .spell-type-selector {
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #9c27b0;
+        }
+        
+        .spell-type-label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #7b1fa2;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .spell-type-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .spell-type-btn {
+            background: white;
+            border: 2px solid #9c27b0;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #4a148c;
+        }
+        
+        .spell-type-btn:hover {
+            background: #f3e5f5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .spell-type-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #6a1b9a;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Spell Preview */
+        .spell-preview {
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #9c27b0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+        
         .draggable-word {
             padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;
             cursor: grab; border: 2px solid; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -163,6 +266,19 @@
         .invoke-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #5d4037; }
         .invoke-btn:active { transform: translateY(4px); box-shadow: none; }
         .invoke-btn:disabled {
+            background: #95a5a6; cursor: not-allowed; box-shadow: none;
+            transform: none;
+        }
+        
+        .equip-btn {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white; border: none; padding: 15px 40px; border-radius: 8px;
+            font-weight: bold; font-size: 18px; cursor: pointer;
+            box-shadow: 0 4px 0 #5d4037; transition: all 0.2s;
+        }
+        .equip-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #5d4037; }
+        .equip-btn:active { transform: translateY(4px); box-shadow: none; }
+        .equip-btn:disabled {
             background: #95a5a6; cursor: not-allowed; box-shadow: none;
             transform: none;
         }
@@ -277,6 +393,12 @@
         .toast.show { opacity: 1; top: 100px; }
         .toast.warn { background: rgba(192, 57, 43, 0.9); border: 2px solid #e74c3c; }
         .toast.good { background: rgba(39, 174, 96, 0.9); border: 2px solid #2ecc71; }
+        
+        /* EQUIPPED SPELL HUD */
+        #equipped-spell-display { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); color: #fff; padding: 10px 15px; border-radius: 8px; font-size: 14px; display: none; border: 2px solid #9b59b6; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 5; pointer-events: none; }
+        #equipped-spell-display .spell-title { font-weight: bold; margin-bottom: 4px; color: #9b59b6; font-size: 12px; text-transform: uppercase; }
+        #equipped-spell-display .spell-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+        #equipped-spell-display .spell-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -289,6 +411,14 @@
                 <div class="bar-track"><div class="bar-fill" id="focus-fill" style="width:100%"></div></div>
             </div>
         </div>
+        
+        <!-- EQUIPPED SPELL HUD -->
+        <div id="equipped-spell-display">
+            <div class="spell-title">⚡ Equipped Spell</div>
+            <div class="spell-name" id="equipped-spell-name">None</div>
+            <div class="spell-hint">Press Q to cast</div>
+        </div>
+        
         <div id="toast-msg" class="toast">Alert</div>
 
         <div id="dialogue-box">
@@ -509,6 +639,45 @@
                         </div>
                     </div>
                     
+                    <!-- Magic Meter -->
+                    <div class="magic-meter-container">
+                        <div class="magic-meter-label">Magic Power</div>
+                        <div class="magic-meter-bar">
+                            <div class="magic-meter-fill" id="magic-meter-fill"></div>
+                        </div>
+                        <div class="magic-meter-text">
+                            <span id="magic-points">0</span> / 20
+                            <span id="magic-tier" style="margin-left:10px; font-weight:bold;">Tier 0: Too Weak</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Spell Type Selector -->
+                    <div class="spell-type-selector">
+                        <div class="spell-type-label">Choose Spell Type:</div>
+                        <div class="spell-type-buttons">
+                            <button class="spell-type-btn" data-type="projectile" onclick="window.SyntaxSorcery.syntax.selectSpellType('projectile')">
+                                🔥 Projectile
+                            </button>
+                            <button class="spell-type-btn" data-type="heal" onclick="window.SyntaxSorcery.syntax.selectSpellType('heal')">
+                                💚 Heal
+                            </button>
+                            <button class="spell-type-btn" data-type="break" onclick="window.SyntaxSorcery.syntax.selectSpellType('break')">
+                                ⛏️ Break
+                            </button>
+                            <button class="spell-type-btn" data-type="dash" onclick="window.SyntaxSorcery.syntax.selectSpellType('dash')">
+                                ⚡ Dash
+                            </button>
+                            <button class="spell-type-btn" data-type="control" onclick="window.SyntaxSorcery.syntax.selectSpellType('control')">
+                                🧊 Control
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Spell Preview -->
+                    <div class="spell-preview" id="spell-preview">
+                        Select a spell type to see details
+                    </div>
+                    
                     <!-- Word Picker -->
                     <div class="lexicon-picker">
                         <div class="lexicon-picker-title">📖 Drag words from your Lexicon</div>
@@ -522,12 +691,15 @@
                     <button class="invoke-btn" id="btn-invoke" onclick="invokeSpell()" disabled>
                         ⚡ Invoke Spell
                     </button>
+                    <button class="equip-btn" id="btn-equip" onclick="equipSpell()" disabled>
+                        📌 Equip Spell
+                    </button>
                     <button class="close-btn" onclick="closeGrimoire()">Close</button>
                 </div>
             </div>
         </div>
     </div>
-    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory | G for Grimoire</div>
+    <div style="color:#aaa; font-size:12px; margin-top:5px; text-align:center;">Keys: Arrows to Move | Space/T to Interact | F to Shoot | B to Build | I for Inventory | G for Grimoire | Q to Cast Spell</div>
 
 <script>
     const VERSION = 3.92;
@@ -671,7 +843,8 @@ let player={
     x:20, y:10, hp:3, maxHp:3, focus:100, maxFocus:100, fragments:0,
     tool: "hand", toolHp: 0, // <--- NEW STATS
     resources:{dirt:0,sand:0,stone:0,wood:0,obsidian:0},roots:[], affixes:[], artifacts:[], hasQuill:false, invinc:0, facingLeft:false, blocks:{9:5,4:0,5:0,11:0,6:0,13:0}, arrows:0, activeBlock:9, quests:{bark:0, rusty:0, cloudia:0, mike:0}, unlocks:{map:false, drill:false, magnet:false, doubleFrag:false},
-    lexicon:[] // SYNTAX SORCERY: Word storage with POS
+    lexicon:[], // SYNTAX SORCERY: Word storage with POS
+    equippedSpell: null // SYNTAX SORCERY: Quick-cast spell
 };
 // Make player globally accessible for modules
 window.player = player;
@@ -803,7 +976,17 @@ const TOOLS = {
              }
         }
         
-        for(let i=particles.length-1; i>=0; i--) { particles[i].life--; particles[i].y-=0.05; if(particles[i].life<=0) particles.splice(i,1); }
+        for(let i=particles.length-1; i>=0; i--) {
+            let p = particles[i];
+            p.life--;
+            
+            // Apply velocity if present (for spell particles)
+            if (p.vx !== undefined) p.x += p.vx;
+            if (p.vy !== undefined) p.y += p.vy;
+            else p.y -= 0.05; // Default upward drift
+            
+            if (p.life <= 0) particles.splice(i, 1);
+        }
     }
 
     // NEW: Centralized movement logic to support simultaneous held keys/buttons
@@ -838,6 +1021,29 @@ const TOOLS = {
         if(e.key==='i'||e.key==='I') setGameState('inventory'); if(e.key==='b'||e.key==='B') placeBlock();
         if(e.key==='t'||e.key==='T') interact(); if(e.key==='m'||e.key==='M') toggleMap();
         if(e.key==='g'||e.key==='G') openGrimoire(); // SYNTAX SORCERY: Open Grimoire
+        
+        // SYNTAX SORCERY: Quick-cast equipped spell with Q key
+        if(e.key==='q'||e.key==='Q') {
+            if (player.equippedSpell && window.SyntaxSorcery) {
+                const spell = window.SyntaxSorcery.spells.getSpellById(player.equippedSpell.spellId);
+                
+                if (player.focus < spell.focusCost) {
+                    showToast(`❌ Not enough Focus! Need ${spell.focusCost}`, 'warn');
+                    return;
+                }
+                
+                const result = window.SyntaxSorcery.spells.executeSpell(spell.id);
+                
+                if (result.success) {
+                    player.focus -= spell.focusCost;
+                    showToast(result.message, 'good');
+                } else {
+                    showToast(result.message, 'warn');
+                }
+            } else {
+                showToast('❌ No spell equipped! Open Grimoire (G) to equip one.', 'warn');
+            }
+        }
     });
     document.addEventListener('keyup', e=>{ keys[e.key]=false; });
 
@@ -1193,7 +1399,18 @@ function showToast(msg, type='neutral') {
              });
         }
         
-        ctx.fillStyle="yellow"; projectiles.forEach(p=>ctx.fillRect(p.x*TILE_SIZE,p.y*TILE_SIZE,5,5));
+        // Enhanced projectile rendering with color support
+        projectiles.forEach(p => {
+            const color = p.color || 'yellow';
+            ctx.fillStyle = color;
+            ctx.fillRect(p.x * TILE_SIZE, p.y * TILE_SIZE, 8, 8);
+            
+            // Add glow effect
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.fillRect(p.x * TILE_SIZE, p.y * TILE_SIZE, 8, 8);
+            ctx.shadowBlur = 0;
+        });
         ctx.font="20px Arial"; particles.forEach(p=>{ctx.fillStyle=p.color; ctx.fillText(p.char,p.x*TILE_SIZE,p.y*TILE_SIZE)});
         ctx.restore();
 
@@ -1716,11 +1933,89 @@ function respawnPlayer() {
     }
     
     function invokeSpell() {
-        if (window.SyntaxSorcery && window.SyntaxSorcery.spells) {
-            // Phase 4 implementation
-            console.log('[Game] Invoke spell called (Phase 4 pending)');
-            showToast('⚡ Spell system coming in Phase 4!', 'good');
+        if (!window.SyntaxSorcery || !window.SyntaxSorcery.syntax) {
+            showToast('❌ Spell system not loaded!', 'warn');
+            return;
         }
+        
+        const validation = window.SyntaxSorcery.syntax.validateSentence();
+        if (!validation.valid) {
+            showToast('❌ Invalid spell: ' + validation.error, 'warn');
+            return;
+        }
+        
+        const state = window.SyntaxSorcery.getState();
+        
+        // Check if spell type is selected
+        if (!state.selectedSpellType) {
+            showToast('❌ Select a spell type first!', 'warn');
+            return;
+        }
+        
+        // Calculate magic points
+        const magicPoints = state.magicPoints;
+        const tier = window.SyntaxSorcery.getTierFromMagicPoints(magicPoints);
+        
+        if (tier === 0) {
+            showToast('❌ Not enough magic power!', 'warn');
+            return;
+        }
+        
+        // Get spell configuration
+        const spellType = window.SyntaxSorcery.SPELL_TYPES[state.selectedSpellType];
+        const spellConfig = spellType.tiers[tier];
+        
+        // Check Focus
+        if (player.focus < spellConfig.focusCost) {
+            showToast(`❌ Need ${spellConfig.focusCost} Focus!`, 'warn');
+            return;
+        }
+        
+        // Execute spell
+        const result = window.SyntaxSorcery.spells.executeSpellByType(
+            state.selectedSpellType,
+            tier,
+            spellConfig
+        );
+        
+        if (result.success) {
+            player.focus -= spellConfig.focusCost;
+            showToast(result.message, 'good');
+            window.SyntaxSorcery.syntax.closeGrimoire();
+        } else {
+            showToast(result.message, 'warn');
+        }
+    }
+    
+    function equipSpell() {
+        if (!window.SyntaxSorcery) {
+            showToast('❌ Spell system not loaded!', 'warn');
+            return;
+        }
+        
+        const validation = window.SyntaxSorcery.syntax.validateSentence();
+        if (!validation.valid) {
+            showToast('❌ Invalid spell!', 'warn');
+            return;
+        }
+        
+        const currentSpell = window.SyntaxSorcery.syntax.getCurrentSpell();
+        const patternId = window.SyntaxSorcery.syntax.getSelectedPattern();
+        const spell = window.SyntaxSorcery.spells.mapSpell(validation.sentence, currentSpell, patternId);
+        
+        player.equippedSpell = {
+            spellId: spell.id,
+            sentence: validation.sentence,
+            words: { ...currentSpell },
+            patternId: patternId
+        };
+        
+        // Update HUD
+        document.getElementById('equipped-spell-name').textContent = spell.name;
+        document.getElementById('equipped-spell-display').style.display = 'block';
+        
+        showToast(`📌 Equipped: ${spell.name}`, 'good');
+        window.SyntaxSorcery.syntax.closeGrimoire();
     }
     
     function changePattern(patternId) {
