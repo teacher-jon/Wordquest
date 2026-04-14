@@ -1879,6 +1879,7 @@
                 processedAssets.tiles=removeWhite(assets.tiles); 
                 processedAssets.chars=removeWhite(assets.chars); 
                 processedAssets.ui=removeWhite(assets.ui); 
+                if(!processedAssets.tiles || !processedAssets.chars) useFallbackAssets = true;
             } catch(e) { useFallbackAssets = true; }
         } 
         document.getElementById('loading').style.display='none'; 
@@ -3111,8 +3112,8 @@ async function forgeWord() {
         
         // SYNTAX SORCERY: Save Grammar Gate state
         let grammarGateState = null;
-        if (window.SyntaxSorcery && window.SyntaxSorcery.gates) {
-            grammarGateState = window.SyntaxSorcery.gates.state.gates;
+        if (player && player.grammarGates) {
+            grammarGateState = player.grammarGates;
             console.log('[Save] Saving Grammar Gates:', grammarGateState.length, 'gates');
         }
         
@@ -3198,8 +3199,8 @@ async function forgeWord() {
                 SyntaxSorcery.lexicon.init();
                 
                 // SYNTAX SORCERY: Restore Grammar Gate state
-                if (data.grammarGates && window.SyntaxSorcery.gates) {
-                    window.SyntaxSorcery.gates.state.gates = data.grammarGates;
+                if (data.grammarGates) {
+                    player.grammarGates = data.grammarGates;
                     console.log('[Load] Restored Grammar Gates:', data.grammarGates.length, 'gates');
                     
                     // Update grid to reflect solved gates
